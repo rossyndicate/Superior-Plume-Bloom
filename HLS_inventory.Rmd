@@ -1,0 +1,152 @@
+---
+title: "HLS Inventory"
+author: "B Steele"
+date: "2023-01-17"
+output: html_document
+---
+
+# Purpose
+
+This script is meant to inventory HLS availability from the LP DAAC for specific locations. It was developed based on the `CMR_STAC_Tutorial.Rmd` found on [LP DAAC's user resources git](https://git.earthdata.nasa.gov/projects/LPDUR). Unedited code chunks are indicated with comments at the start of each chunk. Please refer to the tutorial for more information on STAC.
+
+## Prepare workspace
+
+Identify, install, and load necessary packages.
+
+```{r, warning = FALSE, message = FALSE}
+#chunk from LP DAAC CMR_STAC_Tutorial.Rmd
+packages <- c('httr','purrr','jsonlite','DT','magrittr', 'xml2', 'dplyr') 
+new.packages <- packages[!(packages %in% installed.packages()[,"Package"])] 
+if(length(new.packages)) install.packages(new.packages, repos='http://cran.rstudio.com/') else print('All required packages are installed.') 
+invisible(lapply(packages, library, character.only = TRUE))
+```
+
+## Point to STAC Collection URLs
+
+```{r}
+hls_col_url = "https://cmr.earthdata.nasa.gov/stac/LPCLOUD/collections/HLSL30.v2.0"
+hls_items_url = "https://cmr.earthdata.nasa.gov/stac/LPCLOUD/collections/HLSL30.v2.0/items"
+lpcloud_search_url = "https://cmr.earthdata.nasa.gov/stac/LPCLOUD/search"
+```
+
+Get and print collection information:
+
+```{r}
+hls_collection <- httr::GET(hls_col_url) %>% 
+  httr::content()
+
+hls_collection <- hls_collection %>% 
+  jsonlite::toJSON(auto_unbox = TRUE) %>% 
+  jsonlite::fromJSON()
+
+cat(hls_collection$description)
+```
+
+HLS data are available from 2013 onward, worldwide.
+
+```{r}
+hls_collection$extent %>% 
+  jsonlite::toJSON(auto_unbox = TRUE)
+```
+
+Get the full list of HLS items based on a search query (this is HLS for entire time period and for Western Lake Superior):
+
+```{r}
+collections <- list("HLSS30.v2.0", "HLSL30.v2.0")
+datetime <- '2013-01-01T00:00:00Z/2021-12-31T23:59:59Z'   #YYYY-MM-DDTHH:MM:SSZ/YYYY-MM-DDTHH:MM:SSZ
+bbox <- '-92.300,46.567,-87.191,49.043' # LL and UR Coordinates
+
+#tiles of interest (https://hls.gsfc.nasa.gov/products-description/tiling-system/?_ga=2.88594395.1316645335.1673975201-1973049045.1668112353)
+tiles = c('15TWM', '15TXM', '15TYM', '15TWN', '15TXN', '15TYM', '15UYP')
+
+body <- list(limit=100, 
+             datetime=datetime,
+             bbox= bbox,
+             collections= collections)
+
+
+#get first search, to find out how many features were matched
+search_req <- httr::POST(lpcloud_search_url, body = body, encode = "json") %>% 
+  httr::content(as = "text") %>%  
+  jsonlite::fromJSON()
+
+pages = seq(1,round(search_req$numberMatched/search_req$numberReturned, 1), 1)
+
+```
+
+Make a list of all request pages to ping in request based on the search url and the name
+
+```{r}
+
+make_page_list = function(pages){
+  if (pages > 1){
+    paste0(lpcloud_search_url, '?page=', pages)
+  } else {
+    lpcloud_search_url
+  }
+}
+
+all_pages = map_chr(pages, make_page_list)
+```
+
+Grab the requests and collate all results. This particular chunk of code will take some time to process if you have to make many requests.
+
+```{r}
+get_requests = function(url){
+  src_req = httr::POST(url, body = body, encode = "json") %>% 
+    httr::content(as = "text") %>%  
+    jsonlite::fromJSON()
+  
+  granule_list <- list()
+
+  n <- 1
+  for(row in row.names(search_req$features)){
+    f <- search_req$features[row,]
+    for (b in f$assets){
+      df <- data.frame(Collection = f$collection,
+                       Granule_ID = f$id,
+                       Cloud_Cover = f$properties$`eo:cloud_cover`,
+                       Datetime = f$properties$datetime,
+                       Asset_Link = b$href, stringsAsFactors=FALSE)
+      granule_list[[n]] <- df
+      n <- n + 1
+    }
+  }
+  
+  search_df <- do.call(rbind, granule_list)
+  
+}
+
+all_requests = map_dfr(all_pages, get_requests)
+
+```
+
+'Filter for cloud cover \<70% and tiles in desired area:
+
+```{r}
+#filter out images with >70% cloud cover
+all_requests_filt = all_requests[all_requests$Cloud_Cover < 70, ]
+#get the tile name
+get_tile = function(gran){
+  unlist(strsplit(gran, '\\.'))[3]
+}
+
+#apply to granuleid and save in df
+all_requests_filt$tile = map_chr(all_requests_filt$Granule_ID, get_tile)
+#drop 't'
+all_requests_filt$tile = substr(all_requests_filt$tile, 2, nchar(all_requests_filt$tile))
+
+#filter for only tiles we want
+all_requests_filt=all_requests_filt[(all_requests_filt$tile %in% tiles), ]
+```
+
+Get unique dates per tile
+
+```{r}
+test = all_requests_filt %>% 
+  mutate(date = as.Date(as.POSIXct(Datetime)),
+         wk_yr = format(date, '%W-%Y')) %>%  
+  filter(grepl('jpg', Asset_Link)) %>% 
+  group_by(tile, wk_yr) %>% 
+  summarize(n_images = n())
+```
