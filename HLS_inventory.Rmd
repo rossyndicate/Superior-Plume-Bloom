@@ -158,6 +158,10 @@ make_result_df = function(url, bdy){
   
   do.call(rbind, granule_list)
 }
+
+paste_list = function(list, len) {
+  
+}
 ```
 
 Bring all the pieces together with `make_search_query`
@@ -166,10 +170,11 @@ Bring all the pieces together with `make_search_query`
 make_search_query = function(DT){
   b = make_body(DT)
   u = make_page_list(DT)
-  if(length(u) == 1) { 
+  if(length(u) == 1 & length(b) == 1) { 
     return(make_result_df(u, b)) 
     } else { 
-      return(map2_df(u, b, make_result_df))
+      b_many = rep(list(b), length(u))
+      return(map2_df(u, b_many, make_result_df))
     }
 }
 ```
