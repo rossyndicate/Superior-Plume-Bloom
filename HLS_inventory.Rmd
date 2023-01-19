@@ -15,7 +15,7 @@ Identify, install, and load necessary packages.
 
 ```{r, warning = FALSE, message = FALSE}
 #chunk from LP DAAC CMR_STAC_Tutorial.Rmd
-packages <- c('httr','purrr','jsonlite','DT','magrittr', 'xml2', 'dplyr') 
+packages <- c('httr','purrr','jsonlite','DT','magrittr', 'xml2', 'dplyr', 'tidyverse') 
 new.packages <- packages[!(packages %in% installed.packages()[,"Package"])] 
 if(length(new.packages)) install.packages(new.packages, repos='http://cran.rstudio.com/') else print('All required packages are installed.') 
 invisible(lapply(packages, library, character.only = TRUE))
@@ -179,10 +179,9 @@ make_search_query = function(DT){
 }
 ```
 
-Now, map over the list. This particular chunk of code will take some time to process if you have to make many requests.
+Now, map over the list. This particular chunk of code will take some time to process if you have a particularily long `datetime_list`.
 
 ```{r}
-
 all_requests = map_dfr(datetime_list, make_search_query)
 
 ```
@@ -202,25 +201,72 @@ all_requests_filt$tile = map_chr(all_requests_filt$Granule_ID, get_tile)
 #drop 't'
 all_requests_filt$tile = substr(all_requests_filt$tile, 2, nchar(all_requests_filt$tile))
 
+all_requests$tile = map_chr(all_requests$Granule_ID, get_tile)
+all_requests$tile = substr(all_requests$tile, 2, nchar(all_requests$tile))
+
 #filter for only tiles we want
 all_requests_filt=all_requests_filt[(all_requests_filt$tile %in% tiles), ]
+all_requests=all_requests[(all_requests$tile %in% tiles), ]
 ```
 
 Get unique dates per tile
 
 ```{r}
-summary_bytile = all_requests_filt %>% 
+filt_summary_bytile = all_requests_filt %>% 
   mutate(date = as.Date(as.POSIXct(Datetime)),
          wk_yr = format(date, '%W-%Y')) %>%  
   filter(grepl('jpg', Asset_Link)) %>% 
   group_by(wk_yr, tile) %>% 
   summarize(n_images = n())
 
-summary = all_requests_filt %>% 
+filt_summary_bywkyr = all_requests_filt %>% 
   mutate(date = as.Date(as.POSIXct(Datetime)),
          wk_yr = format(date, '%W-%Y')) %>%  
   filter(grepl('jpg', Asset_Link)) %>% 
   group_by(wk_yr) %>% 
   summarize(n_tiles = length(unique(tile)),
     n_images = n())
+
+
+filt_summary_bywkyr$wk = substr(filt_summary_bywkyr$wk_yr, 1, 2)
+filt_summary_bywkyr$yr = substr(filt_summary_bywkyr$wk_yr, 4,8)
+ggplot(filt_summary_bywkyr, aes(x = wk, y = n_tiles)) +
+  facet_grid(yr~.) +
+  labs(title = 'Harmonized LS-Sen2 tiles with <70% clouds',
+       y = 'number of image tiles with data\n(complete coverage = 6)',
+       x = 'week of year',
+       fill = 'number\nof\ntiles') +
+  geom_col(aes(fill = n_tiles))+
+  theme_bw()
+ggsave('hls_inventory_superior_cclt70.jpg')
+```
+
+```{r}
+summary_bytile = all_requests %>% 
+  mutate(date = as.Date(as.POSIXct(Datetime)),
+         wk_yr = format(date, '%W-%Y')) %>%  
+  filter(grepl('jpg', Asset_Link)) %>% 
+  group_by(wk_yr, tile) %>% 
+  summarize(n_images = n())
+
+summary_bywkyr = all_requests %>% 
+  mutate(date = as.Date(as.POSIXct(Datetime)),
+         wk_yr = format(date, '%W-%Y')) %>%  
+  filter(grepl('jpg', Asset_Link)) %>% 
+  group_by(wk_yr) %>% 
+  summarize(n_tiles = length(unique(tile)),
+    n_images = n())
+
+
+summary_bywkyr$wk = substr(summary_bywkyr$wk_yr, 1, 2)
+summary_bywkyr$yr = substr(summary_bywkyr$wk_yr, 4,8)
+ggplot(summary_bywkyr, aes(x = wk, y = n_tiles)) +
+  facet_grid(yr~.) +
+  labs(title = 'Harmonized LS-Sen2 tiles no cloud filter',
+       y = 'number of image tiles with data\n(complete coverage = 6)',
+       x = 'week of year',
+       fill = 'number\nof\ntiles') +
+  geom_col(aes(fill = n_tiles))+
+  theme_bw()
+ggsave('hls_inventory_superior_allcc.jpg')
 ```
