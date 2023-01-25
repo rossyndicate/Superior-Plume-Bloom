@@ -6,3 +6,9 @@
 
 #python venvs
 availability_checks/env/
+
+#knit output
+reports/images/*
+
+#all tmp folders
+*/tmp/*
