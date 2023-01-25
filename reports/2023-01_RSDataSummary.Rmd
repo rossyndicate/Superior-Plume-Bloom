@@ -9,42 +9,48 @@ output: html_document
 
 This document walks through some of the remote sensing satellite options for use in creating a rasterized timeseries of presence/absence of sediment plumes and blooms. Note that this summary is limited to the Landsat constellation, MODIS/VIIRS, and HLS (Harmonized Landsat-Sentinel) as they provide 3 spatial and temporal options for raster development.
 
+# Background
+
+Below is the area of interest (AOI, green-shaded area) and observed blooms (yellow pins), dating back to 1998.
+
+![Figure 1. Area of interest and observations of blooms.](images/SUP_aoi_blooms-01.jpg)
+
 # Time and Scale
 
 There is an inherent trade off between satellite image overpass frequency and the resolution (pixel size) of the satellite sensors.
 
-+-------------------------------------+----------------------------+----------------------------------------------------+----------------+
-| Satellite/Product                   | Years of Data Availability | Overpass Frequency                                 | Resolution     |
-+=====================================+============================+====================================================+================+
-| Landsat 4, 5, 7, 8, 9               | LS4: 1983-2001             | each satellite 16 day interval                     | 30m^2b^        |
-|                                     |                            |                                                    |                |
-|                                     | LS5: 1984-2013             |                                                    |                |
-|                                     |                            |                                                    |                |
-|                                     | LS7: 1999-2021^a^          |                                                    |                |
-|                                     |                            |                                                    |                |
-|                                     | LS8: 2013-                 |                                                    |                |
-|                                     |                            |                                                    |                |
-|                                     | LS9: 2021-                 |                                                    |                |
-+-------------------------------------+----------------------------+----------------------------------------------------+----------------+
-| MODIS (Aqua/Terra)                  | Aqua: 2000-current         | each satellite has a return frequency of \~ 2 days | 500m^2^        |
-|                                     |                            |                                                    |                |
-|                                     | Terra: 2002-current        |                                                    |                |
-+-------------------------------------+----------------------------+----------------------------------------------------+----------------+
-| VIIRS                               | 2011-current               | daily                                              | 375 & 750m^2c^ |
-+-------------------------------------+----------------------------+----------------------------------------------------+----------------+
-| Harmonized Landsat-Sentinel Product | 2013-current^d^            | 2-3 days                                           | 30m^2^         |
-+-------------------------------------+----------------------------+----------------------------------------------------+----------------+
++-------------------------------------+----------------------------+----------------------------------------------------+----------------+---------------------+
+| Satellite/Product                   | Years of Data Availability | Overpass Frequency                                 | Resolution     | Data Access         |
++=====================================+============================+====================================================+================+=====================+
+| Landsat 4, 5, 7, 8, 9               | LS4: 1983-2001             | each satellite 16 day interval                     | 30m^2b^        | Google Earth Engine |
+|                                     |                            |                                                    |                |                     |
+|                                     | LS5: 1984-2013             |                                                    |                |                     |
+|                                     |                            |                                                    |                |                     |
+|                                     | LS7: 1999-2021^a^          |                                                    |                |                     |
+|                                     |                            |                                                    |                |                     |
+|                                     | LS8: 2013-                 |                                                    |                |                     |
+|                                     |                            |                                                    |                |                     |
+|                                     | LS9: 2021-                 |                                                    |                |                     |
++-------------------------------------+----------------------------+----------------------------------------------------+----------------+---------------------+
+| MODIS (Aqua/Terra)                  | Aqua: 2000-current         | each satellite has a return frequency of \~ 2 days | 500m^2^        | Google Earth Engine |
+|                                     |                            |                                                    |                |                     |
+|                                     | Terra: 2002-current        | daily product available beginning 2002             |                |                     |
++-------------------------------------+----------------------------+----------------------------------------------------+----------------+---------------------+
+| VIIRS                               | 2011-current               | daily                                              | 375 & 750m^2c^ | Google Earth Engine |
++-------------------------------------+----------------------------+----------------------------------------------------+----------------+---------------------+
+| Harmonized Landsat-Sentinel Product | 2013-current^d^            | 2-3 days                                           | 30m^2^         | LP DAAC             |
++-------------------------------------+----------------------------+----------------------------------------------------+----------------+---------------------+
 
 : Table 1. Satellite background information. ^a^ LS7 is currently in the process of being decommissioned. While we are still seeing LS7 images through 2022, they have started to become unreliable due to the proximity of the satellite to the earth. ^b^ Data are resampled to a 30x30m pixel, even if the resolution is larger. ^c^ There are two sensor groups on the VIIRS satellite with differing resolutions. ^d^ Data become more sparse in January 2021 - NASA is not processing all available tiles, but can upon request.
 
-## Satellite Image Tiles
+## Satellite Image Tile Overlays
 
-Satellite images are processed as tiles, and each of the satellite constellations use a different grid system.
+Satellite images are processed as tiles, and each of the satellite constellations use different grid systems.
 
-![Figure 1. Landsat tiles over western Lake Superior.](images/Superior_Landsat_tiles.jpg)
+![Figure 2. Landsat tiles over western Lake Superior. Green-shaded area is AOI. Pictured are WRS tiles path 26, rows 27 and 28 in red.](images/Superior_Landsat_tiles-01.jpg)
 
-![Figure 2. MODIS/VIIRS tile over western Lake Superior.](images/Superior_MODIS-VIIRS_tiles.jpg)
+![Figure 3. MODIS/VIIRS tile over western Lake Superior. Green-shaded area is AOI. AOI falls within the h11v4 MODIS/VIIRS tile.](images/Superior_MODIS-VIIRS_tiles-02.jpg)
 
-![Figure 3. Harmonized Landsat-Sentinel tiles over western Lake Superior.](images/Superior_HLS_tiles.jpg)
+![Figure 4. HLS/Sentinel tiles over western Lake Superior. Green-shaded area is AOI. Tiles pictured are 15TWN, 15TXN, 15TYM, 15TWM, 15TXM, 15TYM, left to right, top to bottom.](images/Superior_HLS_tiles-01.jpg)
 
 ## Image Inventories
