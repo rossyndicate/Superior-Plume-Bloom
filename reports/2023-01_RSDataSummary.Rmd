@@ -2,8 +2,18 @@
 title: "Superior RS Data Availability"
 author: "B Steele"
 date: "2023-01-20"
-output: html_document
+output:
+  word_document: default
+  html_document: default
 ---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+
+library(tidyverse)
+datadir = '~/Documents/GitHub/Superior-Plume-Bloom/data/inventory/'
+
+```
 
 # Purpose
 
@@ -17,7 +27,7 @@ Below is the area of interest (AOI, green-shaded area) and observed blooms (yell
 
 # Time and Scale
 
-There is an inherent trade off between satellite image overpass frequency and the resolution (pixel size) of the satellite sensors. Satellites with more frequent overpasses will have a larger pixel size.
+There is an inherent trade off between satellite image overpass frequency and the resolution (pixel size) of the satellite sensors (Table 1). Satellites with more frequent overpasses will have a larger pixel size. Note the data access differences between sources. HLS data are not yet available on GEE and require a different acquisition and processing pipeline. Note, that while VIIRS is listed here, we do not provide a summary of VIIRS data for availability. VIIRS is the 'next generation' of the MODIS data and unless we are going to develop the pipeline on MODIS data, we will not use the VIIRS dataset. We'd expect VIIRS to have a similar data inventory to MODIS as described later in the text.
 
 +-------------------------------------+----------------------------+----------------------------------------------------+----------------+---------------------+
 | Satellite/Product                   | Years of Data Availability | Overpass Frequency                                 | Resolution     | Data Access         |
@@ -28,9 +38,9 @@ There is an inherent trade off between satellite image overpass frequency and th
 |                                     |                            |                                                    |                |                     |
 |                                     | LS7: 1999-2021^a^          |                                                    |                |                     |
 |                                     |                            |                                                    |                |                     |
-|                                     | LS8: 2013-                 |                                                    |                |                     |
+|                                     | LS8: 2013-current          |                                                    |                |                     |
 |                                     |                            |                                                    |                |                     |
-|                                     | LS9: 2021-                 |                                                    |                |                     |
+|                                     | LS9: 2021-current          |                                                    |                |                     |
 +-------------------------------------+----------------------------+----------------------------------------------------+----------------+---------------------+
 | MODIS (Aqua/Terra)                  | Aqua: 2000-current         | each satellite has a return frequency of \~ 2 days | 500m^2^        | Google Earth Engine |
 |                                     |                            |                                                    |                |                     |
@@ -45,7 +55,7 @@ There is an inherent trade off between satellite image overpass frequency and th
 
 ## AOI-Satellite Tile Overlays
 
-Satellite images are processed as tiles, and each of the satellite constellations use different grid systems. To get an idea of the relative area of the AOI to the Satellite tiles, Below are
+Satellite images are processed as tiles, and each of the satellite constellations use different grid systems. To get an idea of the relative area of the AOI to the Satellite tiles, below are images of each satellite's downstream processed tile outline (red) and our AOI (green-shaded polygon)
 
 ![Figure 2. Landsat tiles over western Lake Superior. Green-shaded area is AOI. Pictured are WRS tiles path 26, rows 27 and 28 in red.](images/Superior_Landsat_tiles-01.jpg){width="644"}
 
@@ -53,6 +63,163 @@ Satellite images are processed as tiles, and each of the satellite constellation
 
 ![Figure 4. HLS/Sentinel tiles over western Lake Superior. Green-shaded area is AOI. Tiles pictured are 15TWN, 15TXN, 15TYM, 15TWM, 15TXM, 15TYM, left to right, top to bottom.](images/Superior_HLS_tiles-01.jpg){width="642"}
 
-## Image Inventories
+# Image Inventories
 
-Despite the return frequencies of each of the satellite constellations, the availability of images is defined by cloud cover.
+Despite the return frequencies of each of the satellite constellations, the availability of images is defined by cloud cover. Using the above AOI, we've summarized the availability of images per satellite constellation/product. Note that a different method is used to aggregate HLS data versus Landsat and MODIS due to how the data are accessed.
+
+For HLS, we are assuming that each tile shown in Figure 4 is weighted equally over the AOI and that cloud cover is equally distributed throughout the tile. This is a very conservative estimate of data availability. For Landsat and MODIS, we were able to process and clip images in GEE to evaluate a more precise value for proportional area available. We have taken this into account in our summaries below by reducing the threshold for inclusion in summary figures.
+
+For each of the summary periods below (weekly, monthly), the first figure provides an estimate of proportion of the AOI that we would be able to rasterize into open water-plume-bloom and the second figure gives an idea of the likelihood that we can 'fill in the gaps' from the first figure. The higher the number of images available, the more likely we will be to fill out the AOI with rasterized open water-plume-bloom information.
+
+```{r load files, include=FALSE}
+#actual proportion of coverage calculated in GEE with above AOI
+ls = read.csv(file.path(datadir, 'superior_ls_inventory.csv')) %>% 
+  mutate(sat = 'Landsat',
+         date = as.Date(date))
+modis = read.csv(file.path(datadir, 'superior_modis_inventory.csv')) %>% 
+  mutate(sat = 'MODIS',
+         date = as.Date(system.index, format = '%Y_%m_%d'))
+
+# filter and approximate coverage, where we assume tiles are completely in AOI and are equally weighted.
+hls = read.csv(file.path(datadir, 'superior_hls_all_requests.csv'))
+hls = unique(hls) #for whatever reason, there are a bunch of dupes in here
+hls = hls %>%   
+  filter(tile %in% c('15TWN', '15TXN', '15TYM', '15TWM', '15TXM', '15TYM') & #filter for desired 6 tiles
+    grepl('jpg', Asset_Link)) %>% #for the 'image' request
+  mutate(sat = 'HLS',
+         date = as.Date(as.POSIXct(substr(Datetime, 1, nchar(Datetime)-6), format = '%Y-%m-%dT%H:%M:%S', tz = 'UTC')),
+         p_area = (1/6)*((100-Cloud_Cover)/100)) %>% 
+  group_by(date, Collection, sat) %>% 
+  summarize(p_area = sum(p_area))
+
+sats = full_join(ls, modis) %>% full_join(., hls) %>% 
+  mutate(year = as.numeric(format(date, '%Y')),
+         week = as.numeric(format(date, '%W')),
+         month = as.numeric(format(date, '%m'))) %>% 
+  filter(month >= 4 & month < 11)
+```
+
+## Weekly summaries
+
+Given the data available, we can really only use MODIS to build a consistent rasterized timeseries on a weekly time step. Below we're looking at maximum proportional cloud-free area of the AOI during a given week.
+
+```{r weekly proportion, echo=FALSE}
+sats %>% 
+  group_by(year, week, sat) %>% 
+  summarize(p_area = max(p_area)) %>% 
+  ggplot(.) +
+  geom_tile(aes(x = week, y = year, fill = p_area)) +
+  facet_grid(. ~ sat)+
+  theme_bw() +
+  scale_y_reverse() +
+  scale_fill_viridis_b() +
+  labs(x = 'week of year',
+         fill = 'maximum\nproportional\narea of AOI\nwithout\nclouds')
+```
+
+Figure 5. Indication of maximum proportional area of AOI per week without clouds by satellite product.
+
+And here, the number of images available per week that have at least 50% of our AOI available for Landsat and MODIS or 40% for our estimate for HLS for analysis. Because our estimate of HLS is calculated differently, we are allowing for a slightly more liberal aggregation to contribute to an output product.
+
+```{r weekly count, echo=FALSE}
+sats %>% 
+  filter((sat == 'Landsat' & p_area >0.5) |
+           (sat == 'MODIS' & p_area >0.5) |
+           (sat == 'HLS' & p_area >0.4)) %>% 
+  group_by(year, week, sat) %>%  
+  summarize(img_count = n()) %>% 
+  mutate(img_bin = case_when(img_count == 1 ~ '1',
+                             img_count == 2 ~ '2', 
+                             between(img_count, 3, 5) ~ '3-5',
+                             between(img_count, 6, 10) ~ '6-10',
+                             img_count > 10 ~ '> 10'),
+         img_bin = factor(img_bin, levels = c('1', '2', '3-5', '6-10', '> 10')))%>% 
+  ggplot(.) +
+  geom_tile(aes(x = week, y = year, fill = img_bin)) +
+  facet_grid(. ~ sat)+
+  theme_bw() +
+  scale_y_reverse() +
+  scale_fill_viridis_d() +
+  labs(x = 'week of year',
+         fill = 'number\nof images\nabove AOI\nthreshold')
+```
+
+Figure 6. Number of images above described threshold per week.
+
+## Monthly Summaries
+
+When the data are aggregated on a monthly basis, we can use other satellite constellations to produce a more consistent product. Note, the output raster is likely to be incomplete for HLS and Landsat products, as we can not guarantee that all pixels in our AOI are available for analysis given the limited number of images included in the output product.
+
+```{r monthly summaires, , echo=FALSE}
+sats %>% 
+  group_by(year, month, sat) %>% 
+  summarize(p_area = max(p_area))  %>% 
+  ggplot(.) +
+  geom_tile(aes(x = month, y = year, fill = p_area)) +
+  facet_grid(. ~ sat)+
+  theme_bw() +
+  scale_y_reverse() +
+  scale_fill_viridis_b() +
+  labs(x = 'month of year',
+         fill = 'maximum\nproportional\narea of AOI\nwithout\nclouds')
+```
+
+Figure 7. Indication of maximum proportional area per month of AOI without clouds by satellite product.
+
+Number of images that have at least 50% of AOI (Landsat/MODIS) or 40% of our AOI estimate (HLS) when aggregated to a monthly timestep:
+
+```{r monthly count, echo=FALSE}
+sats %>% 
+  filter((sat == 'Landsat' & p_area >0.5) |
+           (sat == 'MODIS' & p_area >0.5) |
+           (sat == 'HLS' & p_area >0.4)) %>% 
+  group_by(year, month, sat) %>%  
+  summarize(img_count = n()) %>% 
+  mutate(img_bin = case_when(img_count == 1 ~ '1',
+                             img_count == 2 ~ '2', 
+                             between(img_count, 3, 5) ~ '3-5',
+                             between(img_count, 6, 10) ~ '6-10',
+                             between(img_count, 11, 25) ~ '11-25',
+                             img_count > 25 ~ '> 25'),
+         img_bin = factor(img_bin, levels = c('1', '2', '3-5', '6-10', '11-25', '> 25'))) %>% 
+  ggplot(.) +
+  geom_tile(aes(x = month, y = year, fill = img_bin)) +
+  facet_grid(. ~ sat)+
+  theme_bw() +
+  scale_y_reverse() +
+  scale_fill_viridis_d() +
+  labs(x = 'month of year',
+         fill = 'number\nof images\nabove AOI\nthreshold')
+```
+
+Figure 8. Number of images above described threshold per week.
+
+## Notes on data aggregation:
+
+We will have to consider a variety of aggregation techniques and likely enumerate uncertainties in our final output product. Here are some general notes/thoughts to keep in mind as we move forward:
+
+-   We assume the data 'subset' (i.e. the available images for any time period) is representative of actual conditions throughout the entire time period of aggregation. Because return frequency is static and cloud cover is stochastic, we can probably assert this without anyone getting too upset.
+
+-   Any area of our AOI that has fewer stacked images compared to other areas during any aggregated time period may have a greater uncertainty associated with their labels. This may be especially true for those areas where we have labeled "open water" values. There is likely some threshold where there is no impact uncertainty relative to number of images included in any output area.
+
+# Potential Raster Output
+
+## Landsat:
+
+With data dating back to the 1980s, this is the optimal data source for time series over many decades. In order to create a reliable and complete raster data set, however, the data need to be aggregated to a time step of approximately monthly. Although the pixel resolution is sufficient for identification of floating-mat blooms, the gaps in data temporally may mean we 'miss' these events. Output of pipeline built on Landsat would likely be a monthly raster of \~100m pixels from 1985-2022.
+
+## MODIS:
+
+MODIS data availability and extent is the most optimal of the three satellite constellations shown here. The major drawback is resolvable pixel size (500-1000 m). For our particular research question, we may miss blooms completely due to this. Output of pipeline built on MODIS imagery would likely be a weekly raster of 500m pixels from 2000-2022.
+
+## HLS:
+
+A big part of 'novelty' of the HLS acquisition and analysis pipeline is using [STAC](https://lpdaac.usgs.gov/resources/e-learning/getting-started-cloud-native-hls-data-python/) (the Spatialtemporal Asset Catalog) to gather and process/request images and we have not yet built out this pipeline beyond taking inventory of the available data. This product shares many of the drawbacks listed in the Landsat section above. The output of a pipeline based on HLS data would likely be a monthly raster of 30-50m resolution at a higher or similar uncertainty threshold (likely similar to the uncertainty in the 100m Landsat output) or 100m at a slightly lower uncertainty than the 100m Landsat output and would be limited to the time period 2013-2022.
+
+# Next Steps
+
+Given the constraints, caveats, and trade-offs described and shown above, we now need direction on what the output should look like to help guide in the creation of a pipeline. This includes feedback on the temporal time step, the optimal raster pixel size, and the initial satellite product to develop the process.
+
+To be thorough, we will likely try to extract images for all the described satellite constellations here where there is overlapping- or neighboring-by-date observations of algal blooms as shown in Figure 1. This will help us investigate how we can incorporate that information. If there is insufficient data to inform an algorithm of this nature, we will pivot to using established algorithms for estimating chlorophyll-*a* from image bandmath. We will be working on this the week prior to your arrival at CSU to help inform our discussions throughout the week.
+
+All pipelines will require local storage and compute power and acquisition of that hardware will be necessary to develop the pipeline. While the HLS data pipeline will require local storage and compute of the STAC-acquired image collections in order to process with clustering techniques and image segmentation. All GEE pipelines can be run in the cloud or locally. The data handling techniques in GEE are limited, as well as any ability to enumerate uncertainty. Because of this, we will lean towards data acquisition and processing in GEE and then rely on local storage and compute.
