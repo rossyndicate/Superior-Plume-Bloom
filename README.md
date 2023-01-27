@@ -6,3 +6,6 @@ Contact: B Steele (B.Steele@colostate.edu)
 ## Folder Descriptions
 
 *Reports*: Rmd files for report generation
+*availability_checks*: scripts to document image availability for our AOI
+*data*: this links to B's OneDrive folder for the Superior project
+
