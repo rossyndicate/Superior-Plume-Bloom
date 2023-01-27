@@ -194,23 +194,6 @@ def maximum_no_of_tasks(MaxNActive, waitingPeriod):
 
 ```
 
-#### getDate: Function to grab date from a list
-
-```{python}
-def getDate(i):
-  date = uniqueDates.get(i)
-  return date
-
-```
-
-#### getLength: Function to grab length of date
-
-```{python}
-def getLength(ee_list):
-  length = ee_list.length().getInfo()
-  return length
-```
-
 # Export LS Availability
 
 ## Declare timeframe and define CRS
@@ -237,11 +220,13 @@ for y in years:
   allDates = ls_aoi.aggregate_array('DATE_ACQUIRED')
   uniqueDates = allDates.distinct().getInfo()
   
+  collectionOut = ee.Image()
+  
   for d in range(0, len(uniqueDates), 1):
     date = uniqueDates[d]
     datePlus1 = (datetime.datetime.strptime(date, '%Y-%m-%d') + datetime.timedelta(days = 1)).strftime('%Y-%m-%d')
     oneDate = ls_aoi.filter(ee.Filter.date(ee.Date(date),ee.Date(datePlus1)))
-    w = ls_aoi.first().get('WRS_PATH')
+    w = oneDate.first().get('WRS_PATH')
     if d > 0:
       collection = oneDate.mosaic().set({
         'wrs': w,
@@ -279,6 +264,7 @@ for y in years:
 ```{r}
 #get file list and ids
 files = drive_ls('superior_availability/')
+files = files[grepl('ls', files$name),]
 
 #create a temp folder
 dir.create('availability_checks/tmp')
@@ -297,13 +283,12 @@ map2(files$id, files$name, dr_down)
 filelist = list.files(tmpdir)
 
 read_file = function(file) {
-  df = read.csv(file.path(tmpdir, file)) %>% 
-    mutate(sat = unlist(str_split(file, '_'))[2],
-    year = unlist(str_split(file, '_'))[4])
-  df
+  read.csv(file.path(tmpdir, file))
 }
 
 alldata = map_dfr(filelist, read_file)
+
+alldata = alldata %>% rename(first_wrs = wrs)
 
 datadir = 'data/inventory'
 write.csv(alldata, file.path(datadir, 'superior_ls_inventory.csv'), row.names = F)
@@ -313,6 +298,7 @@ write.csv(alldata, file.path(datadir, 'superior_ls_inventory.csv'), row.names = 
 
 ```{r}
 filtered = alldata[alldata$p_area >= 0.5,]
+# filtered = filtered[filtered$wrs == 26,] there are a few instances of multiple satellites imaging on a single day in neighboring paths, for now, let's just call this summary sufficient.
 
-write.csv(filtered, file.path(datadir, 'superior_modis_inventory_gte50perc.csv'), row.names = T)
+write.csv(filtered, file.path(datadir, 'superior_ls_inventory_gte50perc.csv'), row.names = T)
 ```

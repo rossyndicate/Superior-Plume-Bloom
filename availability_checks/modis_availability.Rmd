@@ -297,6 +297,7 @@ for year in years:
 ```{r}
 #get file list and ids
 files = drive_ls('superior_availability/')
+files = files[grepl('aqua', files$name) | grepl('terra', files$name) ,]
 
 #create a temp folder
 dir.create('availability_checks/tmp')
