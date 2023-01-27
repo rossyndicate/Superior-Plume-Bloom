@@ -69,6 +69,8 @@ hlss_collection$extent %>%
 Enter query terms to get info from STAC:
 
 ```{r}
+dumpdir = '~/OneDrive - Colostate/Superior/data/inventory/'
+
 colls <- list("HLSS30.v2.0", "HLSL30.v2.0")
 
 #indicate desired time range, knowing that start date of HLS availability is 04-2023
@@ -238,7 +240,7 @@ ggplot(filt_summary_bywkyr, aes(x = wk, y = n_tiles)) +
        fill = 'number\nof\ntiles') +
   geom_col(aes(fill = n_tiles))+
   theme_bw()
-ggsave('hls_inventory_superior_cclt70.jpg')
+ggsave(file.path(dumpdir,'hls_inventory_superior_cclt70.jpg'))
 ```
 
 ```{r}
@@ -268,5 +270,12 @@ ggplot(summary_bywkyr, aes(x = wk, y = n_tiles)) +
        fill = 'number\nof\ntiles') +
   geom_col(aes(fill = n_tiles))+
   theme_bw()
-ggsave('hls_inventory_superior_allcc.jpg')
+ggsave(file.path(dumpdir, 'hls_inventory_superior_allcc.jpg'))
+```
+
+Save lists
+
+```{r}
+write.csv(all_requests, file.path(dumpdir, 'superior_hls_all_requests.csv'), row.names = F)
+write.csv(all_requests_filt, file.path(dumpdir, 'superior_hls_filtered_requests.csv'), row.names = F)
 ```
