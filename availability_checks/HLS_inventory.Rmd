@@ -1,0 +1,281 @@
+---
+title: "HLS Inventory"
+author: "B Steele"
+date: "2023-01-17"
+output: html_document
+---
+
+# Purpose
+
+This script is meant to inventory HLS availability from the LP DAAC for specific locations. It was developed based on the `CMR_STAC_Tutorial.Rmd` found on [LP DAAC's user resources git](https://git.earthdata.nasa.gov/projects/LPDUR). Unedited code chunks are indicated with comments at the start of each chunk. Please refer to the tutorial for more information on STAC.
+
+## Prepare workspace
+
+Identify, install, and load necessary packages.
+
+```{r, warning = FALSE, message = FALSE}
+#chunk from LP DAAC CMR_STAC_Tutorial.Rmd
+packages <- c('httr','purrr','jsonlite','DT','magrittr', 'xml2', 'dplyr', 'tidyverse') 
+new.packages <- packages[!(packages %in% installed.packages()[,"Package"])] 
+if(length(new.packages)) install.packages(new.packages, repos='http://cran.rstudio.com/') else print('All required packages are installed.') 
+invisible(lapply(packages, library, character.only = TRUE))
+```
+
+## Point to STAC Collection URLs
+
+```{r}
+hlsl_col_url = "https://cmr.earthdata.nasa.gov/stac/LPCLOUD/collections/HLSL30.v2.0"
+hlsl_items_url = "https://cmr.earthdata.nasa.gov/stac/LPCLOUD/collections/HLSL30.v2.0/items"
+hlss_col_url = "https://cmr.earthdata.nasa.gov/stac/LPCLOUD/collections/HLSS30.v2.0"
+hlss_items_url = "https://cmr.earthdata.nasa.gov/stac/LPCLOUD/collections/HLSS30.v2.0/items"
+lpcloud_search_url = "https://cmr.earthdata.nasa.gov/stac/LPCLOUD/search"
+```
+
+Get and print collection information for HLS-L[andsat]:
+
+```{r}
+hlsl_collection <- httr::GET(hlsl_col_url) %>% 
+  httr::content()
+
+hlsl_collection <- hlsl_collection %>% 
+  jsonlite::toJSON(auto_unbox = TRUE) %>% 
+  jsonlite::fromJSON()
+
+cat(hlsl_collection$description)
+```
+
+And for HLS-S[entinel]
+
+```{r}
+hlss_collection <- httr::GET(hlss_col_url) %>% 
+  httr::content()
+
+hlss_collection <- hlss_collection %>% 
+  jsonlite::toJSON(auto_unbox = TRUE) %>% 
+  jsonlite::fromJSON()
+
+cat(hlss_collection$description)
+```
+
+HLS-L data are available from 2013 onward and HLS-S from late 2015 onward, worldwide.
+
+```{r}
+hlsl_collection$extent %>% 
+  jsonlite::toJSON(auto_unbox = TRUE)
+hlss_collection$extent %>% 
+  jsonlite::toJSON(auto_unbox = TRUE)
+```
+
+Enter query terms to get info from STAC:
+
+```{r}
+dumpdir = '~/OneDrive - Colostate/Superior/data/inventory/'
+
+colls <- list("HLSS30.v2.0", "HLSL30.v2.0")
+
+#indicate desired time range, knowing that start date of HLS availability is 04-2023
+startyear = 2013
+endyear = 2022
+startmonth = 04
+endmonth = 11
+
+#LL and UR coordinates of area of interest
+bx <- '-92.300,46.567,-87.191,49.043' 
+
+#tiles of interest (https://hls.gsfc.nasa.gov/products-description/tiling-system/?_ga=2.88594395.1316645335.1673975201-1973049045.1668112353)
+tiles = c('15TWM', '15TXM', '15TYM', '15TWN', '15TXN', '15TYM', '15UYP')
+
+```
+
+Make datetime list based on above variables
+
+```{r}
+#create sequence of 
+years = seq(startyear, endyear, 1)
+months = seq(startmonth, endmonth, 1)
+
+year_months = expand.grid(years, months)
+colnames(year_months) = c('years', 'months')
+
+make_datetime_list = function(years, months){
+  paste0(as.character(years), '-', 
+         if(nchar(as.character(months)) == 1) {paste0('0', as.character(months))}
+          else(as.character(months)),
+         '-01T00:00:00.00Z/',
+         as.character(years), '-', 
+         if(nchar(as.character(months)) == 1) {paste0('0', as.character(months))}
+          else(as.character(months)),
+         ifelse(months %in% c(1,3,5,7,8,10,12), '-31T23:59:59.59Z',
+                ifelse(months == 2, '-28T23:59:59.59Z',
+                       '-30T23:59:59.59Z')))
+}
+
+datetime_list = map2_chr(year_months$years, year_months$months, make_datetime_list)
+
+```
+
+Make some additional functions to call in `make_search_query`
+
+```{r}
+make_body = function(DT){
+  list(limit=100, 
+       datetime=DT,
+       bbox= bx,
+       collections= colls)
+}
+
+get_number_pages = function(DT){
+  bdy = make_body(DT)
+  search_req <- httr::POST(lpcloud_search_url,body = bdy, encode = "json") %>% 
+    httr::content(as = "text") %>%  
+    jsonlite::fromJSON()
+  seq(1,round(search_req$numberMatched/search_req$numberReturned, 1), 1)
+}
+
+make_page_list = function(DT){
+  n_pages = get_number_pages(DT)
+  ifelse(n_pages > 1, paste0(lpcloud_search_url, '?page=', n_pages),    lpcloud_search_url)
+}
+
+make_result_df = function(url, bdy){
+  src_req = httr::POST(url, body = bdy, encode = "json") %>% 
+    httr::content(as = "text") %>%  
+    jsonlite::fromJSON()
+  
+  granule_list <- list()
+
+  n <- 1
+  for(row in row.names(src_req$features)){
+    f <- src_req$features[row,]
+    for (b in f$assets){
+      df <- data.frame(Collection = f$collection,
+                       Granule_ID = f$id,
+                       Cloud_Cover = f$properties$`eo:cloud_cover`,
+                       Datetime = f$properties$datetime,
+                       Asset_Link = b$href, stringsAsFactors=FALSE)
+      granule_list[[n]] <- df
+      n <- n + 1
+    }
+  }
+  
+  do.call(rbind, granule_list)
+}
+
+paste_list = function(list, len) {
+  
+}
+```
+
+Bring all the pieces together with `make_search_query`
+
+```{r}
+make_search_query = function(DT){
+  b = make_body(DT)
+  u = make_page_list(DT)
+  if(length(u) == 1 & length(b) == 1) { 
+    return(make_result_df(u, b)) 
+    } else { 
+      b_many = rep(list(b), length(u))
+      return(map2_df(u, b_many, make_result_df))
+    }
+}
+```
+
+Now, map over the list. This particular chunk of code will take some time to process if you have a particularily long `datetime_list`.
+
+```{r}
+all_requests = map_dfr(datetime_list, make_search_query)
+
+```
+
+Filter for cloud cover \<70% and tiles in desired area:
+
+```{r}
+#filter out images with >70% cloud cover
+all_requests_filt = all_requests[all_requests$Cloud_Cover < 70, ]
+#get the tile name
+get_tile = function(gran){
+  unlist(strsplit(gran, '\\.'))[3]
+}
+
+#apply to granuleid and save in df
+all_requests_filt$tile = map_chr(all_requests_filt$Granule_ID, get_tile)
+#drop 't'
+all_requests_filt$tile = substr(all_requests_filt$tile, 2, nchar(all_requests_filt$tile))
+
+all_requests$tile = map_chr(all_requests$Granule_ID, get_tile)
+all_requests$tile = substr(all_requests$tile, 2, nchar(all_requests$tile))
+
+#filter for only tiles we want
+all_requests_filt=all_requests_filt[(all_requests_filt$tile %in% tiles), ]
+all_requests=all_requests[(all_requests$tile %in% tiles), ]
+```
+
+Get unique dates per tile
+
+```{r}
+filt_summary_bytile = all_requests_filt %>% 
+  mutate(date = as.Date(as.POSIXct(Datetime)),
+         wk_yr = format(date, '%W-%Y')) %>%  
+  filter(grepl('jpg', Asset_Link)) %>% 
+  group_by(wk_yr, tile) %>% 
+  summarize(n_images = n())
+
+filt_summary_bywkyr = all_requests_filt %>% 
+  mutate(date = as.Date(as.POSIXct(Datetime)),
+         wk_yr = format(date, '%W-%Y')) %>%  
+  filter(grepl('jpg', Asset_Link)) %>% 
+  group_by(wk_yr) %>% 
+  summarize(n_tiles = length(unique(tile)),
+    n_images = n())
+
+
+filt_summary_bywkyr$wk = substr(filt_summary_bywkyr$wk_yr, 1, 2)
+filt_summary_bywkyr$yr = substr(filt_summary_bywkyr$wk_yr, 4,8)
+ggplot(filt_summary_bywkyr, aes(x = wk, y = n_tiles)) +
+  facet_grid(yr~.) +
+  labs(title = 'Harmonized LS-Sen2 tiles with <70% clouds',
+       y = 'number of image tiles with data\n(complete coverage = 6)',
+       x = 'week of year',
+       fill = 'number\nof\ntiles') +
+  geom_col(aes(fill = n_tiles))+
+  theme_bw()
+ggsave(file.path(dumpdir,'hls_inventory_superior_cclt70.jpg'))
+```
+
+```{r}
+summary_bytile = all_requests %>% 
+  mutate(date = as.Date(as.POSIXct(Datetime)),
+         wk_yr = format(date, '%W-%Y')) %>%  
+  filter(grepl('jpg', Asset_Link)) %>% 
+  group_by(wk_yr, tile) %>% 
+  summarize(n_images = n())
+
+summary_bywkyr = all_requests %>% 
+  mutate(date = as.Date(as.POSIXct(Datetime)),
+         wk_yr = format(date, '%W-%Y')) %>%  
+  filter(grepl('jpg', Asset_Link)) %>% 
+  group_by(wk_yr) %>% 
+  summarize(n_tiles = length(unique(tile)),
+    n_images = n())
+
+
+summary_bywkyr$wk = substr(summary_bywkyr$wk_yr, 1, 2)
+summary_bywkyr$yr = substr(summary_bywkyr$wk_yr, 4,8)
+ggplot(summary_bywkyr, aes(x = wk, y = n_tiles)) +
+  facet_grid(yr~.) +
+  labs(title = 'Harmonized LS-Sen2 tiles no cloud filter',
+       y = 'number of image tiles with data\n(complete coverage = 6)',
+       x = 'week of year',
+       fill = 'number\nof\ntiles') +
+  geom_col(aes(fill = n_tiles))+
+  theme_bw()
+ggsave(file.path(dumpdir, 'hls_inventory_superior_allcc.jpg'))
+```
+
+Save lists
+
+```{r}
+write.csv(all_requests, file.path(dumpdir, 'superior_hls_all_requests.csv'), row.names = F)
+write.csv(all_requests_filt, file.path(dumpdir, 'superior_hls_filtered_requests.csv'), row.names = F)
+```
