@@ -29,6 +29,12 @@ from datetime import datetime
 import time
 ```
 
+Authenticate `googledrive`
+
+```{r}
+drive_auth()
+```
+
 ## Authenticate your Earth Engine Session
 
 In the terminal in your Rstudio, authenticate your GEE login information. Do this by executing the following text in your zsh terminal.
@@ -43,7 +49,7 @@ Now we can initiate our EE session:
 ee.Initialize()
 ```
 
-# Aquire data availability
+# Acquire data availability from GEE
 
 ## Load image collections and aoi
 
