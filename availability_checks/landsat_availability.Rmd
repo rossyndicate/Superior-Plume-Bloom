@@ -70,7 +70,7 @@ l5 = ee.ImageCollection('LANDSAT/LT05/C02/T1_L2') \
 l4 = ee.ImageCollection('LANDSAT/LT04/C02/T1_L2') \
   .select(['SR_B7', 'QA_PIXEL'])
 
-ls = ee.ImageCollection(l4.merge(l5).merge(l7).merge(l5).merge(l4))
+ls = ee.ImageCollection(l4.merge(l5).merge(l7).merge(l8).merge(l8))
 
 aoi = ee.FeatureCollection('projects/ee-ross-superior/assets/sup_pl_bl_small_aoi')
 
@@ -225,19 +225,22 @@ for y in years:
   for d in range(0, len(uniqueDates), 1):
     date = uniqueDates[d]
     datePlus1 = (datetime.datetime.strptime(date, '%Y-%m-%d') + datetime.timedelta(days = 1)).strftime('%Y-%m-%d')
-    oneDate = ls_aoi.filter(ee.Filter.date(ee.Date(date),ee.Date(datePlus1)))
+    oneDate = ls_aoi.filterDate(ee.Date(date),ee.Date(datePlus1))
     w = oneDate.first().get('WRS_PATH')
+    miss = oneDate.first().get('LANDSAT_PRODUCT_ID')
     if d > 0:
       collection = oneDate.mosaic().set({
         'wrs': w,
-        'date': ee.String(date)
+        'date': ee.String(date),
+        'ls_miss': miss
       })
       addCollection = ee.ImageCollection(collection)
       collectionOut = collectionOut.merge(addCollection)
     else:
       collection = oneDate.mosaic().set({
         'wrs': w,
-        'date': ee.String(date)
+        'date': ee.String(date),
+        'ls_miss': miss
       })
       collectionOut = ee.ImageCollection(collection)
       
@@ -248,7 +251,7 @@ for y in years:
   
   file_out = ee.batch.Export.table.toDrive(
     collection = ls_area, 
-    selectors = ['date', 'wrs', 'area', 'p_area'],
+    selectors = ['date', 'wrs', 'ls_miss', 'area', 'p_area'],
     description = filename,
     folder = 'superior_availability',
     fileFormat = 'csv')
