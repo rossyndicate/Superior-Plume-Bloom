@@ -297,11 +297,3 @@ datadir = 'data/inventory'
 write.csv(alldata, file.path(datadir, 'superior_ls_inventory.csv'), row.names = F)
 ```
 
-## Filter for 50% coverage
-
-```{r}
-filtered = alldata[alldata$p_area >= 0.5,]
-# filtered = filtered[filtered$wrs == 26,] there are a few instances of multiple satellites imaging on a single day in neighboring paths, for now, let's just call this summary sufficient.
-
-write.csv(filtered, file.path(datadir, 'superior_ls_inventory_gte50perc.csv'), row.names = T)
-```
