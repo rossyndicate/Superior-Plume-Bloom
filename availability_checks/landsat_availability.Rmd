@@ -1,0 +1,299 @@
+---
+title: "Landsat data availability"
+author: "B Steele"
+date: "2023-01-26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source('availability_checks/pySetup.R')
+library(googledrive)
+
+```
+
+# Purpose
+
+This script pulls MODIS availability from GEE and summarizes it for the designated AOI in western Lake Superior.
+
+# Dependencies
+
+[Install and initiate](https://cloud.google.com/sdk/docs/install) `gcloud`.
+
+# Setup
+
+Install python module.
+
+```{python}
+import ee
+import datetime
+import time
+```
+
+Authenticate `googledrive`
+
+```{r}
+drive_auth()
+```
+
+## Authenticate your Earth Engine Session
+
+In the terminal in your Rstudio, authenticate your GEE login information. Do this by executing the following text in your zsh terminal.
+
+`earthengine authenticate`
+
+This will open a browser for you to login using your Google account associated with your EE login. If this fails and says that gcloud is not installed or recognized, make sure you're using a zsh terminal by clicking the dropdown next to 'Terminal 1', clicking properties, choosing 'New Terminal Opens With' zsh. For whatever reason (at least on a MacOS M1), a bash terminal will not execute the authentication process correctly. Additionally, there are commands (ee.Authenticate) in the Python GEE API, however it does not work in an .Rmd or .Qmd file code chunk.
+
+Now we can initiate our EE session:
+
+```{python}
+ee.Initialize()
+
+```
+
+# Acquire data availability from GEE
+
+Using GEE, summarize the proportion of area available for analysis within the AOI per day
+
+## Load image collections and aoi
+
+```{python}
+#grab C2 SR/ST Landsat image collections and grab a consistent band and the qa pixel for this purpose.
+l9 = ee.ImageCollection('LANDSAT/LC09/C02/T1_L2') \
+  .select(['SR_B7', 'QA_PIXEL'])
+l8 = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2') \
+  .select(['SR_B7', 'QA_PIXEL'])
+l7 = ee.ImageCollection('LANDSAT/LE07/C02/T1_L2') \
+  .select(['SR_B7', 'QA_PIXEL'])
+l5 = ee.ImageCollection('LANDSAT/LT05/C02/T1_L2') \
+  .select(['SR_B7', 'QA_PIXEL'])
+l4 = ee.ImageCollection('LANDSAT/LT04/C02/T1_L2') \
+  .select(['SR_B7', 'QA_PIXEL'])
+
+ls = ee.ImageCollection(l4.merge(l5).merge(l7).merge(l8).merge(l8))
+
+aoi = ee.FeatureCollection('projects/ee-ross-superior/assets/sup_pl_bl_small_aoi')
+
+ls = ls.filterBounds(aoi)
+```
+
+## Cacluate AOI area
+
+```{python}
+aoi_area = aoi.geometry().area()
+print(aoi_area.getInfo())
+```
+
+## Load Functions
+
+#### clip: Function to clip image collection to AOI
+
+```{python}
+def clip(image):
+  cl_im = image.clip(aoi)
+  return cl_im
+
+```
+
+#### findWater_noClouds: Function to mask for water pixels and no clouds based on Landsat PIXEL_QA band.
+
+Note, this is not the most robust way to perform either of these checks, but it will give us some idea of data availability
+
+-   Bit 1: Dilated Cloud
+
+-   Bit 3: Cloud
+
+-   Bit 4: Cloud Shadow
+
+-   Bit 5: Snow
+
+-   Bit 7: Water
+
+```{python}
+def findWater_noClouds(image):
+  qa = image.select('QA_PIXEL')
+  water = qa.bitwiseAnd(1 << 7)
+  dialatedclouds = qa.bitwiseAnd(1 << 1)
+  clouds = qa.bitwiseAnd(1 << 3)
+  shadow = qa.bitwiseAnd(1 << 4)
+  snow = qa.bitwiseAnd(1 << 5)
+  qaClouds = dialatedclouds.eq(1)\
+    .where(clouds.eq(1), ee.Image(2)) \
+    .where(shadow.eq(1), ee.Image(3)) \
+    .where(snow.eq(1), ee.Image(4))
+  maskClouds = qaClouds.eq(0)
+  return image.updateMask(maskClouds).updateMask(water)
+
+```
+
+#### mosaicDate: Function to mosaic images from a given date
+
+```{python}
+def mosaicDate(date):
+  oneDate = ls_aoi.filter(ee.String('DATE_ACQUIRED == ') \
+    .cat(uniqueDates.getString(uniqueDates.indexOf(date))))
+  additionalCollection = oneDate.mosaic()
+  collectionOut = collectionOut.merge(additionalCollection)
+  return collectionOut
+
+```
+
+#### addArea: Function to add area calculation per image
+
+```{python}
+def addArea(image):
+  oneband = image.select('SR_B7') #grab any refl band 
+  area = ee.Image.pixelArea() \
+    .updateMask(oneband.mask()) \
+    .reduceRegion(
+      reducer = ee.Reducer.sum(), \
+      geometry = aoi, \
+      crs = img_crs, \
+      crsTransform = img_crsTrans, \
+      bestEffort = True
+      ) 
+  return image.set(area)
+
+```
+
+#### calcPro: Function to calculate the proportion of AOI available
+
+```{python}
+def calcPro(image):
+  area = image.get('area')
+  pro_area = ee.Number(area).divide(aoi_area)
+  i = image.set('p_area', pro_area)
+  return i
+
+```
+
+#### maximum_no_of_tasks: Define task counter
+
+```{python}
+# function to monitor jobs on GEE as to not send too many at once -- this is a function copied from the guts of AquaSat RS pulls, author is likely Simon Topp 
+
+def maximum_no_of_tasks(MaxNActive, waitingPeriod):
+  ##maintain a maximum number of active tasks
+  time.sleep(10)
+  ## initialize submitting jobs
+  ts = list(ee.batch.Task.list())
+  NActive = 0
+  for task in ts:
+     if ('RUNNING' in str(task) or 'READY' in str(task)):
+         NActive += 1
+  ## wait if the number of current active tasks reach the maximum number
+  ## defined in MaxNActive
+  while (NActive >= MaxNActive):
+    time.sleep(waitingPeriod) # if reach or over maximum no. of active tasks, wait for 2min and check again
+    ts = list(ee.batch.Task.list())
+    NActive = 0
+    for task in ts:
+      if ('RUNNING' in str(task) or 'READY' in str(task)):
+        NActive += 1
+  return()
+
+```
+
+# Export LS Availability
+
+## Declare timeframe and define CRS
+
+Store crs and crsTransform for area calculation
+
+```{python}
+img_crs = ls.first().projection()
+img_crsTrans = img_crs.getInfo()['transform']
+```
+
+## Pull all the functions together
+
+```{python}
+years = range(1983, 2023, 1)
+
+for y in years:
+  start = str(y) + '-04-01'
+  end = str(y) + '-11-30'
+  ls_filt = ls.filterDate(ee.Date(start), ee.Date(end))
+  ls_qa = ls_filt.map(findWater_noClouds)
+  ls_aoi = ls_qa.map(clip)
+  
+  allDates = ls_aoi.aggregate_array('DATE_ACQUIRED')
+  uniqueDates = allDates.distinct().getInfo()
+  
+  collectionOut = ee.Image()
+  
+  for d in range(0, len(uniqueDates), 1):
+    date = uniqueDates[d]
+    datePlus1 = (datetime.datetime.strptime(date, '%Y-%m-%d') + datetime.timedelta(days = 1)).strftime('%Y-%m-%d')
+    oneDate = ls_aoi.filterDate(ee.Date(date),ee.Date(datePlus1))
+    w = oneDate.first().get('WRS_PATH')
+    miss = oneDate.first().get('LANDSAT_PRODUCT_ID')
+    if d > 0:
+      collection = oneDate.mosaic().set({
+        'wrs': w,
+        'date': ee.String(date),
+        'ls_miss': miss
+      })
+      addCollection = ee.ImageCollection(collection)
+      collectionOut = collectionOut.merge(addCollection)
+    else:
+      collection = oneDate.mosaic().set({
+        'wrs': w,
+        'date': ee.String(date),
+        'ls_miss': miss
+      })
+      collectionOut = ee.ImageCollection(collection)
+      
+
+  ls_area = ee.ImageCollection(collectionOut).map(addArea).map(calcPro)
+  
+  filename = 'superior_ls_availability_' + str(y) + '_v_' + datetime.datetime.today().strftime('%Y-%m-%d')
+  
+  file_out = ee.batch.Export.table.toDrive(
+    collection = ls_area, 
+    selectors = ['date', 'wrs', 'ls_miss', 'area', 'p_area'],
+    description = filename,
+    folder = 'superior_availability',
+    fileFormat = 'csv')
+  
+  #Check how many existing tasks are running and take a break at a specified point 
+  maximum_no_of_tasks(10, 120)
+  file_out.start()
+
+```
+
+# Read in Files from Google Drive
+
+```{r}
+#get file list and ids
+files = drive_ls('superior_availability/')
+files = files[grepl('ls', files$name),]
+
+#create a temp folder
+dir.create('availability_checks/tmp')
+tmpdir = 'availability_checks/tmp'
+dr_down = function(fileid, filename) {
+  drive_download(file = as_id(fileid), path = file.path(tmpdir, filename))
+}
+
+map2(files$id, files$name, dr_down)
+
+```
+
+## Collate Drive files together
+
+```{r}
+filelist = list.files(tmpdir)
+
+read_file = function(file) {
+  read.csv(file.path(tmpdir, file))
+}
+
+alldata = map_dfr(filelist, read_file)
+
+alldata = alldata %>% rename(first_wrs = wrs)
+
+datadir = 'data/inventory'
+write.csv(alldata, file.path(datadir, 'superior_ls_inventory.csv'), row.names = F)
+```
+

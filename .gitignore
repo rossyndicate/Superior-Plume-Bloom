@@ -1,0 +1,15 @@
+# General 
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+#python venvs
+availability_checks/env/
+
+#knit output
+reports/images/*
+reports/.DS_Store
+
+#all tmp folders
+*/tmp/*

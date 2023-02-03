@@ -1,0 +1,337 @@
+---
+title: "MODIS data availability"
+author: "B Steele"
+date: "2023-01-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source('availability_checks/pySetup.R')
+library(googledrive)
+```
+
+# Purpose
+
+This script pulls MODIS availability from GEE and summarizes it for the designated AOI in western Lake Superior.
+
+# Dependencies
+
+[Install and initiate](https://cloud.google.com/sdk/docs/install) `gcloud`.
+
+# Setup
+
+Install python module.
+
+```{python}
+import ee
+from datetime import datetime
+import time
+```
+
+Authenticate `googledrive`
+
+```{r}
+drive_auth()
+```
+
+## Authenticate your Earth Engine Session
+
+In the terminal in your Rstudio, authenticate your GEE login information. Do this by executing the following text in your zsh terminal.
+
+`earthengine authenticate`
+
+This will open a browser for you to login using your Google account associated with your EE login. If this fails and says that gcloud is not installed or recognized, make sure you're using a zsh terminal by clicking the dropdown next to 'Terminal 1', clicking properties, choosing 'New Terminal Opens With' zsh. For whatever reason (at least on a MacOS M1), a bash terminal will not execute the authentication process correctly. Additionally, there are commands (ee.Authenticate) in the Python GEE API, however it does not work in an .Rmd or .Qmd file code chunk.
+
+Now we can initiate our EE session:
+
+```{python}
+ee.Initialize()
+```
+
+# Acquire data availability from GEE
+
+## Load image collections and aoi
+
+```{python}
+aqua = ee.ImageCollection('MODIS/061/MYD09GA')
+terra = ee.ImageCollection("MODIS/061/MOD09GA")
+
+aoi = ee.FeatureCollection('projects/ee-ross-superior/assets/sup_pl_bl_small_aoi')
+```
+
+## Cacluate AOI area
+
+```{python}
+aoi_area = aoi.geometry().area()
+print(aoi_area.getInfo())
+```
+
+## Load Functions
+
+#### Helper function to extract the values from specific bits.
+
+The input parameter can be a ee.Number() or ee.Image(). Code adapted from <https://gis.stackexchange.com/a/349401/5160>
+
+```{python}
+def bitwiseExtract(input, fromBit, toBit): 
+  maskSize = ee.Number(1).add(toBit).subtract(fromBit)
+  mask = ee.Number(1).leftShift(maskSize).subtract(1)
+  return input.rightShift(fromBit).bitwiseAnd(mask)
+
+```
+
+#### Function to clip image collection to AOI
+
+```{python}
+def clip(image):
+  cl_im = image.clip(aoi)
+  return cl_im
+
+```
+
+#### Function to mask for water pixels based on MODIS QA state band.
+
+**Bits 3-5: Land/water flag**
+
+0: Shallow ocean
+
+1: Land
+
+2: Ocean coastlines and lake shorelines
+
+3: Shallow inland water
+
+4: Ephemeral water
+
+5: Deep inland water
+
+6: Continental/moderate ocean
+
+7: Deep ocean
+
+```{python}
+def find_water(image):
+  state = image.select('state_1km')
+  shallow_water = bitwiseExtract(state, 3, 5).eq(3)
+  deep_water = bitwiseExtract(state, 3, 5).eq(5)
+  land = bitwiseExtract(state, 3, 5).eq(1)
+  water_mask = shallow_water.eq(1)\
+    .Or(deep_water.eq(1))\
+    .And(land.neq(1))
+  return image.updateMask(water_mask)
+
+```
+
+#### Function to mask clouds
+
+**Bits 0-1: Cloud state**
+
+0: Clear
+
+1: Cloudy
+
+2: Mixed
+
+3: Not set, assumed clear
+
+**Bit 2: Cloud shadow**
+
+0: No
+
+1: Yes
+
+```{python}
+def maskCloud(image):
+  state = image.select('state_1km')
+  clear = bitwiseExtract(state, 0, 1).eq(0).Or(bitwiseExtract(state, 0,1).eq(3))
+  no_shad = state.bitwiseAnd(1 << 2).neq(1)
+  cloud_mask = clear.eq(1).And(no_shad.eq(1))
+  return image.updateMask(cloud_mask)
+
+```
+
+#### Function to add area calculation per image
+
+```{python}
+def addArea(image):
+  oneband = image.select('sur_refl_b01') #grab any refl band 
+  area = ee.Image.pixelArea() \
+    .updateMask(oneband.mask()) \
+    .reduceRegion(
+      reducer = ee.Reducer.sum(), \
+      geometry = aoi, \
+      crs = img_crs, \
+      crsTransform = img_crsTrans, \
+      bestEffort = True
+      ) 
+  return image.set(area)
+
+```
+
+#### Function to calculate the proportion of AOI available
+
+```{python}
+def calcPro(image):
+  area = image.get('area')
+  pro_area = ee.Number(area).divide(aoi_area)
+  i = image.set('p_area', pro_area)
+  return(i)
+
+```
+
+## Declare timeframe and define CRS
+
+Store crs and crsTransform for area calculation
+
+```{python}
+img_crs = terra.first().select('sur_refl_b01').projection()
+img_crsTrans = img_crs.getInfo()['transform']
+
+```
+
+Define the function to walk through the years of images
+
+```{python}
+
+def defineAquaCollection(year):
+  start_date = str(year) + '-04-01'
+  end_date = str(year) + '-11-01'
+  imgcoll = aqua \
+    .filter(ee.Filter.date(start_date, end_date))
+  return imgcoll
+
+
+def defineTerraCollection(year):
+  start_date = str(year) + '-04-01'
+  end_date = str(year) + '-11-01'
+  imgcoll = terra \
+    .filter(ee.Filter.date(start_date, end_date))
+  return imgcoll
+  
+  
+def calcProArea(image):
+  #extract to AOI
+  coll_aoi = clip(image)
+  #find water
+  coll_water = find_water(coll_aoi)
+  #mask clouds
+  coll_qual = maskCloud(coll_water)
+  #calculate area and proportion of area
+  coll_area = calcPro(addArea(coll_qual))
+  return coll_area
+
+```
+
+Define task counter
+
+```{python}
+# function to monitor jobs on GEE as to not send too many at once -- this is a function copied from the guts of AquaSat RS pulls, author is likely Simon Topp 
+
+def maximum_no_of_tasks(MaxNActive, waitingPeriod):
+  ##maintain a maximum number of active tasks
+  time.sleep(10)
+  ## initialize submitting jobs
+  ts = list(ee.batch.Task.list())
+  NActive = 0
+  for task in ts:
+     if ('RUNNING' in str(task) or 'READY' in str(task)):
+         NActive += 1
+  ## wait if the number of current active tasks reach the maximum number
+  ## defined in MaxNActive
+  while (NActive >= MaxNActive):
+    time.sleep(waitingPeriod) # if reach or over maximum no. of active tasks, wait for 2min and check again
+    ts = list(ee.batch.Task.list())
+    NActive = 0
+    for task in ts:
+      if ('RUNNING' in str(task) or 'READY' in str(task)):
+        NActive += 1
+  return()
+
+```
+
+# Export Terra Availability
+
+```{python}
+years = range(2000, 2023, 1)
+
+for year in years:
+  terra_collection_sub = defineTerraCollection(year)
+  terra_calc_sub = terra_collection_sub.map(calcProArea)
+  filename = 'superior_terra_availability_' + str(year) + '_v' + datetime.today().strftime('%Y-%m-%d')
+  file_out = ee.batch.Export.table.toDrive(
+    collection = terra_calc_sub, 
+    selectors = ['system:index', 'area', 'p_area'],
+    description = filename,
+    folder = 'superior_availability',
+    fileFormat = 'csv')
+  #check number of jobs
+  maximum_no_of_tasks(10,120) #if there are 10 tasks pending, wait 2 minutes, this is very conservative, you could easily increase tasks or decrease waiting time to slightly quicken this process
+  file_out.start()
+
+```
+
+# Export Aqua Availability
+
+```{python}
+years = range(2002, 2023, 1)
+
+for year in years:
+  aqua_collection_sub = defineAquaCollection(year)
+  aqua_calc_sub = aqua_collection_sub.map(calcProArea)
+  filename = 'superior_aqua_availability_' + str(year) + '_v' + datetime.today().strftime('%Y-%m-%d')
+  file_out = ee.batch.Export.table.toDrive(
+    collection = aqua_calc_sub, 
+    selectors = ['system:index', 'area', 'p_area'],
+    description = filename,
+    folder = 'superior_availability',
+    fileFormat = 'csv')
+  #check number of jobs
+  maximum_no_of_tasks(10,120) #if there are 10 tasks pending, wait 2 minutes, this is very conservative, you could easily increase tasks or decrease waiting time to slightly quicken this process
+  file_out.start()
+
+```
+
+# Read in Files from Google Drive
+
+```{r}
+#get file list and ids
+files = drive_ls('superior_availability/')
+files = files[grepl('aqua', files$name) | grepl('terra', files$name) ,]
+
+#create a temp folder
+dir.create('availability_checks/tmp')
+tmpdir = 'availability_checks/tmp'
+dr_down = function(fileid, filename) {
+  drive_download(file = as_id(fileid), path = file.path(tmpdir, filename))
+}
+
+map2(files$id, files$name, dr_down)
+
+```
+
+## Collate Drive files together
+
+```{r}
+filelist = list.files(tmpdir)
+
+read_file = function(file) {
+  df = read.csv(file.path(tmpdir, file)) %>% 
+    mutate(sat = unlist(str_split(file, '_'))[2],
+    year = unlist(str_split(file, '_'))[4])
+  df
+}
+
+alldata = map_dfr(filelist, read_file)
+
+datadir = 'data/inventory'
+write.csv(alldata, file.path(datadir, 'superior_modis_inventory.csv'), row.names = F)
+```
+
+## Filter for 50% coverage
+
+```{r}
+filtered = alldata[alldata$p_area >= 0.5,]
+
+write.csv(filtered, file.path(datadir, 'superior_modis_inventory_gte50perc.csv'), row.names = T)
+```
