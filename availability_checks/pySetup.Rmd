@@ -26,10 +26,10 @@ conda_create(envname = file.path(dir, 'availability_checks/env'),
                   packages = c('earthengine-api'))
 
 # Set correct path based on OS
-if (grepl('win', os, ignore.case = T) == T ){
+if (grepl('win', osVersion, ignore.case = T) == T ){
  path_pat = 'availability_checks/env/python.exe'
  message('Windows OS detected.')
-} else if (grepl('mac', os, ignore.case = T) == T ){
+} else if (grepl('mac', osVersion, ignore.case = T) == T ){
  path_pat = 'availability_checks/env/bin/python/'
  message('Mac OS detected')
 } else {
