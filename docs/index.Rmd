@@ -1,6 +1,8 @@
 ---
 title: "Earth Engine Plumes and Blooms (eePlumB) Idenfitication Tutorial"
-output: html_document
+output: 
+  html_document:
+    theme: yeti
 ---
 
 # {.tabset .tabset-fade .tabset-pills}
