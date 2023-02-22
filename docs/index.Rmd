@@ -1,5 +1,6 @@
 ---
-title: "Earth Engine Plumes and Blooms (eePlumB) Idenfitication Tutorial"
+title: "eePlumB User Guide"
+subtitle: "Earth Engine Plumes and Blooms (eePlumB) idenfitication tutorial"
 output: 
   html_document:
     theme: yeti
