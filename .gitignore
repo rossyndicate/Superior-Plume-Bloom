@@ -5,14 +5,23 @@
 .Ruserdata
 
 #python venvs
-availability_checks/env/
+*/env/
 
 #knit output
 reports/images/*
-reports/.DS_Store
+*/.DS_Store
 
 #all tmp folders
 */tmp/*
 
 # Local only folders
 data_local/*
+
+# Local only folders
+data_local/*
+
+# PlumB-R
+*/.httr-oauth
+
+# VS Code
+.vscode
