@@ -57,7 +57,7 @@ ee.Initialize()
 aqua = ee.ImageCollection('MODIS/061/MYD09GA')
 terra = ee.ImageCollection("MODIS/061/MOD09GA")
 
-aoi = ee.FeatureCollection('projects/ee-ross-superior/assets/sup_pl_bl_small_aoi')
+aoi = ee.FeatureCollection('projects/ee-ross-superior/assets/superior_final_aoi')
 ```
 
 ## Cacluate AOI area
