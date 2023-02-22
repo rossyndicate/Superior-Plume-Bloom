@@ -6,6 +6,9 @@
 
 // Last modified 02/22/2023
 
+// your initials
+var init = 'BGS';
+
 // Pixel Types. Mouse over and convert this part to geometry import 
 // so that they can be selected from the map interface.
 var openWater = /* color: #181930 */ee.FeatureCollection([]),
@@ -107,10 +110,26 @@ var mergeCollection = function() {
 Map.setOptions('satellite');
 
 // export the data
+// Function to get and format today's date
+function getTodaysDate() {
+  var date = new Date();
+  var dd = date.getDate();
+  var mm = date.getMonth();
+ 
+  if (dd < 10) dd = '0' + dd;
+  if (mm < 10) mm = '0' + mm;
+
+  var date_string = date.getFullYear() + '-' + mm + '-' + dd
+  print(date_string);
+  return(date_string)
+}
+
+var filename = ee.String('validation_').cat(init).cat('_').cat(getTodaysDate())
+// export the data
 var merged = mergeCollection();
 Export.table.toDrive({
   collection: merged,
-  description: 'export_data',
-  folder: '',
-  fileNamePrefix: 'Dataset',
+  description: filename.getInfo(),
+  folder: 'test-val',
+  fileNamePrefix: filename.getInfo(),
   fileFormat: 'csv'});
