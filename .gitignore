@@ -20,7 +20,7 @@ data_local/*
 # Local only folders
 data_local/*
 
-# PlumB-R
+# eePlumB
 */.httr-oauth
 
 # VS Code
