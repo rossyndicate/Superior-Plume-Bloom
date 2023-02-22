@@ -13,3 +13,6 @@ reports/.DS_Store
 
 #all tmp folders
 */tmp/*
+
+# Local only folders
+data_local/*

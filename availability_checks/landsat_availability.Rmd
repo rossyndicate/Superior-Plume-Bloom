@@ -72,7 +72,7 @@ l4 = ee.ImageCollection('LANDSAT/LT04/C02/T1_L2') \
 
 ls = ee.ImageCollection(l4.merge(l5).merge(l7).merge(l8).merge(l8))
 
-aoi = ee.FeatureCollection('projects/ee-ross-superior/assets/sup_pl_bl_small_aoi')
+aoi = ee.FeatureCollection('projects/ee-ross-superior/assets/superior_final_aoi')
 
 ls = ls.filterBounds(aoi)
 ```
@@ -293,7 +293,15 @@ alldata = map_dfr(filelist, read_file)
 
 alldata = alldata %>% rename(first_wrs = wrs)
 
-datadir = 'data/inventory'
+datadir = 'data/inventory/'
+# Change how the directory is handled if you do not have access to the
+# symlink checked into the repo as `data`
+if(!file.info(dirname(datadir))$isdir) {
+  # If `data` is not a folder but rather a file, then you don't have
+  # access to that symlink directory and need to save your data elsewhere.
+  datadir = gsub('data', 'data_local', datadir)
+  dir.create(datadir, recursive=TRUE)
+}
 write.csv(alldata, file.path(datadir, 'superior_ls_inventory.csv'), row.names = F)
 ```
 
