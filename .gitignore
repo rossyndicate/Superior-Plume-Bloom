@@ -16,3 +16,6 @@ reports/images/*
 
 # PlumB-R
 */.httr-oauth
+
+# VS Code
+.vscode
