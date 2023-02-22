@@ -1,0 +1,24 @@
+---
+title: "Earth Engine Plumes and Blooms (eePlumB) Idenfitication Tutorial"
+output: html_document
+---
+
+# {.tabset .tabset-fade .tabset-pills}
+
+## About this project
+
+**Why identify plumes and blooms?**
+
+Hilary says really interesting things here about why this is a great use of your time and how you are helping move limno science forward.
+
+## Initial setup
+
+creating a GEE account + copying the script and editing initials + validation steps
+
+## What are we ID-ing?
+
+flow chart & examples
+
+## How to ID in GEE
+
+actual "how-to" for editing and adding features
