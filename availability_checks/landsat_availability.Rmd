@@ -300,7 +300,7 @@ if(!file.info(dirname(datadir))$isdir) {
   # If `data` is not a folder but rather a file, then you don't have
   # access to that symlink directory and need to save your data elsewhere.
   datadir = gsub('data', 'data_local', datadir)
-  dir.create(datadir, recursive=TRUE)
+  if(!dir.exists(datadir)) dir.create(datadir, recursive=TRUE)
 }
 write.csv(alldata, file.path(datadir, 'superior_ls_inventory.csv'), row.names = F)
 ```
