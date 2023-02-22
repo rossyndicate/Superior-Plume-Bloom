@@ -7,10 +7,9 @@
 #python venvs
 */env/
 
-
 #knit output
 reports/images/*
-reports/.DS_Store
+*/.DS_Store
 
 #all tmp folders
 */tmp/*
