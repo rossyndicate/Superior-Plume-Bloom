@@ -14,6 +14,12 @@ reports/images/*
 #all tmp folders
 */tmp/*
 
+# Local only folders
+data_local/*
+
+# Local only folders
+data_local/*
+
 # PlumB-R
 */.httr-oauth
 

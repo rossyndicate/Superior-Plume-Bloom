@@ -42,7 +42,7 @@ In the terminal in your Rstudio, authenticate your GEE login information. Do thi
 
 `earthengine authenticate`
 
-This will open a browser for you to login using your Google account associated with your EE login. If this fails and says that gcloud is not installed or recognized, make sure you're using a zsh terminal by clicking the dropdown next to 'Terminal 1', clicking properties, choosing 'New Terminal Opens With' zsh. For whatever reason (at least on a MacOS M1), a bash terminal will not execute the authentication process correctly. Additionally, there are commands (ee.Authenticate) in the Python GEE API, however it does not work in an .Rmd or .Qmd file code chunk.
+This will open a browser for you to login using your Google account associated with your EE login. If this fails and says that gcloud is not installed or recognized, make sure you're using a zsh terminal by clicking the dropdown next to 'Terminal 1', clicking properties, choosing 'New Terminal Opens With' zsh. For whatever reason (at least on a MacOS M1), a bash terminal will not execute the authentication process correctly. Additionally, there are commands (ee.Authenticate) in the Python GEE API, however it does not work in an .Rmd or .Qmd file code chunk. You may have success running `ee.Authenticate()` in a different terminal that is running Python outside of RStudio. Then, you should be able to return to this Rmd and continue on with the next step.
 
 Now we can initiate our EE session:
 
@@ -72,7 +72,7 @@ l4 = ee.ImageCollection('LANDSAT/LT04/C02/T1_L2') \
 
 ls = ee.ImageCollection(l4.merge(l5).merge(l7).merge(l8).merge(l8))
 
-aoi = ee.FeatureCollection('projects/ee-ross-superior/assets/sup_pl_bl_small_aoi')
+aoi = ee.FeatureCollection('projects/ee-ross-superior/assets/superior_final_aoi')
 
 ls = ls.filterBounds(aoi)
 ```
@@ -293,7 +293,15 @@ alldata = map_dfr(filelist, read_file)
 
 alldata = alldata %>% rename(first_wrs = wrs)
 
-datadir = 'data/inventory'
+datadir = 'data/inventory/'
+# Change how the directory is handled if you do not have access to the
+# symlink checked into the repo as `data`
+if(!file.info(dirname(datadir))$isdir) {
+  # If `data` is not a folder but rather a file, then you don't have
+  # access to that symlink directory and need to save your data elsewhere.
+  datadir = gsub('data', 'data_local', datadir)
+  if(!dir.exists(datadir)) dir.create(datadir, recursive=TRUE)
+}
 write.csv(alldata, file.path(datadir, 'superior_ls_inventory.csv'), row.names = F)
 ```
 
