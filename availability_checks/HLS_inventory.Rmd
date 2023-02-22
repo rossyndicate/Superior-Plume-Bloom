@@ -36,7 +36,15 @@ Get and print collection information for HLS-L[andsat]:
 ```{r}
 hlsl_collection <- httr::GET(hlsl_col_url) %>% 
   httr::content()
-
+if(hlsl_collection$status %in% c(404, 500)) {
+  stop(sprintf(
+    "You weren't able to access to the HLS collection URL. 
+    Troubleshoot why before continuing. 
+    Workflow may have changed since this code was written.
+    
+    \nThe URL returned this error:\n %s: %s", 
+    hlsl_collection$status, hlsl_collection$errors))
+}
 hlsl_collection <- hlsl_collection %>% 
   jsonlite::toJSON(auto_unbox = TRUE) %>% 
   jsonlite::fromJSON()
@@ -69,7 +77,15 @@ hlss_collection$extent %>%
 Enter query terms to get info from STAC:
 
 ```{r}
-dumpdir = '~/OneDrive - Colostate/Superior/data/inventory/'
+dumpdir = 'data/inventory/'
+# Change how the directory is handled if you do not have access to the
+# symlink checked into the repo as `data`
+if(!file.info(dirname(dumpdir))$isdir) {
+  # If `data` is not a folder but rather a file, then you don't have
+  # access to that symlink directory and need to save your data elsewhere.
+  dumpdir = gsub('data', 'data_local', dumpdir)
+  if(!dir.exists(dumpdir)) dir.create(dumpdir, recursive=TRUE)
+}
 
 colls <- list("HLSS30.v2.0", "HLSL30.v2.0")
 

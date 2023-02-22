@@ -11,7 +11,18 @@ output:
 knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
 
 library(tidyverse)
-datadir = '~/Documents/GitHub/Superior-Plume-Bloom/data/inventory/'
+
+# This data inventory folder is created by code in `availability_checks/landsat_availability.Rmd`
+# and `availability_checks/modis_availability.Rmd`. Start there if you don't have any files in
+# `data/inventory`
+datadir = 'data/inventory'
+# Change how the directory is handled if you do not have access to the
+# symlink checked into the repo as `data`
+if(!file.info(dirname(datadir))$isdir) {
+  # If `data` is not a folder but rather a file, then you don't have
+  # access to that symlink directory and need to save your data elsewhere.
+  datadir = gsub('data', 'data_local', datadir)
+}
 
 ```
 
@@ -87,18 +98,30 @@ modis = read.csv(file.path(datadir, 'superior_modis_inventory.csv')) %>%
          date = as.Date(system.index, format = '%Y_%m_%d'))
 
 # filter and approximate coverage, where we assume tiles are completely in AOI and are equally weighted.
-hls = read.csv(file.path(datadir, 'superior_hls_all_requests.csv'))
-hls = unique(hls) #for whatever reason, there are a bunch of dupes in here
-hls = hls %>%   
-  filter(tile %in% c('15TWN', '15TXN', '15TYM', '15TWM', '15TXM', '15TYM') & #filter for desired 6 tiles
-    grepl('jpg', Asset_Link)) %>% #for the 'image' request
-  mutate(sat = 'HLS',
-         date = as.Date(as.POSIXct(substr(Datetime, 1, nchar(Datetime)-6), format = '%Y-%m-%dT%H:%M:%S', tz = 'UTC')),
-         p_area = (1/6)*((100-Cloud_Cover)/100)) %>% 
-  group_by(date, Collection, sat) %>% 
-  summarize(p_area = sum(p_area))
+hls_file = file.path(datadir, 'superior_hls_all_requests.csv')
+if(file.exists(hls_file)) {
+  hls = read.csv(hls_file)
+  hls = unique(hls) #for whatever reason, there are a bunch of dupes in here
+  hls = hls %>%   
+    filter(tile %in% c('15TWN', '15TXN', '15TYM', '15TWM', '15TXM', '15TYM') & #filter for desired 6 tiles
+             grepl('jpg', Asset_Link)) %>% #for the 'image' request
+    mutate(sat = 'HLS',
+           date = as.Date(as.POSIXct(substr(Datetime, 1, nchar(Datetime)-6), format = '%Y-%m-%dT%H:%M:%S', tz = 'UTC')),
+           p_area = (1/6)*((100-Cloud_Cover)/100)) %>% 
+    group_by(date, Collection, sat) %>% 
+    summarize(p_area = sum(p_area))
+} else {
+  # If the file doesn't exist, create an empty tibble and tell the user
+  message(sprintf('The HLS file (`%s`) does not exist. Continuing, but no HLS data will be included.', hls_file))
+  hls = tibble()
+}
 
-sats = full_join(ls, modis) %>% full_join(., hls) %>% 
+
+sats = full_join(ls, modis) %>% {
+  if(nrow(hls) > 0) 
+    full_join(., hls) 
+  else .
+} %>% 
   mutate(year = as.numeric(format(date, '%Y')),
          week = as.numeric(format(date, '%W')),
          month = as.numeric(format(date, '%m'))) %>% 

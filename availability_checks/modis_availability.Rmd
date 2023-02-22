@@ -57,7 +57,7 @@ ee.Initialize()
 aqua = ee.ImageCollection('MODIS/061/MYD09GA')
 terra = ee.ImageCollection("MODIS/061/MOD09GA")
 
-aoi = ee.FeatureCollection('projects/ee-ross-superior/assets/sup_pl_bl_small_aoi')
+aoi = ee.FeatureCollection('projects/ee-ross-superior/assets/superior_final_aoi')
 ```
 
 ## Cacluate AOI area
@@ -325,6 +325,14 @@ read_file = function(file) {
 alldata = map_dfr(filelist, read_file)
 
 datadir = 'data/inventory'
+# Change how the directory is handled if you do not have access to the
+# symlink checked into the repo as `data`
+if(!file.info(dirname(datadir))$isdir) {
+  # If `data` is not a folder but rather a file, then you don't have
+  # access to that symlink directory and need to save your data elsewhere.
+  datadir = gsub('data', 'data_local', datadir)
+  if(!dir.exists(datadir)) dir.create(datadir, recursive=TRUE)
+}
 write.csv(alldata, file.path(datadir, 'superior_modis_inventory.csv'), row.names = F)
 ```
 
