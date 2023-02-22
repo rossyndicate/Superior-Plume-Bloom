@@ -5,7 +5,7 @@
 .Ruserdata
 
 #python venvs
-availability_checks/env/
+*env/
 
 #knit output
 reports/images/*

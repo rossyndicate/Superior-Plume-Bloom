@@ -1,0 +1,142 @@
+---
+title: "Superior Bloom Match Up Exploration"
+author: "B Steele"
+date: "2023-02-15"
+output: html
+---
+
+```{r setup}
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+```
+
+# Purpose
+
+The focus of this script is to access imagery from Landsat, MODIS, and HLS from adjacent dates to observed sediment blooms to investigate whether we can visually identify the extent of the blooms using:
+
+1)  visual methods from band boosting/band ratios
+2)  clustering methods from band data
+
+## Dependencies
+
+-   Earth Engine login
+
+-   [Install and intialize gcloud](https://cloud.google.com/sdk/docs/install) and point to gcloud `bin` location. Doing this may require that your re-initialize gcloud according to the linked instructions.
+
+```{r}
+Sys.setenv('EARTHENGINE_GCLOUD' = '~/Documents/admin/google-cloud-sdk/bin/')
+```
+
+-   Install `rgeeExtra`
+
+```{r}
+library(remotes)
+remotes::install_github('r-earthengine/rgeeExtra')
+```
+
+# Setting up a Python environment
+
+For best reproducibility, we use the `reticulate` package method to create a conda environment for use in RStudio. Conda environs in RStudio are a bit tricky, so even if you have run the pySetup chunk before and have an 'env' folder present, re-run this code chunk so that everything goes smoothly.
+
+```{r}
+#point to the directory where you wish to store your virtual environment
+py_env_dir = file.path(getwd(), 'bloom-matchup-explore/')
+source('bloom-matchup-explore/pySetup.R')
+```
+
+Import python module
+
+```{python}
+import ee
+```
+
+Now authenticate your Earth Engine credentials. Windows users may be able to do this in a python code chunk:
+
+```{python}
+ee.Authenticate()
+```
+
+Alternatively, if you receive an error, execute the following in a zsh Terminal:
+
+`earthengine authenticate`
+
+Now initialize your session:
+
+```{python}
+ee.Initialize()
+```
+
+Load R packages.
+
+```{r}
+library(rgee)
+library(rgeeExtra)
+library(sf)
+```
+
+# Start Exploration
+
+Let's point to the area of interest
+
+```{r}
+sup_aoi <- read_sf('data/aoi/sup_pl_bl_aoi_large.shp')
+sup_extent <- st_bbox(sup_aoi)
+
+sup = ee$Geometry$Rectangle(
+  c(-sup_extent[1],sup_extent[2],sup_extent[3],sup_extent[4]),
+  geodesic = FALSE,
+  proj = "EPSG:4326"
+  )
+```
+
+And load our earth engine datasets we're interested in
+
+```{r}
+LS_scaling <- function(image) {
+  opticalBands = image$select('SR_B.')$multiply(0.0000275)$add(-0.2)
+  thermalBands = image$select('ST_B.*')$multiply(0.00341802)$add(149.0)
+  image$addBands(opticalBands, NULL, TRUE)$
+    addBands(thermalBands, NULL, TRUE)
+}
+
+l9 <- ee$ImageCollection('LANDSAT/LC09/C02/T1_L2')$
+  map(ee_utils_pyfunc(function(image) {
+  opticalBands = image$select('SR_B.')$multiply(0.0000275)$add(-0.2)
+  thermalBands = image$select('ST_B.*')$multiply(0.00341802)$add(149.0)
+  image$addBands(opticalBands, NULL, TRUE)$
+    addBands(thermalBands, NULL, TRUE)
+}))
+  
+
+l9 <- ee$Image('LANDSAT/LC09/C02/T1_L2')$
+  clip(sup) %>% 
+  LS_scaling()
+  
+# 3. Visualization of color false and ndvi --------------------------------
+viz_ndvi <- list(
+  min = -0.5,
+  max = 0.5,
+  palette = cpt("grass_ndvi")
+)
+
+viz <- list(
+  min = 0.07,
+  max = 0.37,
+  bands = c("SR_B5","SR_B4","SR_B3")
+)
+
+Map$centerObject(ica)
+
+m1 <- Map$addLayer(
+  (l9[[5]] - l9[[4]])/(l9[[5]] + l9[[4]]),
+  visParams = viz_ndvi) + 
+  Map$addLegend(
+    visParams = viz_ndvi
+    )
+
+m2 <- Map$addLayer(
+  l9,
+  visParams = viz
+  )
+
+m2 | m1 
+```
