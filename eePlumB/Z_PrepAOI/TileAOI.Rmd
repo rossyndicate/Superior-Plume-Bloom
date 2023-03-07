@@ -1,0 +1,101 @@
+---
+title: "Tile AOI"
+author: "B Steele"
+date: "2023-03-07"
+output: html_document
+---
+
+# Purpose
+
+This script takes an area of interest (AOI) and creates tiles within the extent for use in eePlumB. While this script is built around Lake Superior, it could easily be adapted to any other lake.
+
+```{r}
+library(tidyverse)
+library(sf)
+
+#point to directory where your shapefile lives
+shp_dir = '/Users/steeleb/Documents/GitHub/Superior-Plume-Bloom/data/aoi/'
+```
+
+# Tile AOI
+
+## Read in AOI shapefile
+
+```{r}
+shape = read_sf(file.path(shp_dir, 'superior_no_harbor.shp'))
+
+#in our case, we need to filter for water
+shape = shape %>% 
+  filter(Feature == 'Water')
+
+#plot quickly to confirm
+plot(shape['Feature'])
+```
+
+## Tile shapefile using `st_make_grid`
+
+```{r}
+tiles = st_make_grid(shape,
+                     cellsize = c(35000, 25000))#units are square meters
+tiles = tiles[shape]
+
+#plot quickly to confirm
+plot(tiles)
+plot(shape['Feature'], add = T)
+```
+
+For our purposes, we're going to remove the top row of tiles.
+
+```{r}
+tiles_sub = tiles[1:12]
+plot(tiles_sub)
+plot(shape['Feature'], add = T)
+```
+
+And we'll clip the AOI to the extent of these boxes.
+
+```{r}
+shape_clip = st_crop(shape, st_bbox(tiles_sub))
+
+plot(tiles_sub)
+plot(shape_clip['Feature'], add = T)
+```
+
+And now, we need to merge tiles 9 and 10 (there's just a sliver of area that we want to have a bit more context to label.
+
+```{r}
+tiles_toMerge = tiles[c(9,10)]
+tiles_other = tiles[c(1:8, 11:12)]
+
+tiles_merged = st_union(tiles_toMerge)
+
+tiles_forLabel = st_union(tiles_merged, tiles_other)
+
+plot(tiles_forLabel)
+plot(shape_clip['Feature'], add = T)
+```
+
+Now, intersect to create individual AOIs by tile
+
+```{r}
+shape_tiles = st_intersection(shape_clip, tiles_forLabel)
+
+plot(shape_tiles['Feature'])
+```
+
+## Save each of the tiles as individual features
+
+```{r}
+shape_tiles <- shape_tiles %>% 
+  rowid_to_column() %>% 
+  select(-OID_:Shape_Area)
+
+for(l in 1:nrow(shape_tiles)) {
+  filename = paste0('SuperiorAOI_', l, '.shp')
+  st_write(shape_tiles[shape_tiles$rowid == l,], file.path(shp_dir, 'tiledAOI', filename))
+}
+```
+
+# Upload to GEE
+
+Go to the GEE IDE and upload the assets you just made to your project of choice. In future iterations, this may be part of the script.
