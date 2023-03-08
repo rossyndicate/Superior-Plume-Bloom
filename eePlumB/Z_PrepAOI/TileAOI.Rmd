@@ -34,9 +34,11 @@ plot(shape['Feature'])
 
 ## Tile shapefile using `st_make_grid`
 
+You might need to play around with the cellsize to adjust the grid your your needs and so that it 'makes sense' for your purposes.
+
 ```{r}
 tiles = st_make_grid(shape,
-                     cellsize = c(35000, 25000))#units are square meters
+                     cellsize = c(35000, 25000))#units are square meters for Superior
 tiles = tiles[shape]
 
 #plot quickly to confirm
@@ -44,7 +46,7 @@ plot(tiles)
 plot(shape['Feature'], add = T)
 ```
 
-For our purposes, we're going to remove the top row of tiles.
+For our purposes, we're going to remove the top row of tiles, because we aren't as interested in that area - the upper boundary was already an approximation.
 
 ```{r}
 tiles_sub = tiles[1:12]
@@ -61,15 +63,19 @@ plot(tiles_sub)
 plot(shape_clip['Feature'], add = T)
 ```
 
-And now, we need to merge tiles 9 and 10 (there's just a sliver of area that we want to have a bit more context to label.
+And now, we need to merge tiles 9 and 10 - there's just a sliver of area that we want to have a bit more context to label. Tiles are numbered starting at the bottom left and ending in the top right, following the horizontal axis for each row.
 
 ```{r}
 tiles_toMerge = tiles[c(9,10)]
 tiles_other = tiles[c(1:8, 11:12)]
 
-tiles_merged = st_union(tiles_toMerge)
+tiles_merged = st_union(tiles_toMerge) 
 
-tiles_forLabel = st_union(tiles_merged, tiles_other)
+# sadly, there's no 'easy' way to join these two sfc's with any dplyr or sf method that I can find, so we'll convert to a data frame, join, then convert back to sf
+
+tiles_forLabel = full_join(as.data.frame(tiles_other), 
+                           as.data.frame(tiles_merged)) %>% 
+  st_as_sf() 
 
 plot(tiles_forLabel)
 plot(shape_clip['Feature'], add = T)
@@ -78,9 +84,11 @@ plot(shape_clip['Feature'], add = T)
 Now, intersect to create individual AOIs by tile
 
 ```{r}
-shape_tiles = st_intersection(shape_clip, tiles_forLabel)
+shape_tiles = st_intersection(shape_clip, tiles_forLabel) #warning okay
 
 plot(shape_tiles['Feature'])
+#check to make sure each tile is separate.
+plot(shape_tiles['Feature'][1,])
 ```
 
 ## Save each of the tiles as individual features
