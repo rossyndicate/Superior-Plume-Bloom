@@ -25,7 +25,7 @@ var date4 = '2022-04-19';
 
 // notes from b's noodling around - to see these yourself, uncomment
 // the last two blocks of code and fill in dates on line 123, aoi on 128,
-// and aoi id on 129
+// you don't need to adjust aoi_id for these
 //date0, aoi9 -- cloud artifacts
 //date0, aoi1 -- clear sediment on south shore; cloud artifacts in NE corner
 //date1, aoi1 -- lots of sediment and deep sediment that looks like blooms
