@@ -12,4 +12,7 @@ To train computer algorithms to detect these features in satellite images we nee
 
 ## Future plans
 
-The GROD workflow will be adapted to using all available scenes instead of the most recent cloud-free scene.
+The GROD workflow (folders 1_user_interface_script, 2_data_ingestion) will be adapted to using all available scenes instead of the most recent cloud-free scene.
+
+Z_PrepAOI: auto upload of ee.FeatureCollections into Assets.
+
