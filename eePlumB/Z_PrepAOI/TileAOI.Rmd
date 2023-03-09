@@ -78,7 +78,7 @@ tiles_forLabel = full_join(as.data.frame(tiles_other),
   st_as_sf() 
 
 plot(tiles_forLabel)
-plot(shape_clip['Feature'], add = T)
+plot(shape_clip['Feature'], add = T, col = alpha('Green', 0.7))
 ```
 
 Now, intersect to create individual AOIs by tile
