@@ -35,7 +35,7 @@ var date4 = '2022-04-19';
 //date2, aoi1 -- sediment swirls, near harbor very brown
 //date2, aoi6 -- open water except deep sediment in bottom center open water
 //date2, aoi7 -- stringy sediment between island and land, sediment near inlet, lots of mixed shore pixels
-//date2, aoi11 -- no pixels of interest
+//date2, aoi11 -- open water
 //date3, aoi10 -- cloud artifacts (especially in bottom r; sediment between islands
 //date3, aoi2 -- lots of wind-blown suspended sediment
 //date3, aoi8 -- cloud artifacts
