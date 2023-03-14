@@ -159,29 +159,29 @@ function mosaicOneDay(date, aoi, aoi_id){
 // this is NOT the most elegant way of doing this
 // but GEE doesn't do for-loops and the nested functions
 // make my head spin, sooooo reptition for the win.
-var mos1 = mosaicOneDay(dates[0], aois[0], aoi_ids[0]);
-var mos2 = mosaicOneDay(dates[1], aois[1], aoi_ids[1]);
-var mos3 = mosaicOneDay(dates[2], aois[2], aoi_ids[2]);
-var mos4 = mosaicOneDay(dates[3], aois[3], aoi_ids[3]);
-var mos5 = mosaicOneDay(dates[4], aois[4], aoi_ids[4]);
-var mos6 = mosaicOneDay(dates[5], aois[5], aoi_ids[5]);
-var mos7 = mosaicOneDay(dates[6], aois[6], aoi_ids[6]);
-var mos8 = mosaicOneDay(dates[7], aois[7], aoi_ids[7]);
-var mos9 = mosaicOneDay(dates[8], aois[8], aoi_ids[8]);
-var mos10 = mosaicOneDay(dates[9], aois[9], aoi_ids[9]);
-var mos11 = mosaicOneDay(dates[10], aois[10], aoi_ids[10]);
-var mos12 = mosaicOneDay(dates[11], aois[11], aoi_ids[11]);
-var mos13 = mosaicOneDay(dates[12], aois[12], aoi_ids[12]);
-var mos14 = mosaicOneDay(dates[13], aois[13], aoi_ids[13]);
-var mos15 = mosaicOneDay(dates[14], aois[14], aoi_ids[14]);
-var mos16 = mosaicOneDay(dates[15], aois[15], aoi_ids[15]);
-var mos17 = mosaicOneDay(dates[16], aois[16], aoi_ids[16]);
+var mos0_9 = mosaicOneDay(dates[0], aois[0], aoi_ids[0]);
+var mos0_1 = mosaicOneDay(dates[1], aois[1], aoi_ids[1]);
+var mos1_1 = mosaicOneDay(dates[2], aois[2], aoi_ids[2]);
+var mos1_2 = mosaicOneDay(dates[3], aois[3], aoi_ids[3]);
+var mos1_4 = mosaicOneDay(dates[4], aois[4], aoi_ids[4]);
+var mos1_9 = mosaicOneDay(dates[5], aois[5], aoi_ids[5]);
+var mos2_1 = mosaicOneDay(dates[6], aois[6], aoi_ids[6]);
+var mos2_7 = mosaicOneDay(dates[7], aois[7], aoi_ids[7]);
+var mos2_11 = mosaicOneDay(dates[8], aois[8], aoi_ids[8]);
+var mos3_10 = mosaicOneDay(dates[9], aois[9], aoi_ids[9]);
+var mos3_2 = mosaicOneDay(dates[10], aois[10], aoi_ids[10]);
+var mos3_8 = mosaicOneDay(dates[11], aois[11], aoi_ids[11]);
+var mos4_3 = mosaicOneDay(dates[12], aois[12], aoi_ids[12]);
+var mos4_1 = mosaicOneDay(dates[13], aois[13], aoi_ids[13]);
+var mos4_5 = mosaicOneDay(dates[14], aois[14], aoi_ids[14]);
+var mos4_6 = mosaicOneDay(dates[15], aois[15], aoi_ids[15]);
+
 
 var validationCollection = ee.ImageCollection([mos1,
                           mos2, mos3, mos4, mos5, mos6,
                           mos7, mos8, mos9, mos10, mos11,
-                          mos12, mos13, mos14, mos15, mos16,
-                          mos17]);
+                          mos12, mos13, mos14, mos15, mos16
+                          ]);
 
 validationCollection.aside(print);
 
