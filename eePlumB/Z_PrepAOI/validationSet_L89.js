@@ -206,7 +206,7 @@ var processMos = function(mosaic){
   var id = ee.String('aoi_').cat(astr).cat('_').cat(dstr);
 
   //apend with assetIDPrefix
-  var assetIDPrefix = 'projects/ee-ross-superior/assets/eePlumB_valSets/LS4-7_eePlumB_val';
+  var assetIDPrefix = 'projects/ee-ross-superior/assets/eePlumB_valSets/LS89_eePlumB_val';
   var assetId = ee.String(assetIDPrefix).cat('_').cat(id);
   var descrip = ee.String('Export').cat('_').cat(id);  
   
