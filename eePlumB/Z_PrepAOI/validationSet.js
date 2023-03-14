@@ -40,7 +40,7 @@ var date4 = '2022-04-19';
 //date3, aoi2 -- lots of wind-blown suspended sediment
 //date3, aoi8 -- cloud artifacts
 //date4, aoi3 -- cloud artifacts, sediment s of island
-//date4, aoi1 -- dark dark sediment
+//date4, aoi1 -- dark dark sediment, cloud artifacts at the bottom edge
 //date4, aoi5 -- open water except near inlet of knife river
 //date4, aoi6 -- cloud artifacts at the bottom edge, deep sediment
 
