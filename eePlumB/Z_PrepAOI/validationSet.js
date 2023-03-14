@@ -1,6 +1,6 @@
-// This script creates the validation collection for eePlumB
+// This script creates the validation collection for eePlumB for Landsat 8 & 9
 // written by B. Steele
-// 2020-03-07
+// last modified 2020-03-14
 
 var aoi1 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_1');
 var aoi2 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_2');
@@ -25,35 +25,35 @@ var date4 = '2022-04-19';
 
 // notes from b's noodling around - to see these yourself, uncomment
 // the last two blocks of code and fill in dates on line 123, aoi on 128,
-// you don't need to adjust aoi_id for these
+// and aoi id on 129
 //date0, aoi9 -- cloud artifacts
 //date0, aoi1 -- clear sediment on south shore; cloud artifacts in NE corner
 //date1, aoi1 -- lots of sediment and deep sediment that looks like blooms
 //date1, aoi2 -- lots of sediment and deep sediment that looks like blooms
 //date1, aoi4 -- unmasked clouds, sediment along s shore
-//date1, aoi9 -- open water (arguable deep sed at bottom)
+//date1, aoi9 -- no pixels of interest (arguable deep sed at bottom)
 //date2, aoi1 -- sediment swirls, near harbor very brown
 //date2, aoi7 -- stringy sediment between island and land, sediment near inlet, lots of mixed shore pixels
-//date2, aoi11 -- open water
+//date2, aoi11 -- no pixels of interest
 //date3, aoi10 -- cloud artifacts (especially in bottom r; sediment between islands
 //date3, aoi2 -- lots of wind-blown suspended sediment
 //date3, aoi8 -- cloud artifacts
 //date4, aoi3 -- cloud artifacts, sediment s of island
-//date4, aoi1 -- dark dark sediment, cloud artifacts at the bottom edge
+//date4, aoi1 -- dark dark sediment
 //date4, aoi5 -- open water except near inlet of knife river
 //date4, aoi6 -- cloud artifacts at the bottom edge, deep sediment
 
 var dates = [date0,date0, 
                     date1,date1,date1,date1, 
-                    date2,date2,date2,date2, 
+                    date2,,date2,date2, 
                     date3,date3,date3,
                     date4,date4,date4,date4];
 
-var aois = [aoi9, aoi1, aoi1, aoi2, aoi4, aoi9, aoi1, aoi6, 
+var aois = [aoi9, aoi1, aoi1, aoi2, aoi4, aoi9, aoi1, 
                   aoi7, aoi11, aoi10, aoi2, aoi8, aoi3, aoi1, aoi5, 
                   aoi6];
 
-var aoi_ids = [9, 1, 1, 2, 4, 9, 1, 6, 7, 11, 10, 2, 8, 3, 1, 5, 6];
+var aoi_ids = [9, 1, 1, 2, 4, 9, 1, 7, 11, 10, 2, 8, 3, 1, 5, 6];
 
 // load Landsat 8 and 9 Surface Reflectance
 var l9 = ee.ImageCollection("LANDSAT/LC09/C02/T1_L2");
