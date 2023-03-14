@@ -1,7 +1,7 @@
 ---
 title: "Tile AOI"
 author: "B Steele"
-date: "2023-03-07"
+date: "2023-03-14"
 output: html_document
 ---
 
@@ -22,7 +22,7 @@ shp_dir = '/Users/steeleb/Documents/GitHub/Superior-Plume-Bloom/data/aoi/'
 ## Read in AOI shapefile
 
 ```{r}
-shape = read_sf(file.path(shp_dir, 'superior_no_harbor.shp'))
+shape = read_sf(file.path(shp_dir, 'superior_no_harbor', 'superior_no_harbor.shp'))
 
 #in our case, we need to filter for water
 shape = shape %>% 
@@ -38,7 +38,7 @@ You might need to play around with the cellsize to adjust the grid your your nee
 
 ```{r}
 tiles = st_make_grid(shape,
-                     cellsize = c(35000, 25000))#units are square meters for Superior
+                     cellsize = c(30000, 20000))#units are square meters for Superior
 tiles = tiles[shape]
 
 #plot quickly to confirm
@@ -46,10 +46,10 @@ plot(tiles)
 plot(shape['Feature'], add = T)
 ```
 
-For our purposes, we're going to remove the top row of tiles, because we aren't as interested in that area - the upper boundary was already an approximation.
+For our purposes, we're going to remove the top row of tiles, because we aren't as interested in that area - the upper boundary was already an approximation. Tiles are numbered left to right, bottom to top.
 
 ```{r}
-tiles_sub = tiles[1:12]
+tiles_sub = tiles[1:19]
 plot(tiles_sub)
 plot(shape['Feature'], add = T)
 ```
@@ -63,18 +63,26 @@ plot(tiles_sub)
 plot(shape_clip['Feature'], add = T)
 ```
 
-And now, we need to merge tiles 9 and 10 - there's just a sliver of area that we want to have a bit more context to label. Tiles are numbered starting at the bottom left and ending in the top right, following the horizontal axis for each row.
+And now, we need to merge a few tiles for better context. We'll split out the unmerged tiles into two sets so that we can maintain the left to right, bottom to top numbering
 
 ```{r}
-tiles_toMerge = tiles[c(9,10)]
-tiles_other = tiles[c(1:8, 11:12)]
+tiles_toMerge_1 = tiles_sub[c(1, 2)]
+tiles_toMerge_2 = tiles_sub[c(3, 4)]
+tiles_other_1 = tiles_sub[c(5:10)]
+tiles_toMerge_3 = tiles_sub[c(11, 12)]
+tiles_other_2 = tiles_sub[c(13:19)]
 
-tiles_merged = st_union(tiles_toMerge) 
+tiles_merged_1 = st_union(tiles_toMerge_1) 
+tiles_merged_2 = st_union(tiles_toMerge_2) 
+tiles_merged_3 = st_union(tiles_toMerge_3) 
 
 # sadly, there's no 'easy' way to join these two sfc's with any dplyr or sf method that I can find, so we'll convert to a data frame, join, then convert back to sf
 
-tiles_forLabel = full_join(as.data.frame(tiles_other), 
-                           as.data.frame(tiles_merged)) %>% 
+tiles_forLabel = full_join(as.data.frame(tiles_merged_1),
+                           as.data.frame(tiles_merged_2)) %>% 
+  full_join(as.data.frame(tiles_other_1)) %>% 
+  full_join(as.data.frame(tiles_merged_3)) %>% 
+  full_join(as.data.frame(tiles_other_2)) %>% 
   st_as_sf() 
 
 plot(tiles_forLabel)
@@ -96,7 +104,7 @@ plot(shape_tiles['Feature'][1,])
 ```{r}
 shape_tiles <- shape_tiles %>% 
   rowid_to_column() %>% 
-  select(-OID_:Shape_Area)
+  select(-c(OID_:Shape_Area))
 
 for(l in 1:nrow(shape_tiles)) {
   filename = paste0('SuperiorAOI_', l, '.shp')
