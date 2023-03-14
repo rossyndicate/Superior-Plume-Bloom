@@ -1,4 +1,5 @@
-// This script creates the validation collection for eePlumB for Landsat 8 & 9
+// This script creates the validation collection for eePlumB 
+// for Landsat 8 & 9 at Lake Superior
 // written by B. Steele
 // last modified 2020-03-14
 
@@ -13,6 +14,12 @@ var aoi8 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/Super
 var aoi9 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_9');
 var aoi10 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_10');
 var aoi11 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_11');
+var aoi12 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_12');
+var aoi13 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_13');
+var aoi14 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_14');
+var aoi15 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_15');
+var aoi16 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_16');
+
 
 //------------------------------------//
 // DATES FOR USER VALIDATION ------------//
@@ -24,36 +31,26 @@ var date3 = '2022-10-28';
 var date4 = '2022-04-19';
 
 // notes from b's noodling around - to see these yourself, uncomment
-// the last two blocks of code and fill in dates on line 123, aoi on 128,
-// and aoi id on 129
-//date0, aoi9 -- cloud artifacts
-//date0, aoi1 -- clear sediment on south shore; cloud artifacts in NE corner
-//date1, aoi1 -- lots of sediment and deep sediment that looks like blooms
-//date1, aoi2 -- lots of sediment and deep sediment that looks like blooms
-//date1, aoi4 -- unmasked clouds, sediment along s shore
-//date1, aoi9 -- open water (arguable deep sed at bottom)
-//date2, aoi1 -- sediment swirls, near harbor very brown
-//date2, aoi7 -- stringy sediment between island and land, sediment near inlet, lots of mixed shore pixels
-//date2, aoi11 -- open water
-//date3, aoi10 -- cloud artifacts (especially in bottom r; sediment between islands
-//date3, aoi2 -- lots of wind-blown suspended sediment
-//date3, aoi8 -- cloud artifacts
-//date4, aoi3 -- cloud artifacts, sediment s of island
-//date4, aoi1 -- dark dark sediment
-//date4, aoi5 -- open water except near inlet of knife river
-//date4, aoi6 -- cloud artifacts at the bottom edge, deep sediment
+// the last two blocks of code and fill in dates on line 119, aoi on 124,
+// and optionally aoi id on 125
 
-var dates = [date0,date0, 
-                    date1,date1,date1,date1, 
-                    date2,,date2,date2, 
-                    date3,date3,date3,
-                    date4,date4,date4,date4];
+var dates = [date0,date0, date0,
+            date1,date1,date1, 
+            date2,date2, 
+            date3,date3,date3,
+            date4,date4];
 
-var aois = [aoi9, aoi1, aoi1, aoi2, aoi4, aoi9, aoi1, 
-                  aoi7, aoi11, aoi10, aoi2, aoi8, aoi3, aoi1, aoi5, 
-                  aoi6];
+var aois = [aoi9, aoi1, aoi16, 
+            aoi1, aoi4, aoi11, 
+            aoi2, aoi10, 
+            aoi16, aoi5, aoi11, 
+            aoi1, aoi13];
 
-var aoi_ids = [9, 1, 1, 2, 4, 9, 1, 7, 11, 10, 2, 8, 3, 1, 5, 6];
+var aoi_ids = [9, 1, 16,
+              1, 4, 11, 
+              2, 10, 
+              16, 5, 11, 
+              1, 13];
 
 // load Landsat 8 and 9 Surface Reflectance
 var l9 = ee.ImageCollection("LANDSAT/LC09/C02/T1_L2");
@@ -68,7 +65,7 @@ var l89 = l89
   .filter(ee.Filter.eq('WRS_PATH', 26))
   .filter(ee.Filter.inList('WRS_ROW', ROWS));
   
-l89.aside(print)
+l89.aside(print);
 
 // Applies scaling factors to LS8/9
 function applyScaleFactors(image) {
@@ -119,13 +116,27 @@ function clip(image) {
   return cl_im;
 }
 
-var today = ee.Date(date2);
+var today = ee.Date(date4);
 var tomorrow = today.advance(1, 'days');
 var l89_oneDay = l89
   .filterDate(today, tomorrow);
   
-var aoi = aoi6;
+var aoi = aoi16;
 var aoi_id = 1;
+
+//date0, aoi9 -- open water, cloud artifacts
+//date0, aoi1 -- clear sediment on south shore
+//date0, aoi16 - open water
+//date1, aoi1 -- lots of sediment and deep sediment that looks like blooms
+//date1, aoi4 -- sediment near harbor, unmasked clouds, shoreline artifacts (jetties)
+//date1, aoi11 -- sediment along shores, looks like blooms (but is more likely plumes)
+//date2, aoi2 -- ruddy sediment, open water (top right)
+//date2, aoi10 -- stringy sediment between island and land, sediment near inlet, open water
+//date3, aoi16 -- open water 
+//date3, aoi5 -- lots of wind-blown suspended sediment
+//date3, aoi11 -- cloud artifacts, sediment between islands
+//date4, aoi1 -- dark dark sediment, cloud artifacts along s shore
+//date4, aoi13 -- open water except near inlets
 
 var l89_oneDay = l89_oneDay
   .filterBounds(aoi)
@@ -162,32 +173,29 @@ function mosaicOneDay(date, aoi, aoi_id){
 var mos0_9 = mosaicOneDay(dates[0], aois[0], aoi_ids[0]);
 var mos0_1 = mosaicOneDay(dates[1], aois[1], aoi_ids[1]);
 var mos1_1 = mosaicOneDay(dates[2], aois[2], aoi_ids[2]);
-var mos1_2 = mosaicOneDay(dates[3], aois[3], aoi_ids[3]);
-var mos1_4 = mosaicOneDay(dates[4], aois[4], aoi_ids[4]);
-var mos1_9 = mosaicOneDay(dates[5], aois[5], aoi_ids[5]);
-var mos2_1 = mosaicOneDay(dates[6], aois[6], aoi_ids[6]);
-var mos2_7 = mosaicOneDay(dates[7], aois[7], aoi_ids[7]);
-var mos2_11 = mosaicOneDay(dates[8], aois[8], aoi_ids[8]);
-var mos3_10 = mosaicOneDay(dates[9], aois[9], aoi_ids[9]);
-var mos3_2 = mosaicOneDay(dates[10], aois[10], aoi_ids[10]);
-var mos3_8 = mosaicOneDay(dates[11], aois[11], aoi_ids[11]);
-var mos4_3 = mosaicOneDay(dates[12], aois[12], aoi_ids[12]);
-var mos4_1 = mosaicOneDay(dates[13], aois[13], aoi_ids[13]);
-var mos4_5 = mosaicOneDay(dates[14], aois[14], aoi_ids[14]);
-var mos4_6 = mosaicOneDay(dates[15], aois[15], aoi_ids[15]);
+var mos1_4 = mosaicOneDay(dates[3], aois[3], aoi_ids[3]);
+var mos1_11 = mosaicOneDay(dates[4], aois[4], aoi_ids[4]);
+var mos2_2 = mosaicOneDay(dates[5], aois[5], aoi_ids[5]);
+var mos2_10 = mosaicOneDay(dates[6], aois[6], aoi_ids[6]);
 
+var mos3_16 = mosaicOneDay(dates[7], aois[7], aoi_ids[7]);
+var mos3_5 = mosaicOneDay(dates[8], aois[8], aoi_ids[8]);
+var mos3_11 = mosaicOneDay(dates[9], aois[9], aoi_ids[9]);
 
-var validationCollection = ee.ImageCollection([mos0_9,
-                          mos0_1, mos1_1, mos1_2, mos1_4, mos1_9,
-                          mos2_1, mos2_7, mos2_11, mos3_10, mos3_2,
-                          mos3_8, mos4_3, mos4_1, mos4_5, mos4_6
-                          ]);
+var mos4_1 = mosaicOneDay(dates[10], aois[10], aoi_ids[10]);
+var mos4_13 = mosaicOneDay(dates[11], aois[11], aoi_ids[11]);
+
+var validationCollection = ee.ImageCollection([mos0_9, mos0_1, 
+                          mos1_1, mos1_4, mos1_11,
+                          mos2_2, mos2_10, 
+                          mos3_16, mos3_5, mos3_11, 
+                          mos4_1, mos4_13]);
 
 validationCollection.aside(print);
 
 Export.table.toAsset(validationCollection);
 
-/*// ------------------------------- //
+// ------------------------------- //
 // -- add vis params-------------- //
 // ------------------------------- //
 
@@ -203,6 +211,4 @@ var l89_style_tc = {
 // ------------------------------- //
 
 Map.addLayer(l89_oneDay, l89_style_tc, 'True Color');
-Map.centerObject(aoi);
-*/
- 
+Map.centerObject(aoi, 12);
