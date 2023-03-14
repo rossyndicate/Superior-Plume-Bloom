@@ -172,20 +172,19 @@ function mosaicOneDay(date, aoi, aoi_id){
 // make my head spin, sooooo reptition for the win.
 var mos0_9 = mosaicOneDay(dates[0], aois[0], aoi_ids[0]);
 var mos0_1 = mosaicOneDay(dates[1], aois[1], aoi_ids[1]);
-var mos1_1 = mosaicOneDay(dates[2], aois[2], aoi_ids[2]);
-var mos1_4 = mosaicOneDay(dates[3], aois[3], aoi_ids[3]);
-var mos1_11 = mosaicOneDay(dates[4], aois[4], aoi_ids[4]);
-var mos2_2 = mosaicOneDay(dates[5], aois[5], aoi_ids[5]);
-var mos2_10 = mosaicOneDay(dates[6], aois[6], aoi_ids[6]);
+var mos0_16 = mosaicOneDay(dates[2], aois[2], aoi_ids[2]);
+var mos1_1 = mosaicOneDay(dates[3], aois[3], aoi_ids[3]);
+var mos1_4 = mosaicOneDay(dates[4], aois[4], aoi_ids[4]);
+var mos1_11 = mosaicOneDay(dates[5], aois[5], aoi_ids[5]);
+var mos2_2 = mosaicOneDay(dates[6], aois[6], aoi_ids[6]);
+var mos2_10 = mosaicOneDay(dates[7], aois[7], aoi_ids[7]);
+var mos3_16 = mosaicOneDay(dates[8], aois[8], aoi_ids[8]);
+var mos3_5 = mosaicOneDay(dates[9], aois[9], aoi_ids[9]);
+var mos3_11 = mosaicOneDay(dates[10], aois[10], aoi_ids[10]);
+var mos4_1 = mosaicOneDay(dates[11], aois[11], aoi_ids[11]);
+var mos4_13 = mosaicOneDay(dates[12], aois[12], aoi_ids[12]);
 
-var mos3_16 = mosaicOneDay(dates[7], aois[7], aoi_ids[7]);
-var mos3_5 = mosaicOneDay(dates[8], aois[8], aoi_ids[8]);
-var mos3_11 = mosaicOneDay(dates[9], aois[9], aoi_ids[9]);
-
-var mos4_1 = mosaicOneDay(dates[10], aois[10], aoi_ids[10]);
-var mos4_13 = mosaicOneDay(dates[11], aois[11], aoi_ids[11]);
-
-var validationCollection = ee.ImageCollection([mos0_9, mos0_1, 
+var validationCollection = ee.ImageCollection([mos0_9, mos0_1, mos0_16,
                           mos1_1, mos1_4, mos1_11,
                           mos2_2, mos2_10, 
                           mos3_16, mos3_5, mos3_11, 
@@ -223,22 +222,23 @@ var processMos = function(mosaic){
 };
 
 //select only bands for ux and export indiv
-processMos(mos0_9.select(['SR_B1', 'SR_B2', 'SR_B3']));
-processMos(mos0_1.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos0_9.select(['SR_B4', 'SR_B3', 'SR_B2']));
+processMos(mos0_1.select(['SR_B4', 'SR_B3', 'SR_B2']));
+processMos(mos0_16.select(['SR_B4', 'SR_B3', 'SR_B2']));
 
-processMos(mos1_1.select(['SR_B1', 'SR_B2', 'SR_B3']));
-processMos(mos1_4.select(['SR_B1', 'SR_B2', 'SR_B3']));
-processMos(mos1_11.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos1_1.select(['SR_B4', 'SR_B3', 'SR_B2']));
+processMos(mos1_4.select(['SR_B4', 'SR_B3', 'SR_B2']));
+processMos(mos1_11.select(['SR_B4', 'SR_B3', 'SR_B2']));
 
-processMos(mos2_2.select(['SR_B1', 'SR_B2', 'SR_B3']));
-processMos(mos2_10.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos2_2.select(['SR_B4', 'SR_B3', 'SR_B2']));
+processMos(mos2_10.select(['SR_B4', 'SR_B3', 'SR_B2']));
 
-processMos(mos3_16.select(['SR_B1', 'SR_B2', 'SR_B3']));
-processMos(mos3_5.select(['SR_B1', 'SR_B2', 'SR_B3']));
-processMos(mos3_11.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos3_16.select(['SR_B4', 'SR_B3', 'SR_B2']));
+processMos(mos3_5.select(['SR_B4', 'SR_B3', 'SR_B2']));
+processMos(mos3_11.select(['SR_B4', 'SR_B3', 'SR_B2']));
 
-processMos(mos4_1.select(['SR_B1', 'SR_B2', 'SR_B3']));
-processMos(mos4_13.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos4_1.select(['SR_B4', 'SR_B3', 'SR_B2']));
+processMos(mos4_13.select(['SR_B4', 'SR_B3', 'SR_B2']));
 
 /*
 // ------------------------------- //
