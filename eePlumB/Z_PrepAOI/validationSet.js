@@ -177,10 +177,10 @@ var mos4_5 = mosaicOneDay(dates[14], aois[14], aoi_ids[14]);
 var mos4_6 = mosaicOneDay(dates[15], aois[15], aoi_ids[15]);
 
 
-var validationCollection = ee.ImageCollection([mos1,
-                          mos2, mos3, mos4, mos5, mos6,
-                          mos7, mos8, mos9, mos10, mos11,
-                          mos12, mos13, mos14, mos15, mos16
+var validationCollection = ee.ImageCollection([mos0_9,
+                          mos0_1, mos1_1, mos1_2, mos1_4, mos1_9,
+                          mos2_1, mos2_7, mos2_11, mos3_10, mos3_2,
+                          mos3_8, mos4_3, mos4_1, mos4_5, mos4_6
                           ]);
 
 validationCollection.aside(print);
