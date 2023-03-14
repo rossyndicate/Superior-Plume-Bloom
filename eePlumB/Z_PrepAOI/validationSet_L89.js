@@ -193,8 +193,54 @@ var validationCollection = ee.ImageCollection([mos0_9, mos0_1,
 
 validationCollection.aside(print);
 
-Export.table.toAsset(validationCollection);
+// for whatever reason, I can't loop through or functionalize the export, so
+// we're doing this the most convoluted and least data science-y way ever
 
+//get the image
+var processMos = function(mosaic){
+  //get the date and aoi
+  var d = mosaic.get('date');
+  var dstr = ee.Date(d).format('yyyy-MM-dd');
+  var a = mosaic.get('aoi');
+  var astr = ee.String(a);
+  var id = ee.String('aoi_').cat(astr).cat('_').cat(dstr);
+
+  //apend with assetIDPrefix
+  var assetIDPrefix = 'projects/ee-ross-superior/assets/eePlumB_valSets/LS4-7_eePlumB_val';
+  var assetId = ee.String(assetIDPrefix).cat('_').cat(id);
+  var descrip = ee.String('Export').cat('_').cat(id);  
+  
+  //define task
+  var task = Export.image.toAsset({
+    'image': mosaic,
+    'description': id.getInfo(),
+    'assetId': assetId.getInfo(),
+    'pyramidingPolicy': 'mode',
+    'scale': 30,
+    'maxPixels': 1e13
+  });
+  
+};
+
+//select only bands for ux and export indiv
+processMos(mos0_9.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos0_1.select(['SR_B1', 'SR_B2', 'SR_B3']));
+
+processMos(mos1_1.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos1_4.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos1_11.select(['SR_B1', 'SR_B2', 'SR_B3']));
+
+processMos(mos2_2.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos2_10.select(['SR_B1', 'SR_B2', 'SR_B3']));
+
+processMos(mos3_16.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos3_5.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos3_11.select(['SR_B1', 'SR_B2', 'SR_B3']));
+
+processMos(mos4_1.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos4_13.select(['SR_B1', 'SR_B2', 'SR_B3']));
+
+/*
 // ------------------------------- //
 // -- add vis params-------------- //
 // ------------------------------- //
@@ -212,3 +258,4 @@ var l89_style_tc = {
 
 Map.addLayer(l89_oneDay, l89_style_tc, 'True Color');
 Map.centerObject(aoi, 12);
+*/

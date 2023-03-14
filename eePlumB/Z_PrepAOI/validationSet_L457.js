@@ -1,7 +1,7 @@
 // This script creates the validation collection for eePlumB 
 // for Landsat 4, 5, 7 at Lake Superior
 // written by B. Steele
-// last modified 2020-03-14
+// last modified 2023-03-14
 
 var aoi1 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_1');
 var aoi2 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_2');
@@ -50,9 +50,23 @@ var date7 = '2020-05-31';
 //date7, aoi4 -- deep sediment, open water, near-shore artifacts (near canal park)
 //date7, aoi2 -- lots of ruddy sediment, open water
 
-var dates = [date0, date0, date1, date1, date2, date2, date3, date4, date4, date5, date5, date6, date7, date7];
+var dates = [date0, date0, 
+            date1, date1, 
+            date2, date2, 
+            date3, 
+            date4, date4, 
+            date5, date5, 
+            date6, 
+            date7, date7];
 
-var aois = [aoi1, aoi4, aoi1, aoi9, aoi12, aoi8, aoi10, aoi2, aoi6, aoi5, aoi15, aoi9, aoi4, aoi2];
+var aois = [aoi1, aoi4, 
+            aoi1, aoi9,
+            aoi12, aoi8, 
+            aoi10, 
+            aoi2, aoi6, 
+            aoi5, aoi15, 
+            aoi9, 
+            aoi4, aoi2];
 
 var aoi_ids = [1, 4, 1, 9, 12, 8, 10, 2, 6, 5, 15, 9, 4, 2];
 
@@ -176,16 +190,72 @@ var mos6_9 = mosaicOneDay(dates[11], aois[11], aoi_ids[11]);
 var mos7_4 = mosaicOneDay(dates[12], aois[12], aoi_ids[12]);
 var mos7_2 = mosaicOneDay(dates[13], aois[13], aoi_ids[13]);
 
-
-var validationCollection = ee.ImageCollection([mos0_1,
-                          mos0_4, mos1_1, mos1_9, mos2_12, mos2_8,
-                          mos3_10, mos4_2, mos4_6, mos5_5, mos5_15,
-                          mos6_9, mos7_4, mos7_2]);
+mos0_1.aside(print)
+var validationCollection = ee.ImageCollection([
+                          mos0_1, mos0_4, 
+                          mos1_1, mos1_9, 
+                          mos2_12, mos2_8,
+                          mos3_10, 
+                          mos4_2, mos4_6, 
+                          mos5_5, mos5_15,
+                          mos6_9, 
+                          mos7_4, mos7_2]);
 
 validationCollection.aside(print);
 
-Export.table.toAsset(validationCollection);
+// for whatever reason, I can't loop through or functionalize the export, so
+// we're doing this the most convoluted and least data science-y way ever
 
+//get the image
+var processMos = function(mosaic){
+  //get the date and aoi
+  var d = mosaic.get('date');
+  var dstr = ee.Date(d).format('yyyy-MM-dd');
+  var a = mosaic.get('aoi');
+  var astr = ee.String(a);
+  var id = ee.String('aoi_').cat(astr).cat('_').cat(dstr);
+
+  //apend with assetIDPrefix
+  var assetIDPrefix = 'projects/ee-ross-superior/assets/eePlumB_valSets/LS4-7_eePlumB_val';
+  var assetId = ee.String(assetIDPrefix).cat('_').cat(id);
+  var descrip = ee.String('Export').cat('_').cat(id);  
+  
+  //define task
+  var task = Export.image.toAsset({
+    'image': mosaic,
+    'description': id.getInfo(),
+    'assetId': assetId.getInfo(),
+    'pyramidingPolicy': 'mode',
+    'scale': 30,
+    'maxPixels': 1e13
+  });
+  
+};
+
+//select only bands for ux and export indiv
+processMos(mos0_1.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos0_4.select(['SR_B1', 'SR_B2', 'SR_B3']));
+
+processMos(mos1_1.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos1_9.select(['SR_B1', 'SR_B2', 'SR_B3']));
+
+processMos(mos2_12.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos2_8.select(['SR_B1', 'SR_B2', 'SR_B3']));
+
+processMos(mos3_10.select(['SR_B1', 'SR_B2', 'SR_B3']));
+
+processMos(mos4_2.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos4_6.select(['SR_B1', 'SR_B2', 'SR_B3']));
+
+processMos(mos5_5.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos5_15.select(['SR_B1', 'SR_B2', 'SR_B3']));
+
+processMos(mos6_9.select(['SR_B1', 'SR_B2', 'SR_B3']));
+
+processMos(mos7_4.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos7_2.select(['SR_B1', 'SR_B2', 'SR_B3']));
+
+/*
 // ------------------------------- //
 // -- add vis params-------------- //
 // ------------------------------- //
@@ -203,5 +273,4 @@ var l457_style_tc = {
 
 Map.addLayer(l457_oneDay, l457_style_tc, 'True Color');
   Map.centerObject(aoi, 12);
-
- 
+*/
