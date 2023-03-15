@@ -4,7 +4,7 @@
 // Adapted from code written by Xiao Yang (yangxiao@live.unc.edu)
 // from the GROD labeling workflow: https://github.com/GlobalHydrologyLab/GROD/blob/master/1_user_interface_script/GROD_validation.js
 
-// Last modified 02/22/2023
+// Last modified 03/15/2023
 
 // your initials
 var init = 'BGS';
@@ -14,45 +14,104 @@ var init = 'BGS';
 var openWater = /* color: #181930 */ee.FeatureCollection([]),
     sedimentPlume = /* color: #9c7238 */ee.FeatureCollection([]),
     algalBloom = /* color: #0c6320 */ee.FeatureCollection([]),
-    cloud = /* color: #ffffff */ee.FeatureCollection([]),
+    unmaskedCloud = /* color: #ffffff */ee.FeatureCollection([]),
     cloudContamination = /* color: #cccccc */ee.FeatureCollection([]),
-    other = /* color: #820580 */ee.FeatureCollection([]);
-// Import related datasets
+    shorelineContamination = /* color: */ee.FeatureCollection([]),
+    other = /* color: #820580 */ee.FeatureCollection([]),
+    uncertain = /* color: */ ee.FeatureCollection([]);
 
-var validationRegions = ee.FeatureCollection("");
+// Import Date-Tile images
+var td1 = ee.Image('projects/ee-ross-superior/assets/eePlumB_valSets/LS89_eePlumB_val_aoi_16_2013-07-23')
+          .select(['SR_B4', 'SR_B3', 'SR_B2'], ['R', 'G', 'B']),
+    td2 = ee.Image('projects/ee-ross-superior/assets/eePlumB_valSets/LS89_eePlumB_val_aoi_1_2020-08-27')
+          .select(['SR_B4', 'SR_B3', 'SR_B2'], ['R', 'G', 'B']),
+    td3 = ee.Image('projects/ee-ross-superior/assets/eePlumB_valSets/LS4-7_eePlumB_val_aoi_1_1984-05-04')
+          .select(['SR_B3', 'SR_B2', 'SR_B1'], ['R', 'G', 'B']),
+    td4 = ee.Image('projects/ee-ross-superior/assets/eePlumB_valSets/LS4-7_eePlumB_val_aoi_12_1987-08-17')
+          .select(['SR_B3', 'SR_B2', 'SR_B1'], ['R', 'G', 'B']),
+    td5 = ee.Image('projects/ee-ross-superior/assets/eePlumB_valSets/LS4-7_eePlumB_val_aoi_5_2002-10-05')
+          .select(['SR_B3', 'SR_B2', 'SR_B1'], ['R', 'G', 'B']),
+    td6 = ee.Image('projects/ee-ross-superior/assets/eePlumB_valSets/LS89_eePlumB_val_aoi_13_2022-04-19')
+          .select(['SR_B4', 'SR_B3', 'SR_B2'], ['R', 'G', 'B']),
+    td7 = ee.Image('projects/ee-ross-superior/assets/eePlumB_valSets/LS89_eePlumB_val_aoi_16_2022-10-28')
+          .select(['SR_B4', 'SR_B3', 'SR_B2'], ['R', 'G', 'B']),
+    td8 = ee.Image('projects/ee-ross-superior/assets/eePlumB_valSets/LS4-7_eePlumB_val_aoi_10_1990-07-24')
+          .select(['SR_B3', 'SR_B2', 'SR_B1'], ['R', 'G', 'B']),
+    td9 = ee.Image('projects/ee-ross-superior/assets/eePlumB_valSets/LS4-7_eePlumB_val_aoi_2_2004-06-28')
+          .select(['SR_B3', 'SR_B2', 'SR_B1'], ['R', 'G', 'B']),
+    td10 = ee.Image('projects/ee-ross-superior/assets/eePlumB_valSets/LS4-7_eePlumB_val_aoi_4_2020-05-31')
+          .select(['SR_B3', 'SR_B2', 'SR_B1'], ['R', 'G', 'B']);
 
-// ui.Buttons
-var Button1 = ui.Button('Region 1', function() {
+var valTiles = ee.ImageCollection(td1).merge(td2).merge(td3).merge(td4).merge(td5).merge(td6).merge(td7).merge(td8).merge(td9).merge(td10);
+valTiles.aside(print);
+
+var Button1 = ui.Button('Tile-Date 1', function() {
   pickRegionByIndex(0);
 });
-var Button2 = ui.Button('Region 2', function() {
+var Button2 = ui.Button('Tile-Date 2', function() {
   pickRegionByIndex(1);
 });
-var Button3 = ui.Button('Region 3', function() {
+var Button3 = ui.Button('Tile-Date 3', function() {
   pickRegionByIndex(2);
 });
-var Button4 = ui.Button('Region 4', function() {
+var Button4 = ui.Button('Tile-Date 4', function() {
   pickRegionByIndex(3);
 });
+var Button5 = ui.Button('Tile-Date 5', function() {
+  pickRegionByIndex(4);
+});
+var Button6 = ui.Button('Tile-Date 6', function() {
+  pickRegionByIndex(5);
+});
+var Button7 = ui.Button('Tile-Date 7', function() {
+  pickRegionByIndex(6);
+});
+var Button8 = ui.Button('Tile-Date 8', function() {
+  pickRegionByIndex(7);
+});
+var Button9 = ui.Button('Tile-Date 9', function() {
+  pickRegionByIndex(8);
+});
+var Button10 = ui.Button('Tile-Date 10', function() {
+  pickRegionByIndex(9);
+});
 
-var regionsPanel = ui.Panel([
+var validationPanel = ui.Panel([
   Button1,
   Button2,
   Button3,
   Button4,
+  Button5,
+  Button6,
+  Button7,
+  Button8,
+  Button9,
+  Button10,
 ], ui.Panel.Layout.flow('horizontal'), {'position': 'bottom-center'});
 
-Map.add(regionsPanel);
+Map.add(validationPanel);
 
-
-var pickRegionByIndex = function(i) {
-  var currentCell = ee.Feature(validationRegions.toList(1, i).get(0)).geometry();
-  var GRWLfil = GRWL.filterBounds(currentCell).map(function(f) {return(f.intersection(currentCell))});
-  Map.centerObject(currentCell);
-  Map.layers().set(0, ui.Map.Layer(ee.Image(1).mask(ee.Image(1).toByte().paint(ee.FeatureCollection(ee.Feature(currentCell, {})), 0)), {palette: 'black'}, 'GRID_background', true, 0.5));
-  Map.layers().set(1, ui.Map.Layer(GRWLfil, {color: 'yellow'}, 'GRWL', true, 0.7));
+var tc_style = {
+  bands: ['R', 'G', 'B'],
+  min: -0.01,
+  max: 0.20
 };
 
+var pickRegionByIndex = function(i) {
+  //on click, clear and re-add panel
+  Map.clear();
+  Map.add(validationPanel);
+
+  //grab one tile-date
+  var TileDate = ee.Image(valTiles.toList(1, i).get(0));
+  
+  var miss = TileDate.get('mission');
+  
+  //focus on tile
+  Map.centerObject(TileDate, 12); 
+  Map.addLayer(TileDate, tc_style);
+};
+  
 
 // Define functions
 var addLatLon = function(f) {
@@ -60,71 +119,75 @@ var addLatLon = function(f) {
   var xy = f.geometry().coordinates();
   return f.set({lon: xy.get(0), lat: xy.get(1)}).setGeometry(null);
 };
+
 var mergeCollection = function() {
   // assign point class as property to each feature and return the merged featurecollection
-  Dams = Dams.map(function(f) {
-    return f.set({class: 'Dam'});
+  openWater = openWater.map(function(f) {
+    return f.set({class: 'openWater'
+    });
   });
 
-  Locks = Locks.map(function(f) {
-    return f.set({class: 'Locks'});
+  sedimentPlume = sedimentPlume.map(function(f) {
+    return f.set({class: 'sedimentPlume'});
   });
 
-  Channel_Dams = Channel_Dams.map(function(f) {
-    return f.set({class: 'Channel_Dams'});
+  algalBloom = algalBloom.map(function(f) {
+    return f.set({class: 'algalBloom'});
   });
 
-  Partial_Dams_gte50 = Partial_Dams_gte50.map(function(f) {
-    return f.set({class: 'Partial_Dams_gte50'});
+  unmaskedCloud = unmaskedCloud.map(function(f) {
+    return f.set({class: 'unmaskedCloud'});
   });
 
-  Partial_Dams_lt50 = Partial_Dams_lt50.map(function(f) {
-    return f.set({class: 'Partial_Dams_lt50'});
+  cloudContamination = cloudContamination.map(function(f) {
+    return f.set({class: 'cloudContamination'});
   });
   
-  Low_Permeable_Dams = Low_Permeable_Dams.map(function(f) {
-    return f.set({class: 'Low_Permeable_Dams'});
+  shorelineContamination = shorelineContamination.map(function(f) {
+    return f.set({class: 'shorelineContamination'});
+  });
+  
+  other = other.map(function(f) {
+    return f.set({class: 'other'});
   });
 
-  Natural_riffles = Natural_riffles.map(function(f) {
-    return f.set({class: 'Natural_riffles'});
+  uncertain = uncertain.map(function(f) {
+    return f.set({class: 'uncertain'});
   });
 
-  Uncertain = Uncertain.map(function(f) {
-    return f.set({class: 'Uncertain'});
-  });
-
-  return (Dams
-  .merge(Locks)
-  .merge(Channel_Dams)
-  .merge(Partial_Dams_gte50)
-  .merge(Partial_Dams_lt50)
-  .merge(Low_Permeable_Dams)
-  .merge(Natural_riffles)
-  .merge(Uncertain)
+  return (openWater
+  .merge(sedimentPlume)
+  .merge(algalBloom)
+  .merge(unmaskedCloud)
+  .merge(cloudContamination)
+  .merge(other)
+  .merge(shorelineContamination)
+  .merge(uncertain)
   .map(addLatLon));
 };
 
 
 // Program starts
-Map.setOptions('satellite');
+Map.setOptions('roadmap');
 
 // export the data
+
 // Function to get and format today's date
 function getTodaysDate() {
   var date = new Date();
   var dd = date.getDate();
-  var mm = date.getMonth();
- 
+  var mm = date.getMonth(); // this is doing something weird and is not correct
+
   if (dd < 10) dd = '0' + dd;
   if (mm < 10) mm = '0' + mm;
 
-  var date_string = date.getFullYear() + '-' + mm + '-' + dd
-  print(date_string);
-  return(date_string)
+  var date_string = date.getFullYear() + '-' + mm + '-' + dd;
+  return(date_string);
 }
 
-var filename = ee.String('validation_').cat(init).cat('_').cat(getTodaysDate())
+var filename = ee.String('validation_').cat(init).cat('_').cat(getTodaysDate());
+print(filename);
+
 // export the data
 var merged = mergeCollection();
 Export.table.toDrive({
@@ -133,3 +196,4 @@ Export.table.toDrive({
   folder: 'test-val',
   fileNamePrefix: filename.getInfo(),
   fileFormat: 'csv'});
+  
