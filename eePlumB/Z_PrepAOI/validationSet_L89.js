@@ -1,7 +1,7 @@
 // This script creates the validation collection for eePlumB 
 // for Landsat 8 & 9 at Lake Superior
 // written by B. Steele
-// last modified 2020-03-14
+// last modified 2020-03-15
 
 var aoi1 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_1');
 var aoi2 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_2');
@@ -91,7 +91,15 @@ function satMask(image){
 
 var l89 = l89.map(satMask);
 
-// Filter for water, clouds, etc ----- //
+//Filter for water //
+function findWater(image) {
+  var qa = image.select('QA_PIXEL');
+  var water = qa.bitwiseAnd(1 << 7);
+  return image.updateMask(water);
+}
+var l89 = l89.map(findWater);
+
+/*// Filter for water, clouds, etc ----- //
 function fMask(image) {
   var qa = image.select('QA_PIXEL');
   var water = qa.bitwiseAnd(1 << 7);
@@ -104,7 +112,7 @@ function fMask(image) {
   return image.updateMask(qaMask).updateMask(water);
 }
 
-var l89 = l89.map(fMask);
+var l89 = l89.map(fMask);*/
 
 // ------------------------------- //
 // -- filter to specific scenes -- //
@@ -166,7 +174,7 @@ function mosaicOneDay(date, aoi, aoi_id){
           'aoi': aoi_id,
           'mission': mission
     });
-  return mosOneDay;
+  return mosOneDay.clip(aoi);
 }
 
 // this is NOT the most elegant way of doing this

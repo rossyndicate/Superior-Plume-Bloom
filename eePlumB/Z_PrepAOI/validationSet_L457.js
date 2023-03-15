@@ -3,7 +3,6 @@
 // written by B. Steele
 // last modified 2023-03-14
 
-var sup_noHarbor = ee.FeatureCollection('projects/ee-ross-superior/assets/aoi_superior_no_harbor');
 var aoi1 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_1');
 var aoi2 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_2');
 var aoi3 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_3');
@@ -111,7 +110,15 @@ function satMask(image){
 
 var l457 = l457.map(satMask);
 
-// Filter for water, clouds, etc ----- //
+//Filter for water //
+function findWater(image) {
+  var qa = image.select('QA_PIXEL');
+  var water = qa.bitwiseAnd(1 << 7);
+  return image.updateMask(water);
+}
+var l457 = l457.map(findWater);
+
+/*// Filter for water, clouds, etc ----- //
 function fMask(image) {
   var qa = image.select('QA_PIXEL');
   var water = qa.bitwiseAnd(1 << 7);
@@ -124,7 +131,7 @@ function fMask(image) {
   return image.updateMask(qaMask).updateMask(water);
 }
 
-var l457 = l457.map(fMask);
+var l457 = l457.map(fMask);*/
 
 // ------------------------------- //
 // -- filter to specific scenes -- //
@@ -173,7 +180,7 @@ function mosaicOneDay(date, aoi, aoi_id){
           'aoi': aoi_id,
           'mission': mission
     });
-  return mosOneDay;
+  return mosOneDay.clip(aoi);
 }
 
 
@@ -252,8 +259,8 @@ processMos(mos6_9, aoi9);
 processMos(mos7_4, aoi4);
 processMos(mos7_2, aoi2);
 
-/*
-// ------------------------------- //
+
+/*// ------------------------------- //
 // -- add vis params-------------- //
 // ------------------------------- //
 
@@ -269,5 +276,5 @@ var l457_style_tc = {
 // ------------------------------- //
 
 Map.addLayer(l457_oneDay, l457_style_tc, 'True Color');
-  Map.centerObject(aoi, 12);
+Map.centerObject(aoi, 12);
 */
