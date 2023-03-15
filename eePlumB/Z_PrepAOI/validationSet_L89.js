@@ -110,7 +110,7 @@ var l89 = l89.map(fMask);
 // -- filter to specific scenes -- //
 // ------------------------------- //
 
-// function to clip to AOI function
+/*// function to clip to AOI function
 function clip(image) {
   var cl_im = image.clip(aoi);
   return cl_im;
@@ -150,7 +150,7 @@ var l89_oneDay = l89_oneDay
         'aoi': aoi_id});
   
 l89_oneDay.aside(print);
-
+*/
 
 // mosaic function
 function mosaicOneDay(date, aoi, aoi_id){
@@ -158,12 +158,14 @@ function mosaicOneDay(date, aoi, aoi_id){
   var tomorrow = today.advance(1, 'days');
   var l89_oneDay = l89
     .filterDate(today, tomorrow)
-    .filterBounds(aoi)
-    .map(clip);
+    .filterBounds(aoi);
+  var mission = l89_oneDay.first().get('SPACECRAFT_ID');
   var mosOneDay = l89_oneDay
     .mosaic()
-    .set({'date': today,
-          'aoi': aoi_id});
+    .set({'date': date,
+          'aoi': aoi_id,
+          'mission': mission
+    });
   return mosOneDay;
 }
 
@@ -184,19 +186,12 @@ var mos3_11 = mosaicOneDay(dates[10], aois[10], aoi_ids[10]);
 var mos4_1 = mosaicOneDay(dates[11], aois[11], aoi_ids[11]);
 var mos4_13 = mosaicOneDay(dates[12], aois[12], aoi_ids[12]);
 
-var validationCollection = ee.ImageCollection([mos0_9, mos0_1, mos0_16,
-                          mos1_1, mos1_4, mos1_11,
-                          mos2_2, mos2_10, 
-                          mos3_16, mos3_5, mos3_11, 
-                          mos4_1, mos4_13]);
-
-validationCollection.aside(print);
 
 // for whatever reason, I can't loop through or functionalize the export, so
 // we're doing this the most convoluted and least data science-y way ever
 
 //get the image
-var processMos = function(mosaic){
+var processMos = function(mosaic, mos_aoi){
   //get the date and aoi
   var d = mosaic.get('date');
   var dstr = ee.Date(d).format('yyyy-MM-dd');
@@ -215,30 +210,32 @@ var processMos = function(mosaic){
     'description': id.getInfo(),
     'assetId': assetId.getInfo(),
     'pyramidingPolicy': 'mode',
+    'crs': 'EPSG:4326',
     'scale': 30,
+    'region': mos_aoi.geometry(),
     'maxPixels': 1e13
   });
   
 };
 
 //select only bands for ux and export indiv
-processMos(mos0_9.select(['SR_B4', 'SR_B3', 'SR_B2']));
-processMos(mos0_1.select(['SR_B4', 'SR_B3', 'SR_B2']));
-processMos(mos0_16.select(['SR_B4', 'SR_B3', 'SR_B2']));
+processMos(mos0_9, aoi9);
+processMos(mos0_1, aoi1);
+processMos(mos0_16, aoi16);
 
-processMos(mos1_1.select(['SR_B4', 'SR_B3', 'SR_B2']));
-processMos(mos1_4.select(['SR_B4', 'SR_B3', 'SR_B2']));
-processMos(mos1_11.select(['SR_B4', 'SR_B3', 'SR_B2']));
+processMos(mos1_1, aoi1);
+processMos(mos1_4, aoi4);
+processMos(mos1_11, aoi11);
 
-processMos(mos2_2.select(['SR_B4', 'SR_B3', 'SR_B2']));
-processMos(mos2_10.select(['SR_B4', 'SR_B3', 'SR_B2']));
+processMos(mos2_2, aoi2);
+processMos(mos2_10, aoi10);
 
-processMos(mos3_16.select(['SR_B4', 'SR_B3', 'SR_B2']));
-processMos(mos3_5.select(['SR_B4', 'SR_B3', 'SR_B2']));
-processMos(mos3_11.select(['SR_B4', 'SR_B3', 'SR_B2']));
+processMos(mos3_16, aoi16);
+processMos(mos3_5, aoi5);
+processMos(mos3_11, aoi11);
 
-processMos(mos4_1.select(['SR_B4', 'SR_B3', 'SR_B2']));
-processMos(mos4_13.select(['SR_B4', 'SR_B3', 'SR_B2']));
+processMos(mos4_1, aoi1);
+processMos(mos4_13, aoi13);
 
 /*
 // ------------------------------- //

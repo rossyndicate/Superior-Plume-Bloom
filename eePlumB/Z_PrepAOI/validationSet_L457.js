@@ -3,6 +3,7 @@
 // written by B. Steele
 // last modified 2023-03-14
 
+var sup_noHarbor = ee.FeatureCollection('projects/ee-ross-superior/assets/aoi_superior_no_harbor');
 var aoi1 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_1');
 var aoi2 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_2');
 var aoi3 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_3');
@@ -129,6 +130,7 @@ var l457 = l457.map(fMask);
 // -- filter to specific scenes -- //
 // ------------------------------- //
 
+/*
 // function to clip to AOI function
 function clip(image) {
   var cl_im = image.clip(aoi);
@@ -154,7 +156,7 @@ var l457_oneDay = l457_oneDay
   .set({'date': today,
         'aoi': aoi_id});
   
-l457_oneDay.aside(print);
+l457_oneDay.aside(print);*/
 
 
 // mosaic function
@@ -163,14 +165,17 @@ function mosaicOneDay(date, aoi, aoi_id){
   var tomorrow = today.advance(1, 'days');
   var l457_oneDay = l457
     .filterDate(today, tomorrow)
-    .filterBounds(aoi)
-    .map(clip);
+    .filterBounds(aoi);
+  var mission = l457_oneDay.first().get('SPACECRAFT_ID');
   var mosOneDay = l457_oneDay
     .mosaic()
-    .set({'date': today,
-          'aoi': aoi_id});
+    .set({'date': date,
+          'aoi': aoi_id,
+          'mission': mission
+    });
   return mosOneDay;
 }
+
 
 // this is NOT the most elegant way of doing this
 // but GEE doesn't do for-loops and the nested functions
@@ -190,24 +195,13 @@ var mos6_9 = mosaicOneDay(dates[11], aois[11], aoi_ids[11]);
 var mos7_4 = mosaicOneDay(dates[12], aois[12], aoi_ids[12]);
 var mos7_2 = mosaicOneDay(dates[13], aois[13], aoi_ids[13]);
 
-mos0_1.aside(print)
-var validationCollection = ee.ImageCollection([
-                          mos0_1, mos0_4, 
-                          mos1_1, mos1_9, 
-                          mos2_12, mos2_8,
-                          mos3_10, 
-                          mos4_2, mos4_6, 
-                          mos5_5, mos5_15,
-                          mos6_9, 
-                          mos7_4, mos7_2]);
 
-validationCollection.aside(print);
 
 // for whatever reason, I can't loop through or functionalize the export, so
 // we're doing this the most convoluted and least data science-y way ever
 
 //get the image
-var processMos = function(mosaic){
+var processMos = function(mosaic, mos_aoi){
   //get the date and aoi
   var d = mosaic.get('date');
   var dstr = ee.Date(d).format('yyyy-MM-dd');
@@ -226,34 +220,37 @@ var processMos = function(mosaic){
     'description': id.getInfo(),
     'assetId': assetId.getInfo(),
     'pyramidingPolicy': 'mode',
+    'crs': 'EPSG:4326',
     'scale': 30,
+    'region': mos_aoi.geometry(),
     'maxPixels': 1e13
   });
-  
+
 };
 
+
 //select only bands for ux and export indiv
-processMos(mos0_1.select(['SR_B1', 'SR_B2', 'SR_B3']));
-processMos(mos0_4.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos0_1, aoi1);
+processMos(mos0_4, aoi4);
 
-processMos(mos1_1.select(['SR_B1', 'SR_B2', 'SR_B3']));
-processMos(mos1_9.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos1_1, aoi1);
+processMos(mos1_9, aoi9);
 
-processMos(mos2_12.select(['SR_B1', 'SR_B2', 'SR_B3']));
-processMos(mos2_8.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos2_12, aoi12);
+processMos(mos2_8, aoi8);
 
-processMos(mos3_10.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos3_10, aoi10);
 
-processMos(mos4_2.select(['SR_B1', 'SR_B2', 'SR_B3']));
-processMos(mos4_6.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos4_2, aoi2);
+processMos(mos4_6, aoi6);
 
-processMos(mos5_5.select(['SR_B1', 'SR_B2', 'SR_B3']));
-processMos(mos5_15.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos5_5, aoi5);
+processMos(mos5_15, aoi15);
 
-processMos(mos6_9.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos6_9, aoi9);
 
-processMos(mos7_4.select(['SR_B1', 'SR_B2', 'SR_B3']));
-processMos(mos7_2.select(['SR_B1', 'SR_B2', 'SR_B3']));
+processMos(mos7_4, aoi4);
+processMos(mos7_2, aoi2);
 
 /*
 // ------------------------------- //
