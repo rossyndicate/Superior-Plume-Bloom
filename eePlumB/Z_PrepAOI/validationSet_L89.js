@@ -40,13 +40,13 @@ var dates = [date0,date0, date0,
             date3,date3,date3,
             date4,date4];
 
-var aois = [aoi9, aoi1, aoi16, 
+var aois = [aoi15, aoi1, aoi16, 
             aoi1, aoi4, aoi11, 
             aoi2, aoi10, 
             aoi16, aoi5, aoi11, 
             aoi1, aoi13];
 
-var aoi_ids = [9, 1, 16,
+var aoi_ids = [15, 1, 16,
               1, 4, 11, 
               2, 10, 
               16, 5, 11, 
@@ -91,7 +91,7 @@ function satMask(image){
 
 var l89 = l89.map(satMask);
 
-//Filter for water //
+/*//Filter for water //
 function findWater(image) {
   var qa = image.select('QA_PIXEL');
   var water = qa.bitwiseAnd(1 << 7);
@@ -99,7 +99,7 @@ function findWater(image) {
 }
 var l89 = l89.map(findWater);
 
-/*// Filter for water, clouds, etc ----- //
+// Filter for water, clouds, etc ----- //
 function fMask(image) {
   var qa = image.select('QA_PIXEL');
   var water = qa.bitwiseAnd(1 << 7);
@@ -124,15 +124,15 @@ function clip(image) {
   return cl_im;
 }
 
-var today = ee.Date(date4);
+var today = ee.Date(date1);
 var tomorrow = today.advance(1, 'days');
 var l89_oneDay = l89
   .filterDate(today, tomorrow);
   
-var aoi = aoi16;
-var aoi_id = 1;
+var aoi = aoi1;
+var aoi_id = 1;*/
 
-//date0, aoi9 -- open water, cloud artifacts
+//date0, aoi15 -- open water, cloud artifacts
 //date0, aoi1 -- clear sediment on south shore
 //date0, aoi16 - open water
 //date1, aoi1 -- lots of sediment and deep sediment that looks like blooms
@@ -146,7 +146,7 @@ var aoi_id = 1;
 //date4, aoi1 -- dark dark sediment, cloud artifacts along s shore
 //date4, aoi13 -- open water except near inlets
 
-var l89_oneDay = l89_oneDay
+/*var l89_oneDay = l89_oneDay
   .filterBounds(aoi)
   .map(clip);
 
@@ -180,7 +180,7 @@ function mosaicOneDay(date, aoi, aoi_id){
 // this is NOT the most elegant way of doing this
 // but GEE doesn't do for-loops and the nested functions
 // make my head spin, sooooo reptition for the win.
-var mos0_9 = mosaicOneDay(dates[0], aois[0], aoi_ids[0]);
+var mos0_15 = mosaicOneDay(dates[0], aois[0], aoi_ids[0]);
 var mos0_1 = mosaicOneDay(dates[1], aois[1], aoi_ids[1]);
 var mos0_16 = mosaicOneDay(dates[2], aois[2], aoi_ids[2]);
 var mos1_1 = mosaicOneDay(dates[3], aois[3], aoi_ids[3]);
@@ -227,7 +227,7 @@ var processMos = function(mosaic, mos_aoi){
 };
 
 //select only bands for ux and export indiv
-processMos(mos0_9, aoi9);
+processMos(mos0_15, aoi15);
 processMos(mos0_1, aoi1);
 processMos(mos0_16, aoi16);
 
