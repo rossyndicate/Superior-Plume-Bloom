@@ -21,7 +21,20 @@ We will be using Google Earth Engine (GEE) for this project and instructions on 
 
 ## Initial setup
 
-creating a GEE account + copying the script and editing initials + validation steps
+Read this tutorial and/or watch this [video](https://youtu.be/QXJf9IAF1z4)
+
+1. Sign up for Google Earth Engine: <https://earthengine.google.com/>
+2. Set up a shareable Google Drive Folder
+     a. Using your Google account (the same one you made your Google Earth Engine account with), open up your [Google drive](https://drive.google.com/drive/my-drive) and make a new folder in your drive to store data from the project. Please include your name in the name of the folder, ex. ‘FirstnameLastnameData’
+     b. Once the folder is created, please share it with the group. To do this, you can right click on the folder and click ‘share.’ Next, click ‘get shareable link’ in the top right corner, and set link sharing to ‘Anyone with the link can edit.’ Lastly, click ‘copy link,’ and paste the link in this [Google Sheets document](https://docs.google.com/spreadsheets/d/1J_jvedUA3fDjD4EAYYUe-bmEszaDJWjTzlbqJJN6MXE/edit#gid=0) alongside your name.
+          
+```{r, echo=FALSE, out.width = '60%'}
+knitr::include_graphics("www/images/newfolder.png")
+```
+
+```{r, echo=FALSE, out.width = '50%'}
+knitr::include_graphics("www/images/sharefolder.png")
+```
 
 ## What are we ID-ing?
 
@@ -31,7 +44,7 @@ flow chart & examples
 
 The purpose of this step is to teach you how to use our Google Earth Engine framework and create an easy reference if you need a refresher in the future.
 
-actual "how-to" for editing and adding features
+actual "how-to" for editing and adding features + copying the script and editing initials
 
 ## Validate your knowledge
 
