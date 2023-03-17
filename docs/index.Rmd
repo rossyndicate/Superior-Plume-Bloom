@@ -21,7 +21,7 @@ We will be using Google Earth Engine (GEE) for this project and instructions on 
 
 ## Initial setup
 
-Read this tutorial and/or watch this [video](https://youtu.be/QXJf9IAF1z4)
+If this is your first time using GEE and this classification workflow, please follow the tutorial below to have your account and permissions setup appropriately. Read this tutorial and/or watch this [video](https://youtu.be/QXJf9IAF1z4)
 
 1. Sign up for Google Earth Engine: <https://earthengine.google.com/>
 2. Set up a shareable Google Drive Folder
@@ -42,10 +42,57 @@ flow chart & examples
 
 ## How to ID in GEE
 
-The purpose of this step is to teach you how to use our Google Earth Engine framework and create an easy reference if you need a refresher in the future.
+The purpose of this step is to teach you how to use our Google Earth Engine framework to classify images. Hopefully, this section is an easy reference if you need a refresher in the future.
 
 actual "how-to" for editing and adding features + copying the script and editing initials
 
-## Validate your knowledge
+1. Go to the project [Github page.](https://github.com/rossyndicate/Superior-Plume-Bloom/tree/main/eePlumB/1_user_interface_script) 
 
-The purpose of this step is to have you go through the full process of classifying a few images for practice and to provide us with data to see how similarly all our volunteers classify a range of conditions. We hope that the examples below will help guide everyone to classify conditions similarly, but we understand that there will be variation as there is a level of subjectivity in this process. 
+2. Copy and paste the appropriate `.js` script into a blank [Google Earth Engine editor](https://code.earthengine.google.com/). 
+
+* If this is your first time through the tutorial, you will be working with the validation script: [`eePlumB_validation.js`](https://github.com/rossyndicate/Superior-Plume-Bloom/blob/5e9d0cd1ad435aa3bdb2f0d2b41c026c0f57c8ab/eePlumB/1_user_interface_script/eePlumB_validation). The purpose of this step is to have you go through the full process of classifying a few images for practice and to provide us with data to see how similarly all our volunteers classify a range of conditions. We hope that the examples below will help guide everyone to classify conditions similarly, but we understand that there will be variation as there is a level of subjectivity in this process. 
+* If you have already completed the tutorial once using the validation script, you have made it to the main classification workflow and will be working with the classification script: [`eePlumB_classification.js`](LINK ME)
+
+```{r, echo=FALSE, out.width = '80%'}
+knitr::include_graphics("www/images/copy.png")
+```
+
+```{r, echo=FALSE, out.width = '80%'}
+knitr::include_graphics("www/images/paste.png")
+```
+
+3. To prepare the feature categories, you will need to convert them to import records. You can do this by hovering over the first few lines of code `var openWater =...` and GEE will prompt you to import these records. Click convert to do so.
+
+```{r, echo=FALSE, out.width = '100%'}
+knitr::include_graphics("www/images/import.png")
+```
+
+4. Write your initials at the top of the script and hit the ‘Save’ button. This will direct you to a pop up which will ask you to create your home folder. Write your name or a nickname and then hit 'continue.' 
+
+```{r, echo=FALSE, out.width = '100%'}
+knitr::include_graphics("www/images/StartUpdated.jpg")
+```
+
+
+```{r, echo=FALSE, out.width = '80%'}
+knitr::include_graphics("www/images/CreateHomeFolder.jpg")
+```
+
+5. Next, you will be asked to create a git repository. A git repository allows you to do version control on the project and to share all the project code with other people. Type in the name of the project, and click 'create.'
+
+```{r, echo=FALSE, out.width = '80%'}
+knitr::include_graphics("www/images/CreateGitRepo.jpg")
+```
+
+6. Lastly, you will need to hit 'save' again, and will be asked to name your script.This will save a copy of the script to your script repository. Please take note the name of the file just saved as you will need this to go back and continue your work.
+
+```{r, echo=FALSE, out.width = '100%'}
+knitr::include_graphics("www/images/StartUpdated.jpg")
+```
+
+7. Hit ‘Run’ at the center top of your screen.
+
+```{r, echo=FALSE, out.width = '100%'}
+knitr::include_graphics("www/images/StartUpdatedNo5.jpg")
+```
+
