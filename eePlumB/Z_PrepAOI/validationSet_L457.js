@@ -1,7 +1,7 @@
 // This script creates the validation collection for eePlumB 
 // for Landsat 4, 5, 7 at Lake Superior
 // written by B. Steele
-// last modified 2023-03-14
+// last modified 2023-03-15
 
 var aoi1 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_1');
 var aoi2 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_2');
@@ -110,7 +110,7 @@ function satMask(image){
 
 var l457 = l457.map(satMask);
 
-//Filter for water //
+/*//Filter for water //
 function findWater(image) {
   var qa = image.select('QA_PIXEL');
   var water = qa.bitwiseAnd(1 << 7);
@@ -118,7 +118,7 @@ function findWater(image) {
 }
 var l457 = l457.map(findWater);
 
-/*// Filter for water, clouds, etc ----- //
+// Filter for water, clouds, etc ----- //
 function fMask(image) {
   var qa = image.select('QA_PIXEL');
   var water = qa.bitwiseAnd(1 << 7);
@@ -137,19 +137,19 @@ var l457 = l457.map(fMask);*/
 // -- filter to specific scenes -- //
 // ------------------------------- //
 
-/*
-// function to clip to AOI function
+
+/*// function to clip to AOI function
 function clip(image) {
   var cl_im = image.clip(aoi);
   return cl_im;
 }
 
-var today = ee.Date(date7);
+var today = ee.Date(date0);
 var tomorrow = today.advance(1, 'days');
 var l457_oneDay = l457
   .filterDate(today, tomorrow);
   
-var aoi = aoi2;
+var aoi = aoi1;
 var aoi_id = 1;
 
 var l457_oneDay = l457_oneDay
@@ -163,8 +163,8 @@ var l457_oneDay = l457_oneDay
   .set({'date': today,
         'aoi': aoi_id});
   
-l457_oneDay.aside(print);*/
-
+l457_oneDay.aside(print);
+*/
 
 // mosaic function
 function mosaicOneDay(date, aoi, aoi_id){
@@ -259,8 +259,8 @@ processMos(mos6_9, aoi9);
 processMos(mos7_4, aoi4);
 processMos(mos7_2, aoi2);
 
-
-/*// ------------------------------- //
+/*
+// ------------------------------- //
 // -- add vis params-------------- //
 // ------------------------------- //
 
@@ -277,4 +277,5 @@ var l457_style_tc = {
 
 Map.addLayer(l457_oneDay, l457_style_tc, 'True Color');
 Map.centerObject(aoi, 12);
+
 */
