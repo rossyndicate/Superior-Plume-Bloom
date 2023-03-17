@@ -17,6 +17,8 @@ Lake Superior is a large lake, and relying on human observations of blooms restr
 
 To train computer algorithms to detect these features in satellite images we need a training dataset. That's where we need your help! In this exercise, we ask you to participate in identify changes in surface conditions in the western arm of Lake Superior. All you need is a computer and your eyes.
 
+We will be using Google Earth Engine (GEE) for this project and instructions on how to use this software are detailed below. 
+
 ## Initial setup
 
 creating a GEE account + copying the script and editing initials + validation steps
@@ -27,4 +29,10 @@ flow chart & examples
 
 ## How to ID in GEE
 
+The purpose of this step is to teach you how to use our Google Earth Engine framework and create an easy reference if you need a refresher in the future.
+
 actual "how-to" for editing and adding features
+
+## Validate your knowledge
+
+The purpose of this step is to have you go through the full process of classifying a few images for practice and to provide us with data to see how similarly all our volunteers classify a range of conditions. We hope that the examples below will help guide everyone to classify conditions similarly, but we understand that there will be variation as there is a level of subjectivity in this process. 
