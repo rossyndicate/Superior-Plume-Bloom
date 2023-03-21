@@ -30,11 +30,11 @@ You can also watch the first 2.5 minutes of [this video](https://youtu.be/QXJf9I
     b. Once the folder is created, please share it with the group. To do this, you can right click on the folder and click 'share.' Next, click 'get shareable link' in the top right corner, and set link sharing to 'Anyone with the link can edit.' Lastly, click 'copy link,' and paste the link in this [Google Sheets document](https://docs.google.com/spreadsheets/d/1J_jvedUA3fDjD4EAYYUe-bmEszaDJWjTzlbqJJN6MXE/edit#gid=0) alongside your name.
 
 ```{r, echo=FALSE, out.width = '60%'}
-knitr::include_graphics("www/images/newfolder.png")
+knitr::include_graphics("docs/www/images/newfolder.png")
 ```
 
 ```{r, echo=FALSE, out.width = '50%'}
-knitr::include_graphics("www/images/sharefolder.png")
+knitr::include_graphics("docs/www/images/sharefolder.png")
 ```
 
 ## What are we ID-ing?
@@ -53,21 +53,21 @@ The purpose of this step is to walk you through how to setup a script in GEE to 
 * If you have already completed the tutorial once using the validation script, you have made it to the main classification workflow and will be working with the classification script: [`eePlumB_classification.js`](LINK ME)
 
 ```{r, echo=FALSE, out.width = '80%'}
-knitr::include_graphics("www/images/copy.png")
+knitr::include_graphics("docs/www/images/copy.png")
 ```
 
 ```{r, echo=FALSE, out.width = '80%'}
-knitr::include_graphics("www/images/newscript.png")
+knitr::include_graphics("docs/www/images/newscript.png")
 ```
 
 ```{r, echo=FALSE, out.width = '80%'}
-knitr::include_graphics("www/images/paste.png")
+knitr::include_graphics("docs/www/images/paste.png")
 ```
 
 3. To prepare the feature categories, you will need to convert them to import records. You can do this by hovering over the first few lines of code `var openWater =...` and GEE will prompt you to import these records. Click convert to do so.
 
 ```{r, echo=FALSE, out.width = '100%'}
-knitr::include_graphics("www/images/import.png")
+knitr::include_graphics("docs/www/images/import.png")
 ```
 
 4. Write your initials at the top of the script and hit the ‘Save’ button. 
@@ -78,17 +78,17 @@ knitr::include_graphics("www/images/import.png")
 ** If you are working on the actual classification steps, you should name the file `eePlumB_[YOUR INITIALS]_[MISSION]_[DATE]` based on the assigned mission-date combination you are currently working through.
 
 ```{r, echo=FALSE, out.width = '100%'}
-knitr::include_graphics("www/images/savescript.png")
+knitr::include_graphics("docs/www/images/savescript.png")
 ```
 
 ```{r, echo=FALSE, out.width = '80%'}
-knitr::include_graphics("www/images/CreateHomeFolder.jpg")
+knitr::include_graphics("docs/www/images/CreateHomeFolder.jpg")
 ```
 
 5. Verify that you are in the script that you just saved, then hit ‘Run’ at the center top of your screen.
 
 ```{r, echo=FALSE, out.width = '100%'}
-knitr::include_graphics("www/images/run.png")
+knitr::include_graphics("docs/www/images/run.png")
 ```
 
 Now that you have the script running, you are ready to add labels. Head to the next section, `How to label images in GEE, Part 2`!
@@ -102,13 +102,13 @@ The purpose of this step is to teach you how to use our Google Earth Engine fram
 1. Check that you have the appropriate geometry categories by hovering over `Geometry Imports` in the map area of GEE. If you don't see a list of sediment and bloom types, then you should revisit Part 1 and follow those instructions carefully.
 
 ```{r, echo=FALSE, out.width = '80%'}
-knitr::include_graphics("www/images/categories.png")
+knitr::include_graphics("docs/www/images/categories.png")
 ```
 
 2. When you see a new feature in the image that you would like to label, you will need to click on the top left geometry bar and select the point geometry icon.
 
 ```{r, echo=FALSE, out.width = '50%'}
-knitr::include_graphics("www/images/addmarker.png")
+knitr::include_graphics("docs/www/images/addmarker.png")
 ```
 
 3. Change the category to the type of feature that you are labeling by hovering over `openWater` (it just chooses the first category by default) and clicking the name of the category you want.
@@ -116,7 +116,7 @@ knitr::include_graphics("www/images/addmarker.png")
 4. Next, click on the map to add a point of this type. 
 
 ```{r, echo=FALSE, out.width = '80%'}
-knitr::include_graphics("www/images/addpoint.png")
+knitr::include_graphics("docs/www/images/addpoint.png")
 ```
 
 5. Continue adding points in this category by clicking the pixel on the map that you want to label. Zoom in or out and scroll (by clicking and dragging) as needed. 
@@ -124,7 +124,7 @@ knitr::include_graphics("www/images/addpoint.png")
 6. When you are done, click `Exit` next to where it says "Point drawing". If you want to start adding points again, simply go back to Step 2 and repeat.
 
 ```{r, echo=FALSE, out.width = '80%'}
-knitr::include_graphics("www/images/endpoint.png")
+knitr::include_graphics("docs/www/images/endpoint.png")
 ```
 
 ### Editing
@@ -135,7 +135,7 @@ knitr::include_graphics("www/images/endpoint.png")
 
 
 ```{r, echo=FALSE, out.width = '60%'}
-knitr::include_graphics("www/images/editing.png")
+knitr::include_graphics("docs/www/images/editing.png")
 ```
 
 ### Finishing up the labeling
@@ -147,5 +147,5 @@ When you have completed labeling your image, ...
 Here are some useful shortcuts if you are a keyboard rather than mouse person.
 
 ```{r, echo=FALSE, out.width = '40%'}
-knitr::include_graphics("www/images/keyboard.png")
+knitr::include_graphics("docs/www/images/keyboard.png")
 ```
