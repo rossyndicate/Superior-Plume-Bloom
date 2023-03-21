@@ -20,7 +20,9 @@ We will be using Google Earth Engine (GEE) for this project and instructions on 
 
 ## Initial setup
 
-If this is your first time using GEE and this classification workflow, please follow the tutorial below to have your account and permissions setup appropriately. You can also watch the first 2.5 minutes of [this video](https://youtu.be/QXJf9IAF1z4) to visually walk through the setup instructions. Note that the video was originally created for the "GROD workflow", which was the foundation for the workflow here, and you may need to substitute information that is specific for this project.
+If this is your first time using GEE and this classification workflow, please follow the tutorial below to have your account and permissions setup appropriately. You should only need to do this step once.
+
+You can also watch the first 2.5 minutes of [this video](https://youtu.be/QXJf9IAF1z4) to visually walk through the setup instructions. Note that the video was originally created for the "GROD workflow", which was the foundation for the workflow here, and you may need to substitute information that is specific for this project.
 
 1. Sign up for Google Earth Engine: <https://earthengine.google.com/>. If you don't have an affiliation, you can put University of Wisconsin-Madison.
 2. Set up a shareable Google Drive Folder
@@ -39,11 +41,9 @@ knitr::include_graphics("www/images/sharefolder.png")
 
 flow chart & examples
 
-## How to ID in GEE
+## How to label images in GEE, Part 1
 
-The purpose of this step is to teach you how to use our Google Earth Engine framework to classify images. Hopefully, this section is an easy reference if you need a refresher in the future.
-
-actual "how-to" for editing and adding features + copying the script and editing initials
+The purpose of this step is to walk you through how to setup a script in GEE to be able to open an image before you actually label it. You will need to do this process before each new mission-date combination you are classifying.
 
 1. Go to the project [Github page.](https://github.com/rossyndicate/Superior-Plume-Bloom/tree/main/eePlumB/1_user_interface_script) 
 
@@ -90,3 +90,11 @@ knitr::include_graphics("www/images/CreateHomeFolder.jpg")
 ```{r, echo=FALSE, out.width = '100%'}
 knitr::include_graphics("www/images/run.png")
 ```
+
+Now that you have the script running, you are ready to add labels. Head to the next section, `How to label images in GEE, Part 2`!
+
+## How to label images in GEE, Part 2
+
+The purpose of this step is to teach you how to use our Google Earth Engine framework to classify images. Hopefully, this section is an easy reference if you need a refresher in the future. Note that this step assumes you have already done part 1 for the current set of images (either validation or for the specific mission-date you have been assigned).
+
+actual "how-to" for editing and adding features
