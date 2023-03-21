@@ -10,8 +10,7 @@ output:
 
 ## About this project
 
-**Why identify plumes and blooms?**
-Cyanobacteria blooms are one of the most significant management challenges in the Great Lakes today. Recurring blooms of varying toxicity are commonly observed in four of the Great Lakes, and the fifth, Lake Superior, has experienced intermittent nearshore blooms since 2012. The recent advent of cyanobacterial blooms in Lake Superior is disconcerting, given the highly valued, pristine water quality of the large lake. Many fear the appearance of blooms portend a very different future for Lake Superior. As a public resource, the coastal water quality of Lake Superior has tremendous economic, public health, and environmental value, and therefore, preventing cyanobacterial blooms in Lake Superior is a high-priority management challenge. 
+**Why identify plumes and blooms?** Cyanobacteria blooms are one of the most significant management challenges in the Great Lakes today. Recurring blooms of varying toxicity are commonly observed in four of the Great Lakes, and the fifth, Lake Superior, has experienced intermittent nearshore blooms since 2012. The recent advent of cyanobacterial blooms in Lake Superior is disconcerting, given the highly valued, pristine water quality of the large lake. Many fear the appearance of blooms portend a very different future for Lake Superior. As a public resource, the coastal water quality of Lake Superior has tremendous economic, public health, and environmental value, and therefore, preventing cyanobacterial blooms in Lake Superior is a high-priority management challenge.
 
 Lake Superior is a large lake, and relying on human observations of blooms restricts observations to near-shore locations. Remote sensing has the potential to catalog spatial and temporal extent of surface blooms. In this project, we are attempting to use optical imagery from Lake Superior to delineate surface plumes (sediment) and blooms (algae). It is likely that these two surface features occur at the same time (i.e a rainstorm may lead to a sediment plume from a river and subsequently an algal boom). 
 
@@ -21,13 +20,13 @@ We will be using Google Earth Engine (GEE) for this project and instructions on 
 
 ## Initial setup
 
-If this is your first time using GEE and this classification workflow, please follow the tutorial below to have your account and permissions setup appropriately. Read this tutorial and/or watch this [video](https://youtu.be/QXJf9IAF1z4)
+If this is your first time using GEE and this classification workflow, please follow the tutorial below to have your account and permissions setup appropriately. You can also watch the first 2.5 minutes of [this video](https://youtu.be/QXJf9IAF1z4) to visually walk through the setup instructions. Note that the video was originally created for the "GROD workflow", which was the foundation for the workflow here, and you may need to substitute information that is specific for this project.
 
-1. Sign up for Google Earth Engine: <https://earthengine.google.com/>
+1. Sign up for Google Earth Engine: <https://earthengine.google.com/>. If you don't have an affiliation, you can put University of Wisconsin-Madison.
 2. Set up a shareable Google Drive Folder
-     a. Using your Google account (the same one you made your Google Earth Engine account with), open up your [Google drive](https://drive.google.com/drive/my-drive) and make a new folder in your drive to store data from the project. Please include your name in the name of the folder, ex. ‘FirstnameLastnameData’
-     b. Once the folder is created, please share it with the group. To do this, you can right click on the folder and click ‘share.’ Next, click ‘get shareable link’ in the top right corner, and set link sharing to ‘Anyone with the link can edit.’ Lastly, click ‘copy link,’ and paste the link in this [Google Sheets document](https://docs.google.com/spreadsheets/d/1J_jvedUA3fDjD4EAYYUe-bmEszaDJWjTzlbqJJN6MXE/edit#gid=0) alongside your name.
-          
+    a. Using your Google account (the same one you made your Google Earth Engine account with), open up your [Google drive](https://drive.google.com/drive/my-drive) and make a new folder in your drive to store data from the project. Please include your name in the name of the folder, ex. 'FirstnameLastnameData'
+    b. Once the folder is created, please share it with the group. To do this, you can right click on the folder and click 'share.' Next, click 'get shareable link' in the top right corner, and set link sharing to 'Anyone with the link can edit.' Lastly, click 'copy link,' and paste the link in this [Google Sheets document](https://docs.google.com/spreadsheets/d/1J_jvedUA3fDjD4EAYYUe-bmEszaDJWjTzlbqJJN6MXE/edit#gid=0) alongside your name.
+
 ```{r, echo=FALSE, out.width = '60%'}
 knitr::include_graphics("www/images/newfolder.png")
 ```
