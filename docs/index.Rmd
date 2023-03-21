@@ -95,6 +95,57 @@ Now that you have the script running, you are ready to add labels. Head to the n
 
 ## How to label images in GEE, Part 2
 
-The purpose of this step is to teach you how to use our Google Earth Engine framework to classify images. Hopefully, this section is an easy reference if you need a refresher in the future. Note that this step assumes you have already done part 1 for the current set of images (either validation or for the specific mission-date you have been assigned).
+The purpose of this step is to teach you how to use our Google Earth Engine framework to classify images. Hopefully, this section is an easy reference if you need a refresher in the future. Note that this step assumes you have already done Part 1 for the current set of images (either validation or for the specific mission-date you have been assigned).
 
-actual "how-to" for editing and adding features
+### Adding labels
+
+1. Check that you have the appropriate geometry categories by hovering over `Geometry Imports` in the map area of GEE. If you don't see a list of sediment and bloom types, then you should revisit Part 1 and follow those instructions carefully.
+
+```{r, echo=FALSE, out.width = '80%'}
+knitr::include_graphics("www/images/categories.png")
+```
+
+2. When you see a new feature in the image that you would like to label, you will need to click on the top left geometry bar and select the point geometry icon.
+
+```{r, echo=FALSE, out.width = '50%'}
+knitr::include_graphics("www/images/addmarker.png")
+```
+
+3. Change the category to the type of feature that you are labeling by hovering over `openWater` (it just chooses the first category by default) and clicking the name of the category you want.
+
+4. Next, click on the map to add a point of this type. 
+
+```{r, echo=FALSE, out.width = '80%'}
+knitr::include_graphics("www/images/addpoint.png")
+```
+
+5. Continue adding points in this category by clicking the pixel on the map that you want to label. Zoom in or out and scroll (by clicking and dragging) as needed. 
+
+6. When you are done, click `Exit` next to where it says "Point drawing". If you want to start adding points again, simply go back to Step 2 and repeat.
+
+```{r, echo=FALSE, out.width = '80%'}
+knitr::include_graphics("www/images/endpoint.png")
+```
+
+### Editing
+
+1. If you have made a mistake, click on the hand icon at the top left-hand corner of the map (see the red circle on the figure below). Next, click on the point you dislike. Then, you can drag to a new location or hit delete to remove the point. If you moved the point, hit `Exit` to stop the editing session. 
+
+2. To resume adding points, go back to Step 2 in the previous section.
+
+
+```{r, echo=FALSE, out.width = '60%'}
+knitr::include_graphics("www/images/editing.png")
+```
+
+### Finishing up the labeling
+
+When you have completed labeling your image, ... 
+
+### Useful keyboard shortcuts
+
+Here are some useful shortcuts if you are a keyboard rather than mouse person.
+
+```{r, echo=FALSE, out.width = '40%'}
+knitr::include_graphics("www/images/keyboard.png")
+```
