@@ -37,7 +37,7 @@ knitr::include_graphics("docs/www/images/newfolder.png")
 knitr::include_graphics("docs/www/images/sharefolder.png")
 ```
 
-## What are we ID-ing?
+## What are we labeling?
 
 flow chart & examples
 
