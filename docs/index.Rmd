@@ -41,7 +41,7 @@ knitr::include_graphics("docs/www/images/sharefolder.png")
 
 flow chart & examples
 
-## How to label images in GEE, Part 1
+## How to label: Part 1
 
 The purpose of this step is to walk you through how to setup a script in GEE to be able to open an image before you actually label it. You will need to do this process before each new mission-date combination you are classifying.
 
@@ -91,11 +91,11 @@ knitr::include_graphics("docs/www/images/CreateHomeFolder.jpg")
 knitr::include_graphics("docs/www/images/run.png")
 ```
 
-Now that you have the script running, you are ready to add labels. Head to the next section, `How to label images in GEE, Part 2`!
+Now that you have the script running, you are ready to add labels. Head to the next section, `How to label: Part 2`!
 
-## How to label images in GEE, Part 2
+## How to label: Part 2
 
-The purpose of this step is to teach you how to use our Google Earth Engine framework to classify images. Hopefully, this section is an easy reference if you need a refresher in the future. Note that this step assumes you have already done Part 1 for the current set of images (either validation or for the specific mission-date you have been assigned).
+The purpose of this step is to teach you how to use our Google Earth Engine framework to classify images. Hopefully, this section is an easy reference if you need a refresher in the future. Note that this step assumes you have already done `How to label: Part 1` for the current set of images (either validation or for the specific mission-date you have been assigned).
 
 ### Adding labels
 
