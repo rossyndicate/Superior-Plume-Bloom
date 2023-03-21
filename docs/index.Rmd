@@ -57,6 +57,10 @@ knitr::include_graphics("www/images/copy.png")
 ```
 
 ```{r, echo=FALSE, out.width = '80%'}
+knitr::include_graphics("www/images/newscript.png")
+```
+
+```{r, echo=FALSE, out.width = '80%'}
 knitr::include_graphics("www/images/paste.png")
 ```
 
@@ -66,32 +70,23 @@ knitr::include_graphics("www/images/paste.png")
 knitr::include_graphics("www/images/import.png")
 ```
 
-4. Write your initials at the top of the script and hit the ‘Save’ button. This will direct you to a pop up which will ask you to create your home folder. Write your name or a nickname and then hit 'continue.' 
+4. Write your initials at the top of the script and hit the ‘Save’ button. 
+
+* If you haven't done this before, you will be directed to a pop up which will ask you to create your home folder. You won't be able to change this folder name in the future, so we recommend you Write your name or a nickname/email and then hit 'continue.' 
+* Next, you will need to choose a name for this script. You will be saving a new script for each unique classification activity. Please take note the name of the file you save as you will need this to go back and continue your work.
+** If this is your first time through the workflow, you are on the validation step and should name the file `eePlumB_[YOUR INITIALS]_validation`.
+** If you are working on the actual classification steps, you should name the file `eePlumB_[YOUR INITIALS]_[MISSION]_[DATE]` based on the assigned mission-date combination you are currently working through.
 
 ```{r, echo=FALSE, out.width = '100%'}
-knitr::include_graphics("www/images/StartUpdated.jpg")
+knitr::include_graphics("www/images/savescript.png")
 ```
-
 
 ```{r, echo=FALSE, out.width = '80%'}
 knitr::include_graphics("www/images/CreateHomeFolder.jpg")
 ```
 
-5. Next, you will be asked to create a git repository. A git repository allows you to do version control on the project and to share all the project code with other people. Type in the name of the project, and click 'create.'
-
-```{r, echo=FALSE, out.width = '80%'}
-knitr::include_graphics("www/images/CreateGitRepo.jpg")
-```
-
-6. Lastly, you will need to hit 'save' again, and will be asked to name your script.This will save a copy of the script to your script repository. Please take note the name of the file just saved as you will need this to go back and continue your work.
+5. Verify that you are in the script that you just saved, then hit ‘Run’ at the center top of your screen.
 
 ```{r, echo=FALSE, out.width = '100%'}
-knitr::include_graphics("www/images/StartUpdated.jpg")
+knitr::include_graphics("www/images/run.png")
 ```
-
-7. Hit ‘Run’ at the center top of your screen.
-
-```{r, echo=FALSE, out.width = '100%'}
-knitr::include_graphics("www/images/StartUpdatedNo5.jpg")
-```
-
