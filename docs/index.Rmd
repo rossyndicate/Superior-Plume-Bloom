@@ -119,7 +119,7 @@ knitr::include_graphics("docs/www/images/addmarker.png")
 knitr::include_graphics("docs/www/images/addpoint.png")
 ```
 
-5. Continue adding points in this category by clicking the pixel on the map that you want to label. Zoom in or out and scroll (by clicking and dragging) as needed. 
+5. Continue adding points in the current category by clicking the pixel on the map that you want to label. Zoom in or out and scroll (by clicking and dragging) as needed. For each image, label at least 5 pixels for each category you see. Note that you may not see all categories in a given image.
 
 6. When you are done, click `Exit` next to where it says "Point drawing". If you want to start adding points again, simply go back to Step 2 and repeat.
 
