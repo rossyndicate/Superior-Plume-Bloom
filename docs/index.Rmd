@@ -99,7 +99,7 @@ The purpose of this step is to teach you how to use our Google Earth Engine fram
 
 ### Adding labels
 
-1. Check that you have the appropriate geometry categories by hovering over `Geometry Imports` in the map area of GEE. If you don't see a list of sediment and bloom types, then you should revisit Part 1 and follow those instructions carefully.
+1. Check that you have the appropriate geometry categories by hovering over `Geometry Imports` in the map area of GEE. When hovering, you should see a list of sediment and bloom types (see image below). If you do not, then you should revisit Part 1 and follow those instructions carefully.
 
 ```{r, echo=FALSE, out.width = '80%'}
 knitr::include_graphics("docs/www/images/categories.png")
