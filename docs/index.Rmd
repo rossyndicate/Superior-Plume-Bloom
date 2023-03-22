@@ -25,13 +25,17 @@ If this is your first time using GEE and this classification workflow, please fo
 You can also watch the first 2.5 minutes of [this video](https://youtu.be/QXJf9IAF1z4) to visually walk through the setup instructions. Note that the video was originally created for the "GROD workflow", which was the foundation for the workflow here, and you may need to substitute information that is specific for this project.
 
 1. Sign up for Google Earth Engine: <https://earthengine.google.com/>. If you don't have an affiliation, you can put University of Wisconsin-Madison.
-2. Set up a shareable Google Drive Folder
-    a. Using your Google account (the same one you made your Google Earth Engine account with), open up your [Google drive](https://drive.google.com/drive/my-drive) and make a new folder in your drive to store data from the project. Please include your name in the name of the folder, ex. 'FirstnameLastnameData'
-    b. Once the folder is created, please share it with the group. To do this, you can right click on the folder and click 'share.' Next, click 'get shareable link' in the top right corner, and set link sharing to 'Anyone with the link can edit.' Lastly, click 'copy link,' and paste the link in this [Google Sheets document](https://docs.google.com/spreadsheets/d/1J_jvedUA3fDjD4EAYYUe-bmEszaDJWjTzlbqJJN6MXE/edit#gid=0) alongside your name.
+2. Using your Google account (the same one you made your Google Earth Engine account with), open up your [Google drive](https://drive.google.com/drive/my-drive) and make a new folder in your drive to store data from the project. Please include your name in the name of the folder, ex. 'FirstnameLastnameData'
 
-![](www/images/newfolder.png)
+<center>
+![](www/images/newfolder.png){width=400px}
+</center>
+    
+3.  Once the folder is created, please share it with the group. To do this, you can right click on the folder and click 'share.' Next, click 'get shareable link' in the top right corner, and set link sharing to 'Anyone with the link can edit.' Lastly, click 'copy link,' and paste the link in this [Google Sheets document](https://docs.google.com/spreadsheets/d/1J_jvedUA3fDjD4EAYYUe-bmEszaDJWjTzlbqJJN6MXE/edit#gid=0) alongside your name.
 
+<center>
 ![](www/images/sharefolder.png)
+</center>
 
 ## What are we labeling?
 
@@ -43,35 +47,54 @@ The purpose of this step is to walk you through how to setup a script in GEE to 
 
 1. Go to the project [Github page.](https://github.com/rossyndicate/Superior-Plume-Bloom/tree/main/eePlumB/1_user_interface_script) 
 
-2. Copy and paste the appropriate `.js` script into a blank [Google Earth Engine editor](https://code.earthengine.google.com/). 
+2. Copy the appropriate `.js` script. 
 
-* If this is your first time through the tutorial, you will be working with the validation script: [`eePlumB_validation.js`](https://github.com/rossyndicate/Superior-Plume-Bloom/blob/5e9d0cd1ad435aa3bdb2f0d2b41c026c0f57c8ab/eePlumB/1_user_interface_script/eePlumB_validation). The purpose of this step is to have you go through the full process of classifying a few images for practice and to provide us with data to see how similarly all our volunteers classify a range of conditions. We hope that the examples below will help guide everyone to classify conditions similarly, but we understand that there will be variation as there is a level of subjectivity in this process. 
-* If you have already completed the tutorial once using the validation script, you have made it to the main classification workflow and will be working with the classification script: [`eePlumB_classification.js`](LINK ME)
+   * If this is your first time through the tutorial, you will be working with the validation script: [`eePlumB_validation.js`](https://github.com/rossyndicate/Superior-Plume-Bloom/blob/5e9d0cd1ad435aa3bdb2f0d2b41c026c0f57c8ab/eePlumB/1_user_interface_script/eePlumB_validation). The purpose of this step is to have you go through the full process of classifying a few images for practice and to provide us with data to see how similarly all our volunteers classify a range of conditions. We hope that the examples below will help guide everyone to classify conditions similarly, but we understand that there will be variation as there is a level of subjectivity in this process. 
+   * If you have already completed the tutorial once using the validation script, you have made it to the main classification workflow and will be working with the classification script: [`eePlumB_classification.js`](LINK ME)
 
-![](www/images/copy.png)
+<center>
+![](www/images/copy.png){width=550px}
+</center>
 
-![](www/images/newscript.png)
+3. Open a blank script file in the [Google Earth Engine editor](https://code.earthengine.google.com/)
 
-![](www/images/paste.png)
+<center>
+![](www/images/newscript.png){width=200px}
+</center>
 
-3. To prepare the feature categories, you will need to convert them to import records. You can do this by hovering over the first few lines of code `var openWater =...` and GEE will prompt you to import these records. Click convert to do so.
+4. Paste the contents you copied in Step 2 into the blank GEE editor.
 
-![](www/images/import.png)
+<center>
+![](www/images/paste.png){width=550px}
+</center>
 
-4. Write your initials at the top of the script and hit the ‘Save’ button. 
+5. To prepare the feature categories, you will need to convert them to import records. You can do this by hovering over the first few lines of code `var openWater =...` and GEE will prompt you to import these records. Click convert to do so.
 
-* If you haven't done this before, you will be directed to a pop up which will ask you to create your home folder. You won't be able to change this folder name in the future, so we recommend you Write your name or a nickname/email and then hit 'continue.' 
-* Next, you will need to choose a name for this script. You will be saving a new script for each unique classification activity. Please take note the name of the file you save as you will need this to go back and continue your work.
-** If this is your first time through the workflow, you are on the validation step and should name the file `eePlumB_[YOUR INITIALS]_validation`.
-** If you are working on the actual classification steps, you should name the file `eePlumB_[YOUR INITIALS]_[MISSION]_[DATE]` based on the assigned mission-date combination you are currently working through.
+<center>
+![](www/images/import.png){width=550px}
+</center>
 
-![](www/images/savescript.png)
+6. Change the initials at the top of the script to your own and hit the ‘Save’ button. You will need to do steps 7 & 8 before the file is actually saved.
 
-![](www/images/CreateHomeFolder.jpg)
+<center>
+![](www/images/savescript.png){width=350px}
+</center>
+
+7. If you haven't done this before, you will be directed to a pop up which will ask you to create your home folder. You won't be able to change this folder name in the future, so we recommend you write your name or a nickname/email and then hit 'continue.' 
+
+<center>
+![](www/images/CreateHomeFolder.jpg){width=350px}
+</center>
+
+8. Choose a name for this script. You will be saving a new script for each unique classification activity. Please take note the name of the file you save as you will need this to go back and continue your work.
+      * If this is your first time through the workflow, you are on the validation step and should name the file `eePlumB_[YOUR INITIALS]_validation`.
+      * If you are working on the actual classification steps, you should name the file `eePlumB_[YOUR INITIALS]_[MISSION]_[DATE]` based on the assigned mission-date combination you are currently working through.
 
 5. Verify that you are in the script that you just saved, then hit ‘Run’ at the center top of your screen.
 
-![](www/images/run.png)
+<center>
+![](www/images/run.png){width=350px}
+</center>
 
 Now that you have the script running, you are ready to add labels. Head to the next section, `How to label: Part 2`!
 
@@ -83,23 +106,31 @@ The purpose of this step is to teach you how to use our Google Earth Engine fram
 
 1. Check that you have the appropriate geometry categories by hovering over `Geometry Imports` in the map area of GEE. When hovering, you should see a list of sediment and bloom types (see image below). If you do not, then you should revisit Part 1 and follow those instructions carefully.
 
-![](www/images/categories.png)
+<center>
+![](www/images/categories.png){width=350px}
+</center>
 
 2. When you see pixels in the image that you would like to label, you will need to click on the top left geometry bar and select the point geometry icon. For each tile that you are working on, you will have to zoom in until you can discern pixels. This is especially important near shore.
 
-![](www/images/addmarker.png)
+<center>
+![](www/images/addmarker.png){width=300px}
+</center>
 
 3. Change the category to the type of pixel that you are labeling by hovering over `openWater` (it just chooses the first category by default) and clicking the name of the category you want.
 
 4. Next, click on the map to add a point of this type. 
 
-![](www/images/addpoint.png)
+<center>
+![](www/images/addpoint.png){width=550px}
+</center>
 
 5. Continue adding points in the current category by clicking the pixel on the map that you want to label. Zoom in or out and scroll (by clicking and dragging) as needed. For each image, label at least 5 pixels for each category you see. Note that you may not see all categories in a given image.
 
 6. When you are done, click `Exit` next to where it says "Point drawing". If you want to start adding points again, simply go back to Step 2 and repeat.
 
-![](www/images/endpoint.png)
+<center>
+![](www/images/endpoint.png){width=550px}
+</center>
 
 ### Editing
 
@@ -107,7 +138,9 @@ The purpose of this step is to teach you how to use our Google Earth Engine fram
 
 2. To resume adding points, go back to Step 2 in the previous section.
 
-![](www/images/editing.png)
+<center>
+![](www/images/editing.png){width=550px}
+</center>
 
 ### Finishing up the labeling
 
@@ -117,4 +150,4 @@ When you have completed labeling your image, ...
 
 Here are some useful shortcuts if you are a keyboard rather than mouse person.
 
-![](www/images/keyboard.png)
+![](www/images/keyboard.png){width=450px}
