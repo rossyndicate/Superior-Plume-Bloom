@@ -29,13 +29,13 @@ You can also watch the first 2.5 minutes of [this video](https://youtu.be/QXJf9I
 
 <center>
 ![](www/images/newfolder.png){width=400px}
-</center>
+</center> &nbsp;&nbsp;
     
 3.  Once the folder is created, please share it with the group. To do this, you can right click on the folder and click 'share.' Next, click 'get shareable link' in the top right corner, and set link sharing to 'Anyone with the link can edit.' Lastly, click 'copy link,' and paste the link in this [Google Sheets document](https://docs.google.com/spreadsheets/d/1J_jvedUA3fDjD4EAYYUe-bmEszaDJWjTzlbqJJN6MXE/edit#gid=0) alongside your name.
 
 <center>
 ![](www/images/sharefolder.png)
-</center>
+</center> &nbsp;&nbsp;
 
 ## What are we labeling?
 
@@ -54,37 +54,37 @@ The purpose of this step is to walk you through how to setup a script in GEE to 
 
 <center>
 ![](www/images/copy.png){width=550px}
-</center>
+</center> &nbsp;&nbsp;
 
 3. Open a blank script file in the [Google Earth Engine editor](https://code.earthengine.google.com/)
 
 <center>
 ![](www/images/newscript.png){width=200px}
-</center>
+</center> &nbsp;&nbsp;
 
 4. Paste the contents you copied in Step 2 into the blank GEE editor.
 
 <center>
 ![](www/images/paste.png){width=550px}
-</center>
+</center> &nbsp;&nbsp;
 
 5. To prepare the feature categories, you will need to convert them to import records. You can do this by hovering over the first few lines of code `var openWater =...` and GEE will prompt you to import these records. Click convert to do so.
 
 <center>
 ![](www/images/import.png){width=550px}
-</center>
+</center> &nbsp;&nbsp;
 
 6. Change the initials at the top of the script to your own and hit the ‘Save’ button. You will need to do steps 7 & 8 before the file is actually saved.
 
 <center>
 ![](www/images/savescript.png){width=350px}
-</center>
+</center> &nbsp;&nbsp;
 
 7. If you haven't done this before, you will be directed to a pop up which will ask you to create your home folder. You won't be able to change this folder name in the future, so we recommend you write your name or a nickname/email and then hit 'continue.' 
 
 <center>
 ![](www/images/CreateHomeFolder.jpg){width=350px}
-</center>
+</center> &nbsp;&nbsp;
 
 8. Choose a name for this script. You will be saving a new script for each unique classification activity. Please take note the name of the file you save as you will need this to go back and continue your work.
       * If this is your first time through the workflow, you are on the validation step and should name the file `eePlumB_[YOUR INITIALS]_validation`.
@@ -94,7 +94,7 @@ The purpose of this step is to walk you through how to setup a script in GEE to 
 
 <center>
 ![](www/images/run.png){width=350px}
-</center>
+</center> &nbsp;&nbsp;
 
 Now that you have the script running, you are ready to add labels. Head to the next section, `How to label: Part 2`!
 
@@ -108,13 +108,13 @@ The purpose of this step is to teach you how to use our Google Earth Engine fram
 
 <center>
 ![](www/images/categories.png){width=350px}
-</center>
+</center> &nbsp;&nbsp;
 
 2. When you see pixels in the image that you would like to label, you will need to click on the top left geometry bar and select the point geometry icon. For each tile that you are working on, you will have to zoom in until you can discern pixels. This is especially important near shore.
 
 <center>
 ![](www/images/addmarker.png){width=300px}
-</center>
+</center> &nbsp;&nbsp;
 
 3. Change the category to the type of pixel that you are labeling by hovering over `openWater` (it just chooses the first category by default) and clicking the name of the category you want.
 
@@ -122,7 +122,7 @@ The purpose of this step is to teach you how to use our Google Earth Engine fram
 
 <center>
 ![](www/images/addpoint.png){width=550px}
-</center>
+</center> &nbsp;&nbsp;
 
 5. Continue adding points in the current category by clicking the pixel on the map that you want to label. Zoom in or out and scroll (by clicking and dragging) as needed. For each image, label at least 5 pixels for each category you see. Note that you may not see all categories in a given image.
 
@@ -130,7 +130,7 @@ The purpose of this step is to teach you how to use our Google Earth Engine fram
 
 <center>
 ![](www/images/endpoint.png){width=550px}
-</center>
+</center> &nbsp;&nbsp;
 
 ### Editing
 
@@ -140,7 +140,7 @@ The purpose of this step is to teach you how to use our Google Earth Engine fram
 
 <center>
 ![](www/images/editing.png){width=550px}
-</center>
+</center> &nbsp;&nbsp;
 
 ### Finishing up the labeling
 
