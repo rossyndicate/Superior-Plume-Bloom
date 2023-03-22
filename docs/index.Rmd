@@ -105,7 +105,7 @@ The purpose of this step is to teach you how to use our Google Earth Engine fram
 knitr::include_graphics("docs/www/images/categories.png")
 ```
 
-2. When you see pixels in the image that you would like to label, you will need to click on the top left geometry bar and select the point geometry icon.
+2. When you see pixels in the image that you would like to label, you will need to click on the top left geometry bar and select the point geometry icon. For each tile that you are working on, you will have to zoom in until you can discern pixels. This is especially important near shore.
 
 ```{r, echo=FALSE, out.width = '50%'}
 knitr::include_graphics("docs/www/images/addmarker.png")
