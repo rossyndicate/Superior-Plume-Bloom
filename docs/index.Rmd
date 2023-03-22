@@ -105,13 +105,13 @@ The purpose of this step is to teach you how to use our Google Earth Engine fram
 knitr::include_graphics("docs/www/images/categories.png")
 ```
 
-2. When you see a new feature in the image that you would like to label, you will need to click on the top left geometry bar and select the point geometry icon.
+2. When you see pixels in the image that you would like to label, you will need to click on the top left geometry bar and select the point geometry icon.
 
 ```{r, echo=FALSE, out.width = '50%'}
 knitr::include_graphics("docs/www/images/addmarker.png")
 ```
 
-3. Change the category to the type of feature that you are labeling by hovering over `openWater` (it just chooses the first category by default) and clicking the name of the category you want.
+3. Change the category to the type of pixel that you are labeling by hovering over `openWater` (it just chooses the first category by default) and clicking the name of the category you want.
 
 4. Next, click on the map to add a point of this type. 
 
