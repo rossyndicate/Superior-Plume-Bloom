@@ -1,16 +1,21 @@
+// eePlumB: Earth Engine Plume and Bloom labeling module
+// written by B Steele (b.steele@colostate.edu) and Lindsay Platt (lrplatt@wisc.edu)
+
+// Adapted from code written by Xiao Yang (yangxiao@live.unc.edu)
+// from the GROD labeling workflow: https://github.com/GlobalHydrologyLab/GROD/blob/master/1_user_interface_script/GROD.js
+
+// Last modified 03/23/2023
 
 // Pixel Types. Mouse over and convert this part to geometry import 
 // so that they can be selected from the map interface.
 var openWater = /* color: #181930 */ee.FeatureCollection([]),
-    sedimentPlume = /* color: #9c7238 */ee.FeatureCollection([]),
-    ruddySediment = /* color:*/ee.FeatureCollection([]),
-    deepOffshoreSediment = /* color: */ee.FeatureCollection([]),
+    lightNearShoreSediment = /* color: #9c7238 */ee.FeatureCollection([]),
+    darkNearShoreSediment = /* color:*/ee.FeatureCollection([]),
+    offShoreSediment = /* color: */ee.FeatureCollection([]),
     algalBloom = /* color: #0c6320 */ee.FeatureCollection([]),
-    unmaskedCloud = /* color: #ffffff */ee.FeatureCollection([]),
-    cloudContamination = /* color: #cccccc */ee.FeatureCollection([]),
+    cloud = /* color: #ffffff */ee.FeatureCollection([]),
     shorelineContamination = /* color: */ee.FeatureCollection([]),
-    other = /* color: #820580 */ee.FeatureCollection([]),
-    uncertain = /* color: */ ee.FeatureCollection([]);
+    other = /* color: #820580 */ee.FeatureCollection([]);
 
 
 var init = 'BGS';
@@ -37,30 +42,26 @@ var mergeCollection = function() {
     return f.set({class: 'openWater'});
   });
 
-  sedimentPlume = sedimentPlume.map(function(f) {
-    return f.set({class: 'sedimentPlume'});
+  lightNearShoreSediment = lightNearShoreSediment.map(function(f) {
+    return f.set({class: 'lightNearShoreSediment'});
   });
 
-  ruddySediment = ruddySediment.map(function(f) {
-    return f.set({class: 'ruddySediment'});
+  darkNearShoreSediment = darkNearShoreSediment.map(function(f) {
+    return f.set({class: 'darkNearShoreSediment'});
   });
 
-  deepOffshoreSediment = deepOffshoreSediment.map(function(f) {
-    return f.set({class: 'deepOffshoreSediment'});
+  offShoreSediment = offShoreSediment.map(function(f) {
+    return f.set({class: 'offShoreSediment'});
   });
 
   algalBloom = algalBloom.map(function(f) {
     return f.set({class: 'algalBloom'});
   });
 
-  unmaskedCloud = unmaskedCloud.map(function(f) {
-    return f.set({class: 'unmaskedCloud'});
+  cloud = cloud.map(function(f) {
+    return f.set({class: 'cloud'});
   });
 
-  cloudContamination = cloudContamination.map(function(f) {
-    return f.set({class: 'cloudContamination'});
-  });
-  
   shorelineContamination = shorelineContamination.map(function(f) {
     return f.set({class: 'shorelineContamination'});
   });
@@ -69,20 +70,14 @@ var mergeCollection = function() {
     return f.set({class: 'other'});
   });
 
-  uncertain = uncertain.map(function(f) {
-    return f.set({class: 'uncertain'});
-  });
-
   return (openWater
-  .merge(sedimentPlume)
-  .merge(ruddySediment)
-  .merge(deepOffshoreSediment)
+  .merge(lightNearShoreSediment)
+  .merge(darkNearShoreSediment)
+  .merge(offShoreSediment)
   .merge(algalBloom)
-  .merge(unmaskedCloud)
-  .merge(cloudContamination)
-  .merge(other)
+  .merge(cloud)
   .merge(shorelineContamination)
-  .merge(uncertain)
+  .merge(other)
   .map(addLatLon));
 };
 
