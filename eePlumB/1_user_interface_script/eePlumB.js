@@ -15,6 +15,10 @@ var openWater = /* color: #181930 */ee.FeatureCollection([]),
 
 var init = 'BGS';
 
+var mission = 'LS4';
+
+var date = '1990-05-13';
+
 
 //---- FUNCTIONS ----//
 
@@ -116,7 +120,7 @@ function applyScaleFactors(image) {
 var ls = ls
   .map(applyScaleFactors);
   
-ls.aside(print);
+//ls.aside(print);
   
 //---- TILES ----//
 // these do not need to be imported//
@@ -175,6 +179,8 @@ var style_tc = {
 
 // function on move between tiles
 var updateMapOnClick = function(i, satellite, date) {
+  Map.clear();
+  Map.add(panel1);
   var currentTile = getTileByIndex(i);
   var miss = sat_miss.get(satellite);
 
@@ -208,22 +214,11 @@ var label_tile = ui.Label('', {
   padding: '4px',
   color: 'red',
   fontWeight: 'bold'});
-var jumpToId = ui.Textbox({
-  placeholder: 'Enter mission-date...',
-  onChange: function(ID) {
-    var sat = ee.String(ID).slice(0,3);
-    var d = ee.String(ID).slice(-10);
-    label_gridId.setValue('Current mission-date: ' + sat.getInfo() + ' ' + d.getInfo());
-    updateMapOnClick(i, sat, d);
-    label_tile.setValue('Current tile: ', ee.Number(i).add(1).getInfo());
-  }
-});
 var button_next = ui.Button({
   label: 'Next tile',
   onClick: function() {
-    var ID = jumpToId.getValue();
-    var sat = ee.String(ID).slice(0,3);
-    var d = ee.String(ID).slice(-10);
+    var sat = mission;
+    var d = date;
     i = i + 1;
     updateMapOnClick(i, sat, d);
     label_tile.setValue('Current tile: ' + i);
@@ -232,9 +227,8 @@ var button_next = ui.Button({
 var button_prev = ui.Button({
   label: 'Previous tile',
   onClick: function() {
-    var ID = jumpToId.getValue();
-    var sat = ee.String(ID).slice(0,3);
-    var d = ee.String(ID).slice(-10);
+    var sat = mission;
+    var d = date;
     i = i - 1;
     updateMapOnClick(i, sat, d);
     label_tile.setValue('Current tile: ' + i);
@@ -242,7 +236,7 @@ var button_prev = ui.Button({
 });
 
 // 2. panels
-var panel1 = ui.Panel([button_prev, label_gridId, label_tile, button_next, jumpToId], ui.Panel.Layout.flow('horizontal'));
+var panel1 = ui.Panel([button_prev, label_gridId, label_tile, button_next], ui.Panel.Layout.flow('horizontal'));
 panel1.style().set({
   padding: '0px',
   position: 'bottom-center'
@@ -259,7 +253,7 @@ Map.setOptions('roadmap');
 function getTodaysDate() {
   var date = new Date();
   var dd = ee.Date(date).format('dd');
-  var mm = ee.Date(date).format('MM'); // this is doing something weird and is not correct
+  var mm = ee.Date(date).format('MM'); 
 
   if (dd < 10) dd = '0' + dd;
   if (mm < 10) mm = '0' + mm;
@@ -269,7 +263,7 @@ function getTodaysDate() {
 }
 
 // make file name
-var filename = ee.String('eePlumB_').cat(init).cat('_').cat(getTodaysDate());
+var filename = ee.String('eePlumB_').cat(init).cat('_').cat(mission).cat('_').cat(date).cat('_v').cat(getTodaysDate());
 
 // Export data
 var merged = mergeCollection();
@@ -277,7 +271,7 @@ var merged = mergeCollection();
 Export.table.toDrive({
   collection: merged,
   description: filename.getInfo(),
-  folder: 'test-val',
+  folder: 'labels',
   fileNamePrefix: filename.getInfo(),
   fileFormat: 'csv'});
 
