@@ -176,7 +176,7 @@ var mergeCollection = function() {
 function getTodaysDate() {
   var date = new Date();
   var dd = ee.Date(date).format('dd');
-  var mm = ee.Date(date).format('MM'); // this is doing something weird and is not correct
+  var mm = ee.Date(date).format('MM'); 
 
   if (dd < 10) dd = '0' + dd;
   if (mm < 10) mm = '0' + mm;
