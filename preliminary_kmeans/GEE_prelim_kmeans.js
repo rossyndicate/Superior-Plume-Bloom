@@ -271,6 +271,7 @@ var meanSegments = SNIC_MultiBandedResults.select(bandMeansNames);
 var SegmentUnsupervised = afn_Kmeans(meanSegments,
     numberOfUnsupervisedClusters, defaultStudyArea,
     nativeScaleOfImage)
+    .select('unsupervisedClass').add(1).int8()
     .set({'mission': originalImage.get('mission'),
       'date': originalImage.get('date')});
 Map.addLayer(SegmentUnsupervised.randomVisualizer(), {},
