@@ -1,5 +1,13 @@
 // adapted from https://www.eefabook.org/ Section F3.3  //
 // for use in creation of preliminary rasters for Lindsay's pipeline //
+// to walk through images, you must change the input on line 214 //
+
+
+////////////////////////////////////////////////////////////
+// 0. Prepare Landsat stack
+// even though we won't have clouds/rad masked, let's do that here
+// to make the clustering a bit more accurate.
+////////////////////////////////////////////////////////////
 
 var l9 = ee.ImageCollection("LANDSAT/LC09/C02/T1_L2"),
     l8 = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2"),
@@ -22,6 +30,7 @@ var l9 = l9.select(bns);
 // merge collections
 var ls = ee.ImageCollection(l9).merge(l8).merge(l7).merge(l5).merge(l4);
 
+
 //filter for desired PRs
 var ROWS = ee.List([27, 28]);
 var ls = ls
@@ -37,10 +46,33 @@ function applyScaleFactors(image) {
               .addBands(thermalBands, null, true);
 }
 
+// Masks out saturated pixels
+function satQAMask(image) {
+  var satQA = image.select('QA_RADSAT');
+  var satMask = satQA.eq(0); //all must be non-saturated per pixel
+  return image.updateMask(satMask);
+}
+
+// Masks out clouds, masks for water
+function cfMask(image) {
+  var qa = image.select('QA_PIXEL');
+  var water = qa.bitwiseAnd(1 << 7); //water bit
+  var cloudqa = qa.bitwiseAnd(1 << 1) //
+    .where(qa.bitwiseAnd(1 << 2), ee.Image(2)) //
+    .where(qa.bitwiseAnd(1 << 3), ee.Image(3)) // clouds
+    .where(qa.bitwiseAnd(1 << 4), ee.Image(4)) // cloud shadows
+    .where(qa.bitwiseAnd(1 << 5), ee.Image(5)); // snow/ice
+  var qaMask = cloudqa.eq(0);
+  return image.updateMask(qaMask).updateMask(water);
+}
+
 var ls = ls
-  .map(applyScaleFactors);
+  .map(applyScaleFactors)
+  .map(satQAMask)
+  .map(cfMask);
   
 ls.aside(print);
+
 // CLIP FUNCTION
 function clip(image) {
   var cl_im = image.clip(aoi);
@@ -179,20 +211,17 @@ var SNIC_NeighborhoodSize = 2 * SNIC_SuperPixelSize;
 //////////////////////////////////////////////////////////
 
 // 3.1  Selecting Image to Classify 
-var whichImage = 1; // will be used to select among images
-if (whichImage == 1) {
-    var originalImage = img21;//no 6
-    var date = originalImage.get('date');
-    var mission = originalImage.get('mission');
-    var nativeScaleOfImage = 30;
-    var threeBandsToDraw = ['SR_B4', 'SR_B3', 'SR_B2'];
-    var bandsToUse = ['SR_B4', 'SR_B3', 'SR_B2'];
-    var bandMaxes = [1, 1, 1];
-    var drawMin = 0;
-    var drawMax = 0.3;
-    var defaultStudyArea = aoi;
-    var zoomArea = aoi;
-    }
+var originalImage = img1;//no 6
+var date = originalImage.get('date');
+var mission = originalImage.get('mission');
+var nativeScaleOfImage = 30;
+var threeBandsToDraw = ['SR_B4', 'SR_B3', 'SR_B2'];
+var bandsToUse = ['SR_B4', 'SR_B3', 'SR_B2'];
+var bandMaxes = [1, 1, 1];
+var drawMin = 0;
+var drawMax = 0.3;
+var defaultStudyArea = aoi;
+var zoomArea = aoi;
 
 Map.addLayer(originalImage.select(threeBandsToDraw), {
   min: 0,
@@ -202,17 +231,13 @@ Map.addLayer(originalImage.select(threeBandsToDraw), {
 ////////////////////////////////////////////////////////////
 // 4. Image Preprocessing 
 ////////////////////////////////////////////////////////////
+
 var clippedImageSelectedBands = originalImage.clip(defaultStudyArea)
     .select(bandsToUse);
 var ImageToUse = afn_normalize_by_maxes(clippedImageSelectedBands,
     bandMaxes);
 
-/*Map.addLayer(ImageToUse.select(threeBandsToDraw), {
-        min: 0,
-        max: 0.3
-  },
-  '4.3 Pre-normalized image', true, 0);
-*/
+
 ////////////////////////////////////////////////////////////
 // 5. SNIC Clustering
 ////////////////////////////////////////////////////////////
@@ -220,7 +245,7 @@ var ImageToUse = afn_normalize_by_maxes(clippedImageSelectedBands,
 // This function returns a multi-banded image that has had SNIC
 // applied to it. It automatically determine the new names 
 // of the bands that will be returned from the segmentation.
-//print('5.1 Execute SNIC');
+
 var SNIC_MultiBandedResults = afn_SNIC(
     ImageToUse,
     SNIC_SuperPixelSize,
@@ -232,25 +257,13 @@ var SNIC_MultiBandedResults = afn_SNIC(
 
 var SNIC_MultiBandedResults = SNIC_MultiBandedResults
     .reproject('EPSG:3857', null, nativeScaleOfImage);
-//print('5.2 SNIC Multi-Banded Results', SNIC_MultiBandedResults);
 
-/*Map.addLayer(SNIC_MultiBandedResults.select('clusters')
-    .randomVisualizer(), {}, '5.3 SNIC Segment Clusters', true, 1);
-*/
 var theSeeds = SNIC_MultiBandedResults.select('seeds');
-/*Map.addLayer(theSeeds, {
-    palette: 'red'
-}, '5.4 Seed points of clusters', true, 1);
-*/
+
 var bandMeansToDraw = threeBandsToDraw.map(afn_addMeanToBandName);
-//print('5.5 band means to draw', bandMeansToDraw);
+
 var clusterMeans = SNIC_MultiBandedResults.select(bandMeansToDraw);
-/*print('5.6 Cluster Means by Band', clusterMeans);
-Map.addLayer(clusterMeans, {
-    min: drawMin,
-    max: drawMax
-}, '5.7 Image repainted by segments', true, 0);
-*/
+
 ////////////////////////////////////////////////////////////
 // 6. Execute Classifications
 ////////////////////////////////////////////////////////////
@@ -266,7 +279,7 @@ print('6.1b Per-Pixel Unsupervised Results:', PerPixelUnsupervised);
 
 // 6.2 SNIC Unsupervised Classification for Comparison
 var bandMeansNames = bandsToUse.map(afn_addMeanToBandName);
-//print('6.2 band mean names returned by segmentation', bandMeansNames);
+
 var meanSegments = SNIC_MultiBandedResults.select(bandMeansNames);
 var SegmentUnsupervised = afn_Kmeans(meanSegments,
     numberOfUnsupervisedClusters, defaultStudyArea,
@@ -281,13 +294,18 @@ print('6.3b Per-Segment Unsupervised Results:', SegmentUnsupervised);
 ////////////////////////////////////////////////////////////
 // 7. Zoom if requested
 ////////////////////////////////////////////////////////////
+
 if (centerObjectYN === true) {
     Map.centerObject(zoomArea, 10);
 }
 
+////////////////////////////////////////////////////////////
+// 8. Export raster to drive
+////////////////////////////////////////////////////////////
+
 // Set the export parameters
 var exportParams = {
-  driveFolder: 'Superior_kmean',
+  driveFolder: 'Superior_unsup_kmean_GEEout',
   crs: 'EPSG:4326',
   scale: 30,
   region: aoi
