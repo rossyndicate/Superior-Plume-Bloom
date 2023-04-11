@@ -1,0 +1,78 @@
+---
+title: "Stacking GeoTiffs"
+author: "B Steele"
+date: "2023-04-07"
+output: html_document
+---
+
+```{r}
+# setup python venv
+source('preliminary_kmeans/pySetup.R')
+```
+
+```{python}
+#load modules
+import xarray as xr
+import os
+import rasterio
+import rioxarray as rxr
+from scipy import ndimage as ndi
+
+
+# point to directories
+data_dir = 'data/prelim_kmeans/unified_classes/'
+```
+
+# Purpose
+
+This is a framework script to stack multiple geotiffs into netCDF files for the Superior Plume-Bloom project.
+
+# Pre-work
+
+List files, prep nc file, and write functions
+
+```{python}
+
+# list all files in the directory
+files = os.listdir(data_dir)
+files = [string for string in files if string.startswith('LAND')]
+
+# create an empty xarray dataset to store the stacked data
+nc = xr.Dataset()
+
+```
+
+And now stack the files
+
+```{python}
+# loop through the GeoTiffs and add them to the dataset
+for i, geotiff_file in enumerate(files):
+  #get file info
+  file_strings = geotiff_file.split('_')
+  date = file_strings[2]
+  mission = 'Landsat '+ file_strings[1]
+  
+  # open the GeoTiff with rasterio
+  data = rxr.open_rasterio(os.path.join(data_dir, geotiff_file))
+  transform = rasterio.open(os.path.join(data_dir, geotiff_file)).transform
+  
+  # create an xarray data array and add it to the dataset, define coords
+  data_array = xr.DataArray(data,
+    dims=('band', 'y', 'x'), 
+    coords={'band': range(data.shape[0]), 'y': data.y, 'x': data.x})
+  
+  data_array.attrs['date'] = date
+  data_array.attrs['mission'] = mission
+  
+  nc[date] = data_array
+
+```
+
+# Save the netCDF
+
+```{python}
+
+# save the dataset to a netCDF file
+nc.to_netcdf(os.path.join('data/prelim_kmeans/nc/', 'example_stack.nc'))
+
+```

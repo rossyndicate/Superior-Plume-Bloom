@@ -6,6 +6,7 @@
 
 #python venvs
 */env/
+env/
 
 #knit output
 reports/images/*

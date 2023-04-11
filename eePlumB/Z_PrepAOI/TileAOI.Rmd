@@ -22,11 +22,7 @@ shp_dir = '/Users/steeleb/Documents/GitHub/Superior-Plume-Bloom/data/aoi/'
 ## Read in AOI shapefile
 
 ```{r}
-shape = read_sf(file.path(shp_dir, 'superior_no_harbor', 'superior_no_harbor.shp'))
-
-#in our case, we need to filter for water
-shape = shape %>% 
-  filter(Feature == 'Water')
+shape = read_sf(file.path(shp_dir, 'NHDPlusHR', 'NHDPlusHR_superior_crop_noHarbor.shp'))
 
 #plot quickly to confirm
 plot(shape['Feature'])
@@ -38,7 +34,7 @@ You might need to play around with the cellsize to adjust the grid your your nee
 
 ```{r}
 tiles = st_make_grid(shape,
-                     cellsize = c(30000, 20000))#units are square meters for Superior
+                     cellsize = c(35000, 25000))#units are square meters for Superior
 tiles = tiles[shape]
 
 #plot quickly to confirm
