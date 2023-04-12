@@ -22,10 +22,21 @@ shp_dir = '/Users/steeleb/Documents/GitHub/Superior-Plume-Bloom/data/aoi/'
 ## Read in AOI shapefile
 
 ```{r}
-shape = read_sf(file.path(shp_dir, 'NHDPlusHR', 'NHDPlusHR_superior_crop_noHarbor.shp'))
+shape = read_sf(file.path(shp_dir, 'NHDPlusHR', 'NHDPlusHR_Superior.shp'))
 
 #plot quickly to confirm
-plot(shape['Feature'])
+plot(shape['OBJECTID'])
+```
+
+## Clip to AOI
+
+Clip the high res file to the extent we're interested in.
+
+```{r}
+bounds = c(ymin = 46.5, ymax = 47.3,  xmin = -92.2,xmax = -90.1)
+aoi = st_crop(shape, bounds)
+
+plot(aoi['OBJECTID'])
 ```
 
 ## Tile shapefile using `st_make_grid`
@@ -33,66 +44,50 @@ plot(shape['Feature'])
 You might need to play around with the cellsize to adjust the grid your your needs and so that it 'makes sense' for your purposes.
 
 ```{r}
-tiles = st_make_grid(shape,
-                     cellsize = c(35000, 25000))#units are square meters for Superior
-tiles = tiles[shape]
+tiles = st_make_grid(aoi,
+                     cellsize = c(0.55, 0.3))#units are degrees
 
 #plot quickly to confirm
 plot(tiles)
-plot(shape['Feature'], add = T)
+plot(aoi['OBJECTID'], add = T)
 ```
 
-For our purposes, we're going to remove the top row of tiles, because we aren't as interested in that area - the upper boundary was already an approximation. Tiles are numbered left to right, bottom to top.
+Now, we need to merge a few tiles for better context. We'll split out the unmerged tiles into two sets so that we can maintain the left to right, bottom to top numbering
 
 ```{r}
-tiles_sub = tiles[1:19]
-plot(tiles_sub)
-plot(shape['Feature'], add = T)
-```
-
-And we'll clip the AOI to the extent of these boxes.
-
-```{r}
-shape_clip = st_crop(shape, st_bbox(tiles_sub))
-
-plot(tiles_sub)
-plot(shape_clip['Feature'], add = T)
-```
-
-And now, we need to merge a few tiles for better context. We'll split out the unmerged tiles into two sets so that we can maintain the left to right, bottom to top numbering
-
-```{r}
-tiles_toMerge_1 = tiles_sub[c(1, 2)]
-tiles_toMerge_2 = tiles_sub[c(3, 4)]
-tiles_other_1 = tiles_sub[c(5:10)]
-tiles_toMerge_3 = tiles_sub[c(11, 12)]
-tiles_other_2 = tiles_sub[c(13:19)]
+tiles_toMerge_1 = tiles[c(1, 5)]
+tiles_toMerge_2 = tiles[c(2, 6, 10)]
+tiles_toMerge_3 = tiles[c(3, 4)]
+tiles_toMerge_4 = tiles[c(7, 11)]
+tiles_toMerge_5 = tiles[c(8, 12)]
 
 tiles_merged_1 = st_union(tiles_toMerge_1) 
 tiles_merged_2 = st_union(tiles_toMerge_2) 
 tiles_merged_3 = st_union(tiles_toMerge_3) 
+tiles_merged_4 = st_union(tiles_toMerge_4) 
+tiles_merged_5 = st_union(tiles_toMerge_5) 
 
 # sadly, there's no 'easy' way to join these two sfc's with any dplyr or sf method that I can find, so we'll convert to a data frame, join, then convert back to sf
 
 tiles_forLabel = full_join(as.data.frame(tiles_merged_1),
                            as.data.frame(tiles_merged_2)) %>% 
-  full_join(as.data.frame(tiles_other_1)) %>% 
   full_join(as.data.frame(tiles_merged_3)) %>% 
-  full_join(as.data.frame(tiles_other_2)) %>% 
+  full_join(as.data.frame(tiles_merged_4)) %>% 
+  full_join(as.data.frame(tiles_merged_5)) %>% 
   st_as_sf() 
 
 plot(tiles_forLabel)
-plot(shape_clip['Feature'], add = T, col = alpha('Green', 0.7))
+plot(aoi['OBJECTID'], add = T, col = alpha('Green', 0.7))
 ```
 
 Now, intersect to create individual AOIs by tile
 
 ```{r}
-shape_tiles = st_intersection(shape_clip, tiles_forLabel) #warning okay
+shape_tiles = st_intersection(aoi, tiles_forLabel) #warning okay
 
-plot(shape_tiles['Feature'])
+plot(aoi['OBJECTID'])
 #check to make sure each tile is separate.
-plot(shape_tiles['Feature'][1,])
+plot(shape_tiles['OBJECTID'][1,])
 ```
 
 ## Save each of the tiles as individual features
@@ -100,7 +95,7 @@ plot(shape_tiles['Feature'][1,])
 ```{r}
 shape_tiles <- shape_tiles %>% 
   rowid_to_column() %>% 
-  select(-c(OID_:Shape_Area))
+  select(-c(OBJECTID:VPUID))
 
 for(l in 1:nrow(shape_tiles)) {
   filename = paste0('SuperiorAOI_', l, '.shp')
@@ -110,4 +105,4 @@ for(l in 1:nrow(shape_tiles)) {
 
 # Upload to GEE
 
-Go to the GEE IDE and upload the assets you just made to your project of choice. In future iterations, this may be part of the script.
+Go to the GEE IDE and upload the assets you just made to your project of choice.
