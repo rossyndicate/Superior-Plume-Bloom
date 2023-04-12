@@ -1,24 +1,13 @@
 // This script creates the validation collection for eePlumB 
 // for Landsat 4, 5, 7 at Lake Superior
 // written by B. Steele
-// last modified 2023-03-15
+// last modified 2023-04-12
 
 var aoi1 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_1');
 var aoi2 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_2');
 var aoi3 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_3');
 var aoi4 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_4');
 var aoi5 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_5');
-var aoi6 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_6');
-var aoi7 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_7');
-var aoi8 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_8');
-var aoi9 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_9');
-var aoi10 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_10');
-var aoi11 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_11');
-var aoi12 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_12');
-var aoi13 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_13');
-var aoi14 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_14');
-var aoi15 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_15');
-var aoi16 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_16');
 
 //------------------------------------//
 // DATES FOR USER VALIDATION ------------//
@@ -32,43 +21,11 @@ var date5 = '2002-10-05';
 var date6 = '1995-05-19';
 var date7 = '2020-05-31';
 
-// notes from b's noodling around - to see these yourself, uncomment
-// the last two blocks of code and fill in dates on line 124, aoi on 129,
-// and optionally, aoi id on 130
-//date0, aoi1 -- dark sediment, deep sediment, unmasked cloud top r
-//date0, aoi4 -- open water, unmasked clouds
-//date1, aoi1 -- pervasive sediment along shore, unmasked clouds top l
-//date1, aoi9 -- cloud artifacts, open water
-//date2, aoi12 -- sedmient along shore of island, unmasked clouds
-//date2, aoi8 -- sedmient on N side of island, unmasked clouds
-//date3, aoi10 -- stringy sediment between shore and island, open water
-//date4, aoi2 - cloud artifacts (dark areas adjacent to masked clouds, brown/green sedmient, unmasked clouds
-//date4, aoi6 - open water, deep plumes, cloud artifacts, unmasked clouds
-//date5, aoi5 -- brilliant sediment, open water
-//date5, aoi15 -- open water
-//date6, aoi9 -- knife river sediment, open water, unmasked clouds, shoreline artifacts (two harbors)
-//date7, aoi4 -- deep sediment, open water, near-shore artifacts (near canal park)
-//date7, aoi2 -- lots of ruddy sediment, open water
+var dates = [date7, date4];
 
-var dates = [date0, date0, 
-            date1, date1, 
-            date2, date2, 
-            date3, 
-            date4, date4, 
-            date5, date5, 
-            date6, 
-            date7, date7];
+var aois = [aoi2, aoi3];
 
-var aois = [aoi1, aoi4, 
-            aoi1, aoi9,
-            aoi12, aoi8, 
-            aoi10, 
-            aoi2, aoi6, 
-            aoi5, aoi15, 
-            aoi9, 
-            aoi4, aoi2];
-
-var aoi_ids = [1, 4, 1, 9, 12, 8, 10, 2, 6, 5, 15, 9, 4, 2];
+var aoi_ids = [2, 3];
 
 // load Landsat 4, 5, 7 Surface Reflectance
 var l7 = ee.ImageCollection('LANDSAT/LE07/C02/T1_L2');
@@ -110,61 +67,10 @@ function satMask(image){
 
 var l457 = l457.map(satMask);
 
-/*//Filter for water //
-function findWater(image) {
-  var qa = image.select('QA_PIXEL');
-  var water = qa.bitwiseAnd(1 << 7);
-  return image.updateMask(water);
-}
-var l457 = l457.map(findWater);
-
-// Filter for water, clouds, etc ----- //
-function fMask(image) {
-  var qa = image.select('QA_PIXEL');
-  var water = qa.bitwiseAnd(1 << 7);
-  var cloudqa = qa.bitwiseAnd(1 << 1)
-    .where(qa.bitwiseAnd(1 << 2), ee.Image(2))
-    .where(qa.bitwiseAnd(1 << 3), ee.Image(3))
-    .where(qa.bitwiseAnd(1 << 4), ee.Image(4))
-    .where(qa.bitwiseAnd(1 << 5), ee.Image(5));
-  var qaMask = cloudqa.eq(0);
-  return image.updateMask(qaMask).updateMask(water);
-}
-
-var l457 = l457.map(fMask);*/
 
 // ------------------------------- //
 // -- filter to specific scenes -- //
 // ------------------------------- //
-
-
-/*// function to clip to AOI function
-function clip(image) {
-  var cl_im = image.clip(aoi);
-  return cl_im;
-}
-
-var today = ee.Date(date0);
-var tomorrow = today.advance(1, 'days');
-var l457_oneDay = l457
-  .filterDate(today, tomorrow);
-  
-var aoi = aoi1;
-var aoi_id = 1;
-
-var l457_oneDay = l457_oneDay
-  .filterBounds(aoi)
-  .map(clip);
-
-l457_oneDay.aside(print);
-
-var l457_oneDay = l457_oneDay
-  .mosaic()
-  .set({'date': today,
-        'aoi': aoi_id});
-  
-l457_oneDay.aside(print);
-*/
 
 // mosaic function
 function mosaicOneDay(date, aoi, aoi_id){
@@ -187,21 +93,8 @@ function mosaicOneDay(date, aoi, aoi_id){
 // this is NOT the most elegant way of doing this
 // but GEE doesn't do for-loops and the nested functions
 // make my head spin, sooooo reptition for the win.
-var mos0_1 = mosaicOneDay(dates[0], aois[0], aoi_ids[0]);
-var mos0_4 = mosaicOneDay(dates[1], aois[1], aoi_ids[1]);
-var mos1_1 = mosaicOneDay(dates[2], aois[2], aoi_ids[2]);
-var mos1_9 = mosaicOneDay(dates[3], aois[3], aoi_ids[3]);
-var mos2_12 = mosaicOneDay(dates[4], aois[4], aoi_ids[4]);
-var mos2_8 = mosaicOneDay(dates[5], aois[5], aoi_ids[5]);
-var mos3_10 = mosaicOneDay(dates[6], aois[6], aoi_ids[6]);
-var mos4_2 = mosaicOneDay(dates[7], aois[7], aoi_ids[7]);
-var mos4_6 = mosaicOneDay(dates[8], aois[8], aoi_ids[8]);
-var mos5_5 = mosaicOneDay(dates[9], aois[9], aoi_ids[9]);
-var mos5_15 = mosaicOneDay(dates[10], aois[10], aoi_ids[10]);
-var mos6_9 = mosaicOneDay(dates[11], aois[11], aoi_ids[11]);
-var mos7_4 = mosaicOneDay(dates[12], aois[12], aoi_ids[12]);
-var mos7_2 = mosaicOneDay(dates[13], aois[13], aoi_ids[13]);
-
+var mos1 = mosaicOneDay(dates[0], aois[0], aoi_ids[0]);
+var mos2 = mosaicOneDay(dates[1], aois[1], aoi_ids[1]);
 
 
 // for whatever reason, I can't loop through or functionalize the export, so
@@ -217,7 +110,7 @@ var processMos = function(mosaic, mos_aoi){
   var id = ee.String('aoi_').cat(astr).cat('_').cat(dstr);
 
   //apend with assetIDPrefix
-  var assetIDPrefix = 'projects/ee-ross-superior/assets/eePlumB_valSets/LS4-7_eePlumB_val';
+  var assetIDPrefix = 'projects/ee-ross-superior/assets/eePlumB_val_n5/LS4-7_eePlumB_val';
   var assetId = ee.String(assetIDPrefix).cat('_').cat(id);
   var descrip = ee.String('Export').cat('_').cat(id);  
   
@@ -237,29 +130,10 @@ var processMos = function(mosaic, mos_aoi){
 
 
 //select only bands for ux and export indiv
-processMos(mos0_1, aoi1);
-processMos(mos0_4, aoi4);
+processMos(mos1, aoi2);
+processMos(mos2, aoi3);
 
-processMos(mos1_1, aoi1);
-processMos(mos1_9, aoi9);
 
-processMos(mos2_12, aoi12);
-processMos(mos2_8, aoi8);
-
-processMos(mos3_10, aoi10);
-
-processMos(mos4_2, aoi2);
-processMos(mos4_6, aoi6);
-
-processMos(mos5_5, aoi5);
-processMos(mos5_15, aoi15);
-
-processMos(mos6_9, aoi9);
-
-processMos(mos7_4, aoi4);
-processMos(mos7_2, aoi2);
-
-/*
 // ------------------------------- //
 // -- add vis params-------------- //
 // ------------------------------- //
@@ -275,7 +149,8 @@ var l457_style_tc = {
 // -- show on map and center scene -- //
 // ------------------------------- //
 
-Map.addLayer(l457_oneDay, l457_style_tc, 'True Color');
-Map.centerObject(aoi, 12);
+Map.addLayer(mos1, l457_style_tc, 'True Color - Mosaic 1');
+Map.addLayer(mos2, l457_style_tc, 'True Color - Mosaic 2');
 
-*/
+Map.centerObject(aoi3, 10);
+
