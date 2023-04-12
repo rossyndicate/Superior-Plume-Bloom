@@ -12,13 +12,13 @@ var init = 'BGS';
 
 // Pixel Types. Mouse over and convert this part to geometry import 
 // so that they can be selected from the map interface.
-var openWater = /* color: #181930 */ee.FeatureCollection([]),
+var openWater = /* color: #7ff6ff */ee.FeatureCollection([]),
     lightNearShoreSediment = /* color: #9c7238 */ee.FeatureCollection([]),
-    darkNearShoreSediment = /* color:*/ee.FeatureCollection([]),
-    offShoreSediment = /* color: */ee.FeatureCollection([]),
+    darkNearShoreSediment = /* color: #d63000*/ee.FeatureCollection([]),
+    offShoreSediment = /* color: #98ff00*/ee.FeatureCollection([]),
     algalBloom = /* color: #0c6320 */ee.FeatureCollection([]),
     cloud = /* color: #ffffff */ee.FeatureCollection([]),
-    shorelineContamination = /* color: */ee.FeatureCollection([]),
+    shorelineContamination = /* color: #0b4a8b*/ee.FeatureCollection([]),
     other = /* color: #820580 */ee.FeatureCollection([]);
 
 // Import Date-Tile images
