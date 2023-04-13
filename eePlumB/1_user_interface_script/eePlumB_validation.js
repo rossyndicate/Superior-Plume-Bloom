@@ -4,7 +4,7 @@
 // Adapted from code written by Xiao Yang (yangxiao@live.unc.edu)
 // from the GROD labeling workflow: https://github.com/GlobalHydrologyLab/GROD/blob/master/1_user_interface_script/GROD_validation.js
 
-// Last modified 03/23/2023
+// Last modified 2023-04-12
 
 // your initials
 var init = 'BGS';
@@ -12,32 +12,28 @@ var init = 'BGS';
 
 // Pixel Types. Mouse over and convert this part to geometry import 
 // so that they can be selected from the map interface.
-var openWater = /* color: #181930 */ee.FeatureCollection([]),
+var openWater = /* color: #7ff6ff */ee.FeatureCollection([]),
     lightNearShoreSediment = /* color: #9c7238 */ee.FeatureCollection([]),
-    darkNearShoreSediment = /* color:*/ee.FeatureCollection([]),
-    offShoreSediment = /* color: */ee.FeatureCollection([]),
+    darkNearShoreSediment = /* color: #d63000*/ee.FeatureCollection([]),
+    offShoreSediment = /* color: #98ff00*/ee.FeatureCollection([]),
     algalBloom = /* color: #0c6320 */ee.FeatureCollection([]),
     cloud = /* color: #ffffff */ee.FeatureCollection([]),
-    shorelineContamination = /* color: */ee.FeatureCollection([]),
+    shorelineContamination = /* color: #0b4a8b*/ee.FeatureCollection([]),
     other = /* color: #820580 */ee.FeatureCollection([]);
 
 // Import Date-Tile images
-var td1 = ee.Image('projects/ee-ross-superior/assets/eePlumB_valSets/LS89_eePlumB_val_aoi_1_2020-08-27')
+var td1 = ee.Image('projects/ee-ross-superior/assets/eePlumB_val_n5/LS89_eePlumB_val_aoi_1_2020-08-27')
           .select(['SR_B4', 'SR_B3', 'SR_B2'], ['R', 'G', 'B']),
-    td2 = ee.Image('projects/ee-ross-superior/assets/eePlumB_valSets/LS89_eePlumB_val_aoi_15_2013-07-23')
+    td2 = ee.Image('projects/ee-ross-superior/assets/eePlumB_val_n5/LS89_eePlumB_val_aoi_4_2022-10-28')
           .select(['SR_B4', 'SR_B3', 'SR_B2'], ['R', 'G', 'B']),
-    td4 = ee.Image('projects/ee-ross-superior/assets/eePlumB_valSets/LS89_eePlumB_val_aoi_13_2022-04-19')
+    td3 = ee.Image('projects/ee-ross-superior/assets/eePlumB_val_n5/LS89_eePlumB_val_aoi_5_2013-07-23')
           .select(['SR_B4', 'SR_B3', 'SR_B2'], ['R', 'G', 'B']),
-    td5 = ee.Image('projects/ee-ross-superior/assets/eePlumB_valSets/LS89_eePlumB_val_aoi_16_2022-10-28')
-          .select(['SR_B4', 'SR_B3', 'SR_B2'], ['R', 'G', 'B']),
-    td7 = ee.Image('projects/ee-ross-superior/assets/eePlumB_valSets/LS4-7_eePlumB_val_aoi_12_1987-08-17')
+    td4 = ee.Image('projects/ee-ross-superior/assets/eePlumB_val_n5/LS4-7_eePlumB_val_aoi_3_2004-06-28')
           .select(['SR_B3', 'SR_B2', 'SR_B1'], ['R', 'G', 'B']),
-    td8 = ee.Image('projects/ee-ross-superior/assets/eePlumB_valSets/LS4-7_eePlumB_val_aoi_2_2004-06-28')
-          .select(['SR_B3', 'SR_B2', 'SR_B1'], ['R', 'G', 'B']),
-    td9 = ee.Image('projects/ee-ross-superior/assets/eePlumB_valSets/LS4-7_eePlumB_val_aoi_4_2020-05-31')
+    td5 = ee.Image('projects/ee-ross-superior/assets/eePlumB_val_n5/LS4-7_eePlumB_val_aoi_2_2020-05-31')
           .select(['SR_B3', 'SR_B2', 'SR_B1'], ['R', 'G', 'B']);
 
-var valTiles = ee.ImageCollection(td1).merge(td2).merge(td4).merge(td5).merge(td7).merge(td8).merge(td9);
+var valTiles = ee.ImageCollection(td1).merge(td2).merge(td3).merge(td4).merge(td5);
 
 var Button1 = ui.Button('Tile-Date 1', function() {
   pickRegionByIndex(0);
@@ -59,23 +55,13 @@ var Button5 = ui.Button('Tile-Date 5', function() {
   pickRegionByIndex(4);
   print('You are currently working on Tile-Date 5');
 });
-var Button6 = ui.Button('Tile-Date 6', function() {
-  pickRegionByIndex(5);
-  print('You are currently working on Tile-Date 6');
-});
-var Button7 = ui.Button('Tile-Date 7', function() {
-  pickRegionByIndex(6);
-  print('You are currently working on Tile-Date 7');
-});
 
 var validationPanel = ui.Panel([
   Button1,
   Button2,
   Button3,
   Button4,
-  Button5,
-  Button6,
-  Button7
+  Button5
   ], ui.Panel.Layout.flow('horizontal'), {'position': 'bottom-center'});
 
 Map.add(validationPanel);
@@ -101,7 +87,7 @@ var pickRegionByIndex = function(i) {
   var TileDate = ee.Image(valTiles.toList(1, i).get(0));
 
   //focus on tile
-  Map.centerObject(TileDate, 12); 
+  Map.centerObject(TileDate, 10); 
   Map.addLayer(TileDate, tc_style);
 };
 
