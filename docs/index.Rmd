@@ -6,17 +6,17 @@ output:
     theme: yeti
 ---
 
-# {.tabset .tabset-fade .tabset-pills}
+#  {.tabset .tabset-fade .tabset-pills}
 
 ## About this project
 
 **Why identify plumes and blooms?** Cyanobacteria blooms are one of the most significant management challenges in the Great Lakes today. Recurring blooms of varying toxicity are commonly observed in four of the Great Lakes, and the fifth, Lake Superior, has experienced intermittent nearshore blooms since 2012. The recent advent of cyanobacterial blooms in Lake Superior is disconcerting, given the highly valued, pristine water quality of the large lake. Many fear the appearance of blooms portend a very different future for Lake Superior. As a public resource, the coastal water quality of Lake Superior has tremendous economic, public health, and environmental value, and therefore, preventing cyanobacterial blooms in Lake Superior is a high-priority management challenge.
 
-Lake Superior is a large lake, and relying on human observations of blooms restricts observations to near-shore locations. Remote sensing has the potential to catalog spatial and temporal extent of surface blooms. In this project, we are attempting to use optical imagery from Lake Superior to delineate surface plumes (sediment) and blooms (algae). It is likely that these two surface features occur at the same time (i.e a rainstorm may lead to a sediment plume from a river and subsequently an algal boom). 
+Lake Superior is a large lake, and relying on human observations of blooms restricts observations to near-shore locations. Remote sensing has the potential to catalog spatial and temporal extent of surface blooms. In this project, we are attempting to use optical imagery from Lake Superior to delineate surface plumes (sediment) and blooms (algae). It is likely that these two surface features occur at the same time (i.e a rainstorm may lead to a sediment plume from a river and subsequently an algal boom).
 
 To train computer algorithms to detect these features in satellite images we need a training dataset. That's where we need your help! In this exercise, we ask you to participate in identify changes in surface conditions in the western arm of Lake Superior. All you need is a computer and your eyes.
 
-We will be using Google Earth Engine (GEE) for this project and instructions on how to use this software are detailed below. 
+We will be using Google Earth Engine (GEE) for this project and instructions on how to use this software are detailed below.
 
 ## Initial setup
 
@@ -24,77 +24,122 @@ If this is your first time using GEE and this classification workflow, please fo
 
 You can also watch the first 2.5 minutes of [this video](https://youtu.be/QXJf9IAF1z4) to visually walk through the setup instructions. Note that the video was originally created for the "GROD workflow", which was the foundation for the workflow here, and you may need to substitute information that is specific for this project.
 
-1. Sign up for Google Earth Engine: <https://earthengine.google.com/>. If you don't have an affiliation, you can put University of Wisconsin-Madison.
-2. Using your Google account (the same one you made your Google Earth Engine account with), open up your [Google drive](https://drive.google.com/drive/my-drive) and make a new folder in your drive to store data from the project. Please include your name in the name of the folder, ex. 'FirstnameLastnameData'
+1.  Sign up for Google Earth Engine: <https://earthengine.google.com/>. If you don't have an affiliation, you can put University of Wisconsin-Madison.
+2.  Using your Google account (the same one you made your Google Earth Engine account with), open up your [Google drive](https://drive.google.com/drive/my-drive) and make a new folder in your drive to store data from the project. Please include your name in the name of the folder, ex. 'FirstinitialMiddleinitialLastnameData'
 
-<center>
-![](www/images/newfolder.png){width=400px}
-</center> &nbsp;&nbsp;
-    
-3.  Once the folder is created, please share it with the group. To do this, you can right click on the folder and click 'share.' Next, click 'get shareable link' in the top right corner, and set link sharing to 'Anyone with the link can edit.' Lastly, click 'copy link,' and paste the link in this [Google Sheets document](https://docs.google.com/spreadsheets/d/1J_jvedUA3fDjD4EAYYUe-bmEszaDJWjTzlbqJJN6MXE/edit#gid=0) alongside your name.
+<center>![](www/images/newfolder.png){width="400px"}</center>
 
-<center>
-![](www/images/sharefolder.png)
-</center> &nbsp;&nbsp;
+   3. Create two subdirectories within this new folder - one called 'val-test' and another called 'labels'.
+
+<center>![](www/images/subfolders.png){width="400px"}</center>
+
+  
+
+3.  Once the folder is created, please share it with the group. To do this, you can click on the folder and click 'Whare.' Next, set Genera Access to 'Anyone with the link' and 'Editor'. Lastly, click 'copy link,' and paste the link in this [Google Sheets document](https://docs.google.com/spreadsheets/d/1Sk7BuA92Mw4A3_ETialeQ9b1WPXK1TWkfDd8wsvVOFc/edit?usp=sharing) alongside your name and initials.
+
+<center>![](www/images/sharelocation.png){width="400"}</center>
+
+<center>![](www/images/sharefolder.png){width="400"}</center>
+
+  
 
 ## What are we labeling?
 
-flow chart & examples
+For this application, we want to be sure that the pixels that we label are *definitely* the label, which means, if you have a doubt about the class, don't label it.
+
+`openWater`: clear, dark pixels with no cloud interference or highly dispersed sediment.
+
+<center>![](www/images/openWater.png){width="400"}</center>
+
+`lightNearShoreSediment`: yellow and light brown areas, usually near shore.
+
+<center>![](www/images/lNSS.png){width="400"}</center>
+
+`darkNearShoreSediment`: dark brown or red-brown areas, usually near a stream inflow.
+
+<center>![](www/images/dNSS.png){width="400"}</center>
+
+`offShoreSediment`: could also be considered dispersed sediment. Green-ish colored areas proximate to near shore sediment. It may often look 'swirled' in the deeper areas of the lake.
+
+<center>![](www/images/oSS.png){width="400"}</center>
+
+`algalBloom`: this class is tricky! Technically, it is very hard to discriminate between off shore sediment or dispersed sediment and algal blooms in the imagery provided. In fact, it's so tricky, we don't even have an example for you! Please do use this label if you think you see a bloom.
+
+`cloud`: clouds often appear as you would expect: white or wispy. It's totally possible that the *entire* mission-date you have selected is completely cloudy.
+
+<center>![](www/images/cloud.png){width="400"}</center>
+
+Clouds can look green or even black, too:
+
+<center>![](www/images/cloudgb.png){width="400"}</center>
+
+Sometimes the clouds are barely discernible, but the scene looks 'hazy'. In this case, don't label the haze, but do try to avoid it as you label other classes.
+
+<center>![](www/images/haze.png){width="400"}</center>
+
+`shorelineContamination`: usually dark pixels or yellow-brown pixels that overlap with the shoreline. The purpose of this label is for us to be able to add 'uncertainty' to some machine-inferred labels if they are also proximate to pixels labeled as `shorelineContamination`. Generally speaking, label things that might be 'confusing' for a machine to label because the color is similar to colors of a sediment plume. The easiest way to detect this is to turn on the 'Satellite' baselayer in the top right and toggle the 'Layer 1' option under 'Layers':
+
+<center>![](www/images/sat_toggle.png){width="400"}</center>
+
+<center>![](www/images/contamination.png){width="400"}</center>
+
+<center>![](www/images/contamination_under.png){width="400"}</center>
+
+`other`: anything else that is present in the image that might be classified as 'other' or 'unknown'.
 
 ## How to label: Part 1
 
 The purpose of this step is to walk you through how to setup a script in GEE to be able to open an image before you actually label it. You will need to do this process before each new mission-date combination you are classifying.
 
-1. Go to the project [Github page.](https://github.com/rossyndicate/Superior-Plume-Bloom/tree/main/eePlumB/1_user_interface_script) 
+1.  Go to the project [Github page.](https://github.com/rossyndicate/Superior-Plume-Bloom/tree/main/eePlumB/1_user_interface_script)
 
-2. Copy the appropriate `.js` script. 
+2.  Copy the appropriate `.js` script.
 
-   * If this is your first time through the tutorial, you will be working with the validation script: [`eePlumB_validation.js`](https://github.com/rossyndicate/Superior-Plume-Bloom/blob/5e9d0cd1ad435aa3bdb2f0d2b41c026c0f57c8ab/eePlumB/1_user_interface_script/eePlumB_validation). The purpose of this step is to have you go through the full process of classifying a few images for practice and to provide us with data to see how similarly all our volunteers classify a range of conditions. We hope that the examples below will help guide everyone to classify conditions similarly, but we understand that there will be variation as there is a level of subjectivity in this process. 
-   * If you have already completed the tutorial once using the validation script, you have made it to the main classification workflow and will be working with the classification script: [`eePlumB_classification.js`](LINK ME)
+    -   If this is your first time through the tutorial, you will be working with the validation script: [`eePlumB_validation.js`](https://github.com/rossyndicate/Superior-Plume-Bloom/blob/5e9d0cd1ad435aa3bdb2f0d2b41c026c0f57c8ab/eePlumB/1_user_interface_script/eePlumB_validation). The purpose of this step is to have you go through the full process of classifying a few images for practice and to provide us with data to see how similarly all our volunteers classify a range of conditions. We hope that the examples below will help guide everyone to classify conditions similarly, but we understand that there will be variation as there is a level of subjectivity in this process.
+    -   If you have already completed the tutorial once using the validation script, you have made it to the main classification workflow and will be working with the classification script: [`eePlumB_classification.js`](LINK%20ME)
 
-<center>
-![](www/images/copy.png){width=550px}
-</center> &nbsp;&nbsp;
+<center>![](www/images/copy.png){width="550px"}</center>
 
-3. Open a blank script file in the [Google Earth Engine editor](https://code.earthengine.google.com/)
+  
 
-<center>
-![](www/images/newscript.png){width=200px}
-</center> &nbsp;&nbsp;
+3.  Open a blank script file in the [Google Earth Engine editor](https://code.earthengine.google.com/)
 
-4. Paste the contents you copied in Step 2 into the blank GEE editor.
+<center>![](www/images/newscript.png){width="200px"}</center>
 
-<center>
-![](www/images/paste.png){width=550px}
-</center> &nbsp;&nbsp;
+  
 
-5. To prepare the feature categories, you will need to convert them to import records. You can do this by hovering over the first few lines of code `var openWater =...` and GEE will prompt you to import these records. Click convert to do so.
+4.  Paste the contents you copied in Step 2 into the blank GEE editor.
 
-<center>
-![](www/images/import.png){width=550px}
-</center> &nbsp;&nbsp;
+<center>![](www/images/paste.png){width="550px"}</center>
 
-6. Change the initials at the top of the script to your own and hit the ‘Save’ button. You will need to do steps 7 & 8 before the file is actually saved.
+  
 
-<center>
-![](www/images/savescript.png){width=350px}
-</center> &nbsp;&nbsp;
+5.  To prepare the feature categories, you will need to convert them to import records. You can do this by hovering over the first few lines of code `var openWater =...` and GEE will prompt you to import these records. Click convert to do so.
 
-7. If you haven't done this before, you will be directed to a pop up which will ask you to create your home folder. You won't be able to change this folder name in the future, so we recommend you write your name or a nickname/email and then hit 'continue.' 
+<center>![](www/images/import.png){width="550px"}</center>
 
-<center>
-![](www/images/CreateHomeFolder.jpg){width=350px}
-</center> &nbsp;&nbsp;
+  
 
-8. Choose a name for this script. You will be saving a new script for each unique classification activity. Please take note the name of the file you save as you will need this to go back and continue your work.
-      * If this is your first time through the workflow, you are on the validation step and should name the file `eePlumB_[YOUR INITIALS]_validation`.
-      * If you are working on the actual classification steps, you should name the file `eePlumB_[YOUR INITIALS]_[MISSION]_[DATE]` based on the assigned mission-date combination you are currently working through.
+6.  Change the initials at the top of the script to your own and hit the 'Save' button. You will need to do steps 7 & 8 before the file is actually saved.
 
-5. Verify that you are in the script that you just saved, then hit ‘Run’ at the center top of your screen.
+<center>![](www/images/savescript.png){width="350px"}</center>
 
-<center>
-![](www/images/run.png){width=350px}
-</center> &nbsp;&nbsp;
+  
+
+7.  If you haven't done this before, you will be directed to a pop up which will ask you to create your home folder. You won't be able to change this folder name in the future, so we recommend you write your name or a nickname/email and then hit 'continue.'
+
+<center>![](www/images/CreateHomeFolder.jpg){width="350px"}</center>
+
+  
+
+8.  Choose a name for this script. You will be saving a new script for each unique classification activity. Please take note the name of the file you save as you will need this to go back and continue your work.
+    -   If this is your first time through the workflow, you are on the validation step and should name the file `eePlumB_[YOUR INITIALS]_validation`.
+    -   If you are working on the actual classification steps, you should name the file `eePlumB_[YOUR INITIALS]_[MISSION]_[DATE]` based on the assigned mission-date combination you are currently working through.
+9.  Verify that you are in the script that you just saved, then hit 'Run' at the center top of your screen.
+
+<center>![](www/images/run.png){width="350px"}</center>
+
+  
 
 Now that you have the script running, you are ready to add labels. Head to the next section, `How to label: Part 2`!
 
@@ -104,50 +149,50 @@ The purpose of this step is to teach you how to use our Google Earth Engine fram
 
 ### Adding labels
 
-1. Check that you have the appropriate geometry categories by hovering over `Geometry Imports` in the map area of GEE. When hovering, you should see a list of sediment and bloom types (see image below). If you do not, then you should revisit Part 1 and follow those instructions carefully.
+1.  Check that you have the appropriate geometry categories by hovering over `Geometry Imports` in the map area of GEE. When hovering, you should see a list of sediment and bloom types (see image below). If you do not, then you should revisit Part 1 and follow those instructions carefully.
 
-<center>
-![](www/images/categories.png){width=350px}
-</center> &nbsp;&nbsp;
+<center>![](www/images/categories.png){width="350px"}</center>
 
-2. When you see pixels in the image that you would like to label, you will need to click on the top left geometry bar and select the point geometry icon. For each tile that you are working on, you will have to zoom in until you can discern pixels. This is especially important near shore.
+  
 
-<center>
-![](www/images/addmarker.png){width=300px}
-</center> &nbsp;&nbsp;
+2.  When you see pixels in the image that you would like to label, you will need to click on the top left geometry bar and select the point geometry icon. For each tile that you are working on, you will have to zoom in until you can discern pixels. This is especially important near shore.
 
-3. Change the category to the type of pixel that you are labeling by hovering over `openWater` (it just chooses the first category by default) and clicking the name of the category you want.
+<center>![](www/images/addmarker.png){width="300px"}</center>
 
-4. Next, click on the map to add a point of this type. 
+  
 
-<center>
-![](www/images/addpoint.png){width=550px}
-</center> &nbsp;&nbsp;
+3.  Change the category to the type of pixel that you are labeling by hovering over `openWater` (it just chooses the first category by default) and clicking the name of the category you want.
 
-5. Continue adding points in the current category by clicking the pixel on the map that you want to label. Zoom in or out and scroll (by clicking and dragging) as needed. For each image, label at least 5 pixels for each category you see. Note that you may not see all categories in a given image.
+4.  Next, click on the map to add a point of this type.
 
-6. When you are done, click `Exit` next to where it says "Point drawing". If you want to start adding points again, simply go back to Step 2 and repeat.
+<center>![](www/images/addpoint.png){width="550px"}</center>
 
-<center>
-![](www/images/endpoint.png){width=550px}
-</center> &nbsp;&nbsp;
+  
+
+5.  Continue adding points in the current category by clicking the pixel on the map that you want to label. Zoom in or out and scroll (by clicking and dragging) as needed. For each image, label at least 5 pixels for each category you see. Note that you may not see all categories in a given image.
+
+6.  When you are done, click `Exit` next to where it says "Point drawing". If you want to start adding points again, simply go back to Step 2 and repeat.
+
+<center>![](www/images/endpoint.png){width="550px"}</center>
+
+  
 
 ### Editing
 
-1. If you have made a mistake, click on the hand icon at the top left-hand corner of the map (see the red circle on the figure below). Next, click on the point you dislike. Then, you can drag to a new location or hit delete to remove the point. If you moved the point, hit `Exit` to stop the editing session. 
+1.  If you have made a mistake, click on the hand icon at the top left-hand corner of the map (see the red circle on the figure below). Next, click on the point you dislike. Then, you can drag to a new location or hit delete to remove the point. If you moved the point, hit `Exit` to stop the editing session.
 
-2. To resume adding points, go back to Step 2 in the previous section.
+2.  To resume adding points, go back to Step 2 in the previous section.
 
-<center>
-![](www/images/editing.png){width=550px}
-</center> &nbsp;&nbsp;
+<center>![](www/images/editing.png){width="550px"}</center>
+
+  
 
 ### Finishing up the labeling
 
-When you have completed labeling your image, ... 
+When you have completed labeling your image, ...
 
 ### Useful keyboard shortcuts
 
 Here are some useful shortcuts if you are a keyboard rather than mouse person.
 
-![](www/images/keyboard.png){width=450px}
+![](www/images/keyboard.png){width="450px"}
