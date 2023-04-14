@@ -125,8 +125,8 @@ The purpose of this step is to walk you through how to setup a script in GEE to 
 
 2.  Copy the appropriate `.js` script.
 
-    -   If this is your first time through the tutorial, you will be working with the validation script: [eePlumB_validation.js](https://github.com/rossyndicate/Superior-Plume-Bloom/blob/5e9d0cd1ad435aa3bdb2f0d2b41c026c0f57c8ab/eePlumB/1_user_interface_script/eePlumB_validation.js). The purpose of this step is to have you go through the full process of classifying a few images for practice and to provide us with data to see how similarly all our volunteers classify a range of conditions. We hope that the examples below will help guide everyone to classify conditions similarly, but we understand that there will be variation as there is a level of subjectivity in this process.
-    -   If you have already completed the tutorial once using the validation script, you have made it to the main classification workflow and will be working with the classification script: [`eePlumB.js`](https://github.com/rossyndicate/Superior-Plume-Bloom/blob/5e9d0cd1ad435aa3bdb2f0d2b41c026c0f57c8ab/eePlumB/1_user_interface_script/eePlumB.js)
+-   If this is your first time through the tutorial, you will be working with the validation script: [`eePlumB_validation.js`](https://github.com/rossyndicate/Superior-Plume-Bloom/blob/5e9d0cd1ad435aa3bdb2f0d2b41c026c0f57c8ab/eePlumB/1_user_interface_script/eePlumB_validation.js). The purpose of this step is to have you go through the full process of classifying a few images for practice and to provide us with data to see how similarly all our volunteers classify a range of conditions. We hope that the examples below will help guide everyone to classify conditions similarly, but we understand that there will be variation as there is a level of subjectivity in this process.
+-   If you have already completed the tutorial once using the validation script, you have made it to the main classification workflow and will be working with the classification script: [`eePlumB.js`](https://github.com/rossyndicate/Superior-Plume-Bloom/blob/5e9d0cd1ad435aa3bdb2f0d2b41c026c0f57c8ab/eePlumB/1_user_interface_script/eePlumB.js)
 
 <center>![](www/images/copy.png){width="550px"}</center>
 
@@ -150,22 +150,22 @@ The purpose of this step is to walk you through how to setup a script in GEE to 
 
   
 
-6.  Change the initials at the top of the script to your own and hit the 'Save' button. You will need to do steps 7 & 8 before the file is actually saved.
+6.  Change the initials at the top of the script to your own and hit the 'Save' button.
 
 <center>![](www/images/savescript.png){width="350px"}</center>
 
   
 
-7.  If you haven't done this before, you will be directed to a pop up which will ask you to create your home folder. You won't be able to change this folder name in the future, so we recommend you write your name or a nickname/email and then hit 'continue.'
+6.1 If you haven't worked in GEE before, you will be directed to a pop up which will ask you to create your home folder. You won't be able to change this folder name in the future, so we recommend you write your name or a nickname/email and then hit 'continue.'
 
 <center>![](www/images/CreateHomeFolder.jpg){width="350px"}</center>
 
   
 
-8.  Choose a name for this script. You will be saving a new script for each unique classification activity. Please take note the name of the file you save as you will need this to go back and continue your work.
+7.  Type a name for this script. You will be saving a new script for each unique classification activity. Please take note the name of the file you save as you will need this to go back and continue your work.
     -   If this is your first time through the workflow, you are on the validation step and should name the file `eePlumB_[YOUR INITIALS]_validation`.
-    -   If you are working on the actual classification steps, you should name the file `eePlumB_[YOUR INITIALS]_[MISSION]_[DATE]` based on the assigned mission-date combination you are currently working through.
-9.  Verify that you are in the script that you just saved, then hit 'Run' at the center top of your screen.
+    -   If you are working on the actual classification steps, you should name the file `eePlumB_[YOUR INITIALS]_[MISSION]_[DATE]` based on the selected mission-date combination you are currently working through.   
+8.  Verify that you are in the script that you just saved, then hit 'Run' at the center top of your screen.
 
 <center>![](www/images/run.png){width="350px"}</center>
 
@@ -191,7 +191,7 @@ The purpose of this step is to teach you how to use our Google Earth Engine fram
 
   
 
-3.  Change the category to the type of pixel that you are labeling by hovering over `openWater` (it just chooses the first category by default) and clicking the name of the category you want.
+3.  Change the category to the type of pixel that you are labeling by hovering over `openWater` (it just chooses the first category by default) and clicking the name of the category you want. In our example, we'll select 'lightNearShoreSediment'.
 
 4.  Next, click on the map to add a point of this type.
 
@@ -201,9 +201,27 @@ The purpose of this step is to teach you how to use our Google Earth Engine fram
 
 5.  Continue adding points in the current category by clicking the pixel on the map that you want to label. Zoom in or out and scroll (by clicking and dragging) as needed. For each image, label at least 5 pixels for each category you see. Note that you may not see all categories in a given image.
 
-6.  When you are done, click `Exit` next to where it says "Point drawing". If you want to start adding points again, simply go back to Step 2 and repeat.
+6.  When you have finished labeling a given tile-date, move on to the next tile by selecting the next 'Tile-Date' in the `eePlumB_validation.js` script:
+
+<center>![](www/images/tiledate.png){width="300px"}</center>
+
+Or the 'Next Tile' button in the `eePlumB.js` script:
+
+<center>![](www/images/nexttile.png){width="300px"}</center>
+
+If you're not sure if you're done, you can click through each tile to make sure there are markers. There are 5 tiles for the `eePlumB.js` script.
+
+  
+
+7.  When you are done, click `Exit` next to where it says "Point drawing". If you want to start adding points again, simply go back to Step 2 and repeat.
 
 <center>![](www/images/endpoint.png){width="550px"}</center>
+
+  
+
+8.  If you're working on an mission-date in the `eePlumB.js` script and need to stop at any point, GEE will save your work and you can start labeling again by clicking on the script you named `eePlumB_[YOUR INITIALS]_[MISSION]_[DATE]` in the upper left hand corner of the GEE code interface:
+
+<center>![](www/images/reopen.png){width="550px"}</center>
 
   
 
@@ -217,9 +235,68 @@ The purpose of this step is to teach you how to use our Google Earth Engine fram
 
   
 
-### Finishing up the labeling
+## Finishing up the labeling
 
-When you have completed labeling your image, ...
+When you have completed labeling your image, it's time to export the labels you just created. To do this:
+
+1.  Hit the 'Run' button at the top of the page:
+
+<center>![](www/images/run.png){width="550px"}</center>
+
+  
+
+2.  Navigate to the 'Tasks' tab at the top right of the interface:
+
+<center>![](www/images/tasks.png){width="550px"}</center>
+
+  
+
+3.  Under 'UNSUBMITTED TASKS' click the blue 'RUN' button.
+
+<center>![](www/images/tasks_run.png){width="550px"}</center>
+
+  
+
+4.  Click 'RUN' at the bottom of the pop-up:
+
+<center>![](www/images/popup_run.png){width="550px"}</center>
+
+  
+
+5.  You will now see the task move to 'SUBMITTED TASKS' and a gear will start turning:
+
+<center>![](www/images/export_turning.png){width="550px"}</center>
+
+  
+
+That's all! If you're ready to label another image, repeat from 'How to label: Part 1'. See the section 'Selecting a mission-date for the `eeplumB.js` script'. You do not need to wait for the task to complete to navigate away from this screen or to start a new script.
+
+## Selecting a mission-date to start labeling
+
+All mission-date pairs are listed in [this Google Sheet](https://docs.google.com/spreadsheets/d/1g5owPatzZOKuidQccaa5fUGVLnUtHD2na3zjBfQhB-g/edit?usp=sharing). These mission-date pairs have been sorted randomly. As a general rule of thumb, know that Landsat 5 ('mission' = LS5 in the Google sheet) images are 'more difficult' to label because the colors are generally more murky than any other mission. We suggest starting with a LS8 or LS9 image when you start to label.
+
+When you've selected a mission-date to label, put your name and initials in the proper row **when you start** to label the image. This will prevent unnecessary duplication of labeling. When you're finished labeling and have exported the data, add 'yes' to the `finished?` column.
+
+The row values for the 'mission' and 'date' column in the Google Sheet:
+
+![](www/images/mission-date.png){width="450px"}
+
+Are those that you enter into your \`eePlumB\_ [INITIALS] \_ [MISSION] \_ [DATE].js\` script in GEE:
+
+![](www/images/m-d-eePlumB.png){width="450px"}
+
+
+## User tips
+
+The last two columns of the mission-date Google Sheet lists 'n_PR', which stands for the number of path-rows included in the image. If n_PR = 1, this means that there may be areas of the image that are missing. It's okay if you click through 'tiles' and you don't see imagery - it might look like this, only showing the 'Map' basemap:
+
+![](www/images/nodata.png){width="450px"}
+
+Also, you might come across mission-dates or tiles that are completely cloud-covered:
+
+![](www/images/onlycloud.png){width="450px"}
+
+For these, just label the clouds, and don't worry about any other classes. Still export the data by following the directions under 'Finishing up the labeling'.
 
 ### Useful keyboard shortcuts
 
