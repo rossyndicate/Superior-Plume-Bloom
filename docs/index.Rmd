@@ -35,7 +35,7 @@ You can also watch the first 2.5 minutes of [this video](https://youtu.be/QXJf9I
 
   
 
-3.  Once the folder is created, please share it with the group. To do this, you can click on the folder and click 'Whare.' Next, set Genera Access to 'Anyone with the link' and 'Editor'. Lastly, click 'copy link,' and paste the link in this [Google Sheets document](https://docs.google.com/spreadsheets/d/1Sk7BuA92Mw4A3_ETialeQ9b1WPXK1TWkfDd8wsvVOFc/edit?usp=sharing) alongside your name and initials.
+4.  Once the folder is created, please share it with the group. To do this, you can click on the folder and click 'Share.' Next, set General Access to 'Anyone with the link' and 'Editor'. Lastly, click 'copy link,' and paste the link in this [Google Sheets document](https://docs.google.com/spreadsheets/d/1Sk7BuA92Mw4A3_ETialeQ9b1WPXK1TWkfDd8wsvVOFc/edit?usp=sharing) alongside your name and initials.
 
 <center>![](www/images/sharelocation.png){width="400"}</center>
 
