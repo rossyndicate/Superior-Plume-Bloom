@@ -70,6 +70,13 @@ random_mission_date = random_mission_date %>%
          PRs) %>% 
   mutate(name = '', initials = '', `finished?` = '') %>% 
   relocate(mission, date, name, initials, `finished?`)
+
+random_mission_date = random_mission_date %>% 
+  mutate(mission = case_when(mission == 'LANDSAT_5' ~ 'LS5',
+                             mission == 'LANDSAT_7' ~ 'LS7',
+                             mission == 'LANDSAT_8' ~ 'LS8',
+                             mission == 'LANDSAT_9' ~ 'LS9',
+                             TRUE ~ ''))
 ```
 
 ## Save file to Drive
@@ -78,4 +85,10 @@ random_mission_date = random_mission_date %>%
 write.csv(random_mission_date, file.path(temp_dir, 'random_mission_date.csv'), row.names = F)
 
 drive_upload(file.path(temp_dir,'random_mission_date.csv'), path = as_id(folder$id), name = 'eePlumB Mission-Date List', type = 'spreadsheet', overwrite = F)
+```
+
+## Clean up tmp dir
+
+```{r}
+unlink('tmp', recursive = T)
 ```
