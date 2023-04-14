@@ -47,23 +47,39 @@ You can also watch the first 2.5 minutes of [this video](https://youtu.be/QXJf9I
 
 For this application, we want to be sure that the pixels that we label are *definitely* the label, which means, if you have a doubt about the class, don't label it.
 
+Also, please ignore the harbor area - outlined in blue with x's below - when labeling in Tile 1:
+
+<center>![](www/images/ignoreharbor.png){width="400"}</center>
+
+  
+
 `openWater`: clear, dark pixels with no cloud interference or highly dispersed sediment.
 
 <center>![](www/images/openWater.png){width="400"}</center>
+
+  
 
 `lightNearShoreSediment`: yellow and light brown areas, usually near shore.
 
 <center>![](www/images/lNSS.png){width="400"}</center>
 
+  
+
 `darkNearShoreSediment`: dark brown or red-brown areas, usually near a stream inflow.
 
 <center>![](www/images/dNSS.png){width="400"}</center>
+
+  
 
 `offShoreSediment`: could also be considered dispersed sediment. Green-ish colored areas proximate to near shore sediment. It may often look 'swirled' in the deeper areas of the lake.
 
 <center>![](www/images/oSS.png){width="400"}</center>
 
+  
+
 `algalBloom`: this class is tricky! Technically, it is very hard to discriminate between off shore sediment or dispersed sediment and algal blooms in the imagery provided. In fact, it's so tricky, we don't even have an example for you! Please do use this label if you think you see a bloom.
+
+  
 
 `cloud`: clouds often appear as you would expect: white or wispy. It's totally possible that the *entire* mission-date you have selected is completely cloudy.
 
@@ -77,6 +93,8 @@ Sometimes the clouds are barely discernible, but the scene looks 'hazy'. In this
 
 <center>![](www/images/haze.png){width="400"}</center>
 
+  
+
 `shorelineContamination`: usually dark pixels or yellow-brown pixels that overlap with the shoreline. The purpose of this label is for us to be able to add 'uncertainty' to some machine-inferred labels if they are also proximate to pixels labeled as `shorelineContamination`. Generally speaking, label things that might be 'confusing' for a machine to label because the color is similar to colors of a sediment plume. The easiest way to detect this is to turn on the 'Satellite' baselayer in the top right and toggle the 'Layer 1' option under 'Layers':
 
 <center>![](www/images/sat_toggle.png){width="400"}</center>
@@ -85,7 +103,19 @@ Sometimes the clouds are barely discernible, but the scene looks 'hazy'. In this
 
 <center>![](www/images/contamination_under.png){width="400"}</center>
 
-`other`: anything else that is present in the image that might be classified as 'other' or 'unknown'.
+Note, it's very important that you go back to the 'Map' base layer when you aren't labeling shoreline contamination, as it's easy to mistake the 'Satellite' view with the satellite image that you are labeling.
+
+  
+
+`other`: anything else that is present in the image that might be classified as 'other' or 'unknown'. This could be strange image-related issues like this:
+
+<center>![](www/images/image_error.png){width="400"}</center>
+
+Or boats traveling!
+
+<center>![](www/images/boat.png){width="400"}</center>
+
+These labels, like shore contamination, help us identify points of uncertainty when segmenting images.
 
 ## How to label: Part 1
 
@@ -95,8 +125,8 @@ The purpose of this step is to walk you through how to setup a script in GEE to 
 
 2.  Copy the appropriate `.js` script.
 
-    -   If this is your first time through the tutorial, you will be working with the validation script: [`eePlumB_validation.js`](https://github.com/rossyndicate/Superior-Plume-Bloom/blob/5e9d0cd1ad435aa3bdb2f0d2b41c026c0f57c8ab/eePlumB/1_user_interface_script/eePlumB_validation). The purpose of this step is to have you go through the full process of classifying a few images for practice and to provide us with data to see how similarly all our volunteers classify a range of conditions. We hope that the examples below will help guide everyone to classify conditions similarly, but we understand that there will be variation as there is a level of subjectivity in this process.
-    -   If you have already completed the tutorial once using the validation script, you have made it to the main classification workflow and will be working with the classification script: [`eePlumB_classification.js`](LINK%20ME)
+    -   If this is your first time through the tutorial, you will be working with the validation script: [eePlumB_validation.js](https://github.com/rossyndicate/Superior-Plume-Bloom/blob/5e9d0cd1ad435aa3bdb2f0d2b41c026c0f57c8ab/eePlumB/1_user_interface_script/eePlumB_validation.js). The purpose of this step is to have you go through the full process of classifying a few images for practice and to provide us with data to see how similarly all our volunteers classify a range of conditions. We hope that the examples below will help guide everyone to classify conditions similarly, but we understand that there will be variation as there is a level of subjectivity in this process.
+    -   If you have already completed the tutorial once using the validation script, you have made it to the main classification workflow and will be working with the classification script: [`eePlumB.js`](https://github.com/rossyndicate/Superior-Plume-Bloom/blob/5e9d0cd1ad435aa3bdb2f0d2b41c026c0f57c8ab/eePlumB/1_user_interface_script/eePlumB.js)
 
 <center>![](www/images/copy.png){width="550px"}</center>
 
