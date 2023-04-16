@@ -1,0 +1,94 @@
+---
+title: "Process GEE Mission-Date File"
+author: "B Steele"
+date: "2023-04-14"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(googledrive)
+
+# authorize google drive
+drive_auth()
+1 #your desired email path may be different
+```
+
+# Purpose
+
+This script processes the file created in GEE using the script `1_createMissionDateList.js` to create a list of unique mission-date pairs for eePlumB users.
+
+## Download and load raw mission-date list
+
+```{r}
+temp_dir = 'tmp'
+dir.create('tmp')
+
+sup_drive = drive_ls(pattern = 'Bloom Project', recursive = F)
+folder = drive_ls(pattern = 'eePlumB_output', path = as_id(sup_drive))
+file = drive_ls(path = as_id(folder$id), pattern = 'mission_date_list.csv', recursive = T)
+
+drive_download(as_id(file$id), path = file.path(temp_dir, file$name))
+
+miss_date = read.csv(file.path(temp_dir, file$name))
+```
+
+## Summarize mission-date list
+
+The mission-date list includes multiple scenes per mission-date pair, so we want to summarize by mission and date.
+
+```{r}
+miss_date_unique = miss_date %>% 
+  mutate(PR = paste0(WRS_PATH, WRS_ROW)) %>% 
+  group_by(SPACECRAFT_ID, DATE_ACQUIRED) %>% 
+  summarise(n_PR = n(),
+            PRs = paste0(PR, collapse = '; '))
+```
+
+Filter for April through November.
+
+```{r}
+miss_date_filt = miss_date_unique %>% 
+  mutate(DATE_ACQUIRED = as.Date(DATE_ACQUIRED),
+         month = as.numeric(format(DATE_ACQUIRED, '%m'))) %>% 
+  filter(month >=4, month <= 11)
+```
+
+Sort the list randomly
+
+```{r}
+random_mission_date = miss_date_filt[sample(1:nrow(miss_date_filt)),]
+```
+
+And format for the users.
+
+```{r}
+random_mission_date = random_mission_date %>% 
+  select(mission = SPACECRAFT_ID,
+         date = DATE_ACQUIRED,
+         n_PR,
+         PRs) %>% 
+  mutate(name = '', initials = '', `finished?` = '') %>% 
+  relocate(mission, date, name, initials, `finished?`)
+
+random_mission_date = random_mission_date %>% 
+  mutate(mission = case_when(mission == 'LANDSAT_5' ~ 'LS5',
+                             mission == 'LANDSAT_7' ~ 'LS7',
+                             mission == 'LANDSAT_8' ~ 'LS8',
+                             mission == 'LANDSAT_9' ~ 'LS9',
+                             TRUE ~ ''))
+```
+
+## Save file to Drive
+
+```{r}
+write.csv(random_mission_date, file.path(temp_dir, 'random_mission_date.csv'), row.names = F)
+
+drive_upload(file.path(temp_dir,'random_mission_date.csv'), path = as_id(folder$id), name = 'eePlumB Mission-Date List', type = 'spreadsheet', overwrite = F)
+```
+
+## Clean up tmp dir
+
+```{r}
+unlink('tmp', recursive = T)
+```
