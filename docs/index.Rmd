@@ -77,7 +77,7 @@ Firstly, please ignore the harbor area - outlined in blue with x's below - when 
 
   
 
-`algalBloom`: this class is tricky! Technically, it is very hard to discriminate between off shore sediment or dispersed sediment and algal blooms in the imagery provided. In fact, it's so tricky, we don't even have an example for you! Please do use this label if you think you see a bloom.
+`algalBloom`: this class is tricky! It is very hard to discriminate between off shore sediment or dispersed sediment and algal blooms in the imagery provided. In fact, it's so tricky, we don't even have an example for you! Please do use this label if you think you see a bloom.
 
   
 
