@@ -119,7 +119,7 @@ These labels, like shore contamination, help us identify points of uncertainty w
 
 ## How to label: Part 1
 
-The purpose of this step is to walk you through how to setup a script in GEE that will open an image for labeling (see `How to label: Part 2` for adding labels to an open image). You will return to this step and start a fresh script for each new set of mission-date images you complete (e.g. a scene from Landsat 7 on 2001-06-10). If this is your first time reading the tutorial, you will be following our "validation" workflow to practice your labeling skills. When you complete the validation workflow, you will return here to start the mission-date labeling workflow. The workflows are almost identical with slight deviations noted in steps 2 and 7 below.
+The purpose of this step is to walk you through how to setup a script in GEE that will open an image for labeling (see `How to label: Part 2` for adding labels to an open image). You will return to this step and start a fresh script for each new set of mission-date images you complete (e.g. a scene from Landsat 7 on 2001-06-10). If this is your first time reading the tutorial, you will be following our "validation" workflow to practice your labeling skills. When you complete the validation workflow, you will return here to start the mission-date labeling workflow. The workflows are almost identical with slight deviations noted in steps 2 and 8 below.
 
 1.  Go to the project [Github page.](https://github.com/rossyndicate/Superior-Plume-Bloom/tree/main/eePlumB/1_user_interface_script)
 
@@ -156,16 +156,16 @@ The purpose of this step is to walk you through how to setup a script in GEE tha
 
   
 
-6.1 If you haven't worked in GEE before, you will be directed to a pop up which will ask you to create your home folder. You won't be able to change this folder name in the future, so we recommend you write your name or a nickname/email and then hit 'continue.'
+7. If you haven't worked in GEE before, you will be directed to a pop up which will ask you to create your home folder. You won't be able to change this folder name in the future, so we recommend you write your name or a nickname/email and then hit 'continue.'
 
 <center>![](www/images/CreateHomeFolder.jpg){width="350px"}</center>
 
   
 
-7.  Type a name for this script. You will be saving a new script for each unique classification activity. Please take note the name of the file you save as you will need this to go back and continue your work.
+8.  Type a name for this script. You will be saving a new script for each unique classification activity. Please take note the name of the file you save as you will need this to go back and continue your work.
     -   If this is your first time through the workflow, you are on the validation step and should name the file `eePlumB_[YOUR INITIALS]_validation`.
     -   If you are working on the actual classification steps, you should name the file `eePlumB_[YOUR INITIALS]_[MISSION]_[DATE]` based on the selected mission-date combination you are currently working through.   
-8.  Verify that you are in the script that you just saved, then hit 'Run' at the center top of your screen.
+9.  Verify that you are in the script that you just saved, then hit 'Run' at the center top of your screen.
 
 <center>![](www/images/run.png){width="350px"}</center>
 
