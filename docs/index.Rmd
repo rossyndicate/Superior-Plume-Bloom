@@ -119,7 +119,7 @@ These labels, like shore contamination, help us identify points of uncertainty w
 
 ## How to label: Part 1
 
-The purpose of this step is to walk you through how to setup a script in GEE to be able to open an image before you actually label it. You will need to do this process before each new mission-date combination you are classifying.
+The purpose of this step is to walk you through how to setup a script in GEE that will open an image for labeling (see `How to label: Part 2` for adding labels to an open image). You will return to this step and start a fresh script for each new set of mission-date images you complete (e.g. a scene from Landsat 7 on 2001-06-10). If this is your first time reading the tutorial, you will be following our "validation" workflow to practice your labeling skills. When you complete the validation workflow, you will return here to start the mission-date labeling workflow. The workflows are almost identical with slight deviations noted in steps 2 and 7 below.
 
 1.  Go to the project [Github page.](https://github.com/rossyndicate/Superior-Plume-Bloom/tree/main/eePlumB/1_user_interface_script)
 
