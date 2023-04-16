@@ -259,7 +259,7 @@ When you have completed labeling your image, it's time to export the labels you 
 
   
 
-4.  Click 'RUN' at the bottom of the pop-up:
+4.  Click 'RUN' at the bottom of the pop-up and accept the default entries. Note that for the validation workflow, the `Drive folder` and `Filename` will look different than the example image below. 
 
 <center>![](www/images/popup_run.png){width="550px"}</center>
 
