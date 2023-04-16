@@ -29,7 +29,7 @@ You can also watch the first 2.5 minutes of [this video](https://youtu.be/QXJf9I
 
 <center>![](www/images/newfolder.png){width="400px"}</center>
 
-   3. Create two subdirectories within this new folder - one called 'val-test' and another called 'labels'.
+   3. Create two subdirectories within this new folder - one called 'test-val' and another called 'labels'.
 
 <center>![](www/images/subfolders.png){width="400px"}</center>
 
