@@ -201,15 +201,15 @@ The purpose of this step is to teach you how to use our GEE framework to classif
 
 5.  Continue adding points in the current category by clicking the pixel on the map that you want to label. Zoom in or out and scroll (by clicking and dragging) as needed. For each image, label at least 5 pixels for each category you see. Note that you may not see all categories in a given image.
 
-6.  When you have finished labeling a given tile-date, move on to the next tile by selecting the next 'Tile-Date' in the `eePlumB_validation.js` script:
+6.  When you have finished labeling a given tile-date, move on to the next tile. If you're not sure if you're done, you can click through each tile to make sure there are markers. There should be 5 tiles for each of the workflows.
+
+   -  In the validation workflow, click 'Tile-Date X' to go to the next image.
 
 <center>![](www/images/tiledate.png){width="300px"}</center>
 
-Or the 'Next Tile' button in the `eePlumB.js` script:
+   -  In the mission-date workflow, click 'Next Tile' to go to the next image.
 
 <center>![](www/images/nexttile.png){width="300px"}</center>
-
-If you're not sure if you're done, you can click through each tile to make sure there are markers. There are 5 tiles for the `eePlumB.js` script.
 
   
 
