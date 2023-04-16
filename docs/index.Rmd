@@ -150,7 +150,7 @@ The purpose of this step is to walk you through how to setup a script in GEE tha
 
   
 
-6.  Change the initials at the top of the script to your own and hit the 'Save' button.
+6.  Change the initials at the top of the script to your own and hit the 'Save' button. If you are working on a specific mission-date labeling task (NOT the validation workflow), you should also update the `mission` and `date` variables based on the mission-date you chose in `Selecting a mission-date to start labeling`. 
 
 <center>![](www/images/savescript.png){width="350px"}</center>
 
