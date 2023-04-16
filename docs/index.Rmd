@@ -271,7 +271,10 @@ When you have completed labeling your image, it's time to export the labels you 
 
   
 
-That's all! If you're ready to label another image, repeat from 'How to label: Part 1'. See the section 'Selecting a mission-date for the `eeplumB.js` script'. You do not need to wait for the task to complete to navigate away from this screen or to start a new script.
+That's all! You do not need to wait for the task to complete to navigate away from this screen or to start a new script.
+
+- If you were completing the validation workflow, check your labeled images against our expectations by ????. If you are happy with your results, you are ready to start labeling for real! Head to the `Selecting a mission-date for labeling` section to pick your own mission-date, and then start back at `How to label: Part 1`.
+- If you're ready to label another image, go to `Selecting a mission-date for labeling`, pick a new mission-date, and start again at `How to label: Part 1`. 
 
 ## Selecting a mission-date to start labeling
 
