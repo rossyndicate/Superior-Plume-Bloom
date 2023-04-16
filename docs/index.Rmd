@@ -225,6 +225,8 @@ The purpose of this step is to teach you how to use our GEE framework to classif
 
   
 
+9. If you have at least 5 markers for each class type you see in all of 5 of your tiles, move on to the `Finishing up the labeling` section. This will guide you through saving and exporting your labeled images. 
+
 ### Editing
 
 1.  If you have made a mistake, click on the hand icon at the top left-hand corner of the map (see the red circle on the figure below). Next, click on the point you dislike. Then, you can drag to a new location or hit delete to remove the point. If you moved the point, hit `Exit` to stop the editing session.
