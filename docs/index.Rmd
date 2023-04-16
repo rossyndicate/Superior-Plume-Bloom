@@ -45,9 +45,9 @@ You can also watch the first 2.5 minutes of [this video](https://youtu.be/QXJf9I
 
 ## What are we labeling?
 
-For this application, we want to be sure that the pixels that we label are *definitely* the label, which means, if you have a doubt about the class, don't label it.
+For this application, we want to be sure that the pixels that we label are *definitely* the label, which means, if you have a doubt about the class, don't label it. Use the examples and descriptions below to understand the types of pixels we are looking to label in this workflow.
 
-Also, please ignore the harbor area - outlined in blue with x's below - when labeling in Tile 1:
+Firstly, please ignore the harbor area - outlined in blue with x's below - when labeling in Tile 1:
 
 <center>![](www/images/ignoreharbor.png){width="400"}</center>
 
