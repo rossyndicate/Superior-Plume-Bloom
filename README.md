@@ -12,3 +12,7 @@ This repository is covered by the MIT use license. We request that all downstrea
 *availability_checks*: scripts to document image availability for our AOI
 
 *data*: this links to B's OneDrive folder for the Superior project
+
+*eePlumB*: scripts to develop the 'Earth Engine Plume and Bloom' (eePlumB) labeling modules
+
+*preliminary_kmeans*: basic scripts to develop a dummy image stack for model development
