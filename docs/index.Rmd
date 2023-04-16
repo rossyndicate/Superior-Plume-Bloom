@@ -175,7 +175,7 @@ Now that you have the script running, you are ready to add labels. Head to the n
 
 ## How to label: Part 2
 
-The purpose of this step is to teach you how to use our Google Earth Engine framework to classify images. Hopefully, this section is an easy reference if you need a refresher in the future. Note that this step assumes you have already done `How to label: Part 1` for the current set of images (either validation or for the specific mission-date you have been assigned).
+The purpose of this step is to teach you how to use our GEE framework to classify images. Hopefully, this section is an easy reference if you need a refresher in the future. Note that this step assumes you have already done `How to label: Part 1` for the current set of images - either for validation or for the specific mission-date you chose during the `Selecting a mission-date to start labeling` step.
 
 ### Adding labels
 
