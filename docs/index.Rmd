@@ -278,15 +278,16 @@ That's all! You do not need to wait for the task to complete to navigate away fr
 
 ## Selecting a mission-date to start labeling
 
-All mission-date pairs are listed in [this Google Sheet](https://docs.google.com/spreadsheets/d/1g5owPatzZOKuidQccaa5fUGVLnUtHD2na3zjBfQhB-g/edit?usp=sharing). These mission-date pairs have been sorted randomly. As a general rule of thumb, know that Landsat 5 ('mission' = LS5 in the Google sheet) images are 'more difficult' to label because the colors are generally more murky than any other mission. We suggest starting with a LS8 or LS9 image when you start to label.
+We are hoping to recruit quite a few plume-bloom classifiers to label as many images as we can. The more images we can have amazing citizen scientists like you classify, the better our algorithm can learn from us humans and produce better automated results. We are hoping to label a bunch of dates across a few different "missions" (Landsat 8, Landsat 9, etc), currently totaling over 700 mission-date combinations! 
+To help us stay organized and avoid duplication, we have listed all our target mission-date pairs in [this Google Sheet](https://docs.google.com/spreadsheets/d/1g5owPatzZOKuidQccaa5fUGVLnUtHD2na3zjBfQhB-g/edit?usp=sharing). These mission-date pairs have been sorted randomly. As a general rule of thumb, know that Landsat 5 ('mission' = LS5 in the Google sheet) images are 'more difficult' to label because the colors are generally more murky than any other mission. We suggest starting with a LS8 or LS9 image if you are new to satellite imagery.
 
 When you've selected a mission-date to label, put your name and initials in the proper row **when you start** to label the image. This will prevent unnecessary duplication of labeling. When you're finished labeling and have exported the data, add 'yes' to the `finished?` column.
 
-The row values for the 'mission' and 'date' column in the Google Sheet:
+To start labeling your selected mission-date, head to the `How to label: Part 1` section. Note that in steps 6 & 8, you will need to use the row values for the 'mission' and 'date' column from the Google Sheet
 
 ![](www/images/mission-date.png){width="450px"}
 
-Are those that you enter into your \`eePlumB\_ [INITIALS] \_ [MISSION] \_ [DATE].js\` script in GEE:
+to enter as your `mission` and `date` variables at the top of the script, as well as, to name your script \`eePlumB\_ [INITIALS] \_ [MISSION] \_ [DATE].js\` in GEE.
 
 ![](www/images/m-d-eePlumB.png){width="450px"}
 
