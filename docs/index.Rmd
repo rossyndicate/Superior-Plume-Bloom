@@ -14,9 +14,9 @@ output:
 
 Lake Superior is a large lake, and relying on human observations of blooms restricts observations to near-shore locations. Remote sensing has the potential to catalog spatial and temporal extent of surface blooms. In this project, we are attempting to use optical imagery from Lake Superior to delineate surface plumes (sediment) and blooms (algae). It is likely that these two surface features occur at the same time (i.e a rainstorm may lead to a sediment plume from a river and subsequently an algal boom).
 
-To train computer algorithms to detect these features in satellite images we need a training dataset. That's where we need your help! In this exercise, we ask you to participate in identify changes in surface conditions in the western arm of Lake Superior. All you need is a computer and your eyes.
+To train computer algorithms to detect these features in satellite images we need a training dataset. That's where we need your help! In this exercise, we ask you to participate in identifying changes in surface conditions in the western arm of Lake Superior. All you need is a computer and your eyes.
 
-We will be using Google Earth Engine (GEE) for this project and instructions on how to use this software are detailed below.
+We will be using Google Earth Engine (GEE) for this project. Instructions on how to use this software and label satellite imagery are detailed in this tutorial. Click the "Initial setup" tab to begin.
 
 ## Initial setup
 
