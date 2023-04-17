@@ -285,7 +285,7 @@ To help us stay organized and avoid duplication, we have listed all our target m
 
 When you've selected a mission-date to label, put your name and initials in the proper row **when you start** to label the image. This will prevent unnecessary duplication of labeling. When you're finished labeling and have exported the data, add 'yes' to the `finished?` column.
 
-To start labeling your selected mission-date, head to the `How to label: Part 1` section. Note that in steps 6 & 8, you will need to use the row values for the 'mission' and 'date' column from the Google Sheet
+To start labeling your selected mission-date, head to the `How to label: Part 1` section. Note that in steps 6 & 8, you will need to use the row values for the 'mission' and 'date' column from the Google Sheet in addition to editing the script to include your initials (lines 14, 16, and 18) after you've imported the geometry records.
 
 ![](www/images/mission-date.png){width="450px"}
 
