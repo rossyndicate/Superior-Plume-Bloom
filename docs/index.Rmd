@@ -14,9 +14,11 @@ output:
 
 Lake Superior is a large lake, and relying on human observations of blooms restricts observations to near-shore locations. Remote sensing has the potential to catalog spatial and temporal extent of surface blooms. In this project, we are attempting to use optical imagery from Lake Superior to delineate surface plumes (sediment) and blooms (algae). It is likely that these two surface features occur at the same time (i.e a rainstorm may lead to a sediment plume from a river and subsequently an algal boom).
 
-To train computer algorithms to detect these features in satellite images we need a training dataset. That's where we need your help! In this exercise, we ask you to participate in identify changes in surface conditions in the western arm of Lake Superior. All you need is a computer and your eyes.
+To train computer algorithms to detect these features in satellite images we need a training dataset. That's where we need your help! In this exercise, we ask you to participate in identifying changes in surface conditions in the western arm of Lake Superior. All you need is a computer and your eyes.
 
-We will be using Google Earth Engine (GEE) for this project and instructions on how to use this software are detailed below.
+**It's my first time here &rarr;** We will be using Google Earth Engine (GEE) for this project. Instructions on how to use this software and label satellite imagery are detailed in this tutorial. Click the `Initial setup` tab to begin.
+
+**I've come back to label more &rarr;** If you have completed this workflow before and are returning to contribute more, THANK YOU! Head to `Selecting a mission-date to start labeling` to get going again.
 
 ## Initial setup
 
@@ -29,7 +31,7 @@ You can also watch the first 2.5 minutes of [this video](https://youtu.be/QXJf9I
 
 <center>![](www/images/newfolder.png){width="400px"}</center>
 
-   3. Create two subdirectories within this new folder - one called 'val-test' and another called 'labels'.
+   3. Create two subdirectories within this new folder - one called 'test-val' and another called 'labels'.
 
 <center>![](www/images/subfolders.png){width="400px"}</center>
 
@@ -45,9 +47,9 @@ You can also watch the first 2.5 minutes of [this video](https://youtu.be/QXJf9I
 
 ## What are we labeling?
 
-For this application, we want to be sure that the pixels that we label are *definitely* the label, which means, if you have a doubt about the class, don't label it.
+For this application, we want to be sure that the pixels that we label are *definitely* the label, which means, if you have a doubt about the class, don't label it. Use the examples and descriptions below to understand the types of pixels we are looking to label in this workflow.
 
-Also, please ignore the harbor area - outlined in blue with x's below - when labeling in Tile 1:
+Firstly, please ignore the harbor area - outlined in blue with x's below - when labeling in Tile 1:
 
 <center>![](www/images/ignoreharbor.png){width="400"}</center>
 
@@ -77,7 +79,7 @@ Also, please ignore the harbor area - outlined in blue with x's below - when lab
 
   
 
-`algalBloom`: this class is tricky! Technically, it is very hard to discriminate between off shore sediment or dispersed sediment and algal blooms in the imagery provided. In fact, it's so tricky, we don't even have an example for you! Please do use this label if you think you see a bloom.
+`algalBloom`: this class is tricky! It is very hard to discriminate between off shore sediment or dispersed sediment and algal blooms in the imagery provided. In fact, it's so tricky, we don't even have an example for you! Please do use this label if you think you see a bloom.
 
   
 
@@ -119,7 +121,7 @@ These labels, like shore contamination, help us identify points of uncertainty w
 
 ## How to label: Part 1
 
-The purpose of this step is to walk you through how to setup a script in GEE to be able to open an image before you actually label it. You will need to do this process before each new mission-date combination you are classifying.
+The purpose of this step is to walk you through how to setup a script in GEE that will open an image for labeling (see `How to label: Part 2` for adding labels to an open image). You will return to this step and start a fresh script for each new set of mission-date images you complete (e.g. a scene from Landsat 7 on 2001-06-10). If this is your first time reading the tutorial, you will be following our "validation" workflow to practice your labeling skills. When you complete the validation workflow, you will return here to start the mission-date labeling workflow. The workflows are almost identical with slight deviations noted in steps 2 and 8 below.
 
 1.  Go to the project [Github page.](https://github.com/rossyndicate/Superior-Plume-Bloom/tree/main/eePlumB/1_user_interface_script)
 
@@ -150,22 +152,22 @@ The purpose of this step is to walk you through how to setup a script in GEE to 
 
   
 
-6.  Change the initials at the top of the script to your own and hit the 'Save' button.
+6.  Change the initials at the top of the script to your own and hit the 'Save' button. If you are working on a specific mission-date labeling task (NOT the validation workflow), you should also update the `mission` and `date` variables based on the mission-date you chose in `Selecting a mission-date to start labeling`. 
 
 <center>![](www/images/savescript.png){width="350px"}</center>
 
   
 
-6.1 If you haven't worked in GEE before, you will be directed to a pop up which will ask you to create your home folder. You won't be able to change this folder name in the future, so we recommend you write your name or a nickname/email and then hit 'continue.'
+7. If you haven't worked in GEE before, you will be directed to a pop up which will ask you to create your home folder. You won't be able to change this folder name in the future, so we recommend you write your name or a nickname/email and then hit 'continue.'
 
 <center>![](www/images/CreateHomeFolder.jpg){width="350px"}</center>
 
   
 
-7.  Type a name for this script. You will be saving a new script for each unique classification activity. Please take note the name of the file you save as you will need this to go back and continue your work.
+8.  Type a name for this script. You will be saving a new script for each unique classification activity. Please take note the name of the file you save as you will need this to go back and continue your work.
     -   If this is your first time through the workflow, you are on the validation step and should name the file `eePlumB_[YOUR INITIALS]_validation`.
     -   If you are working on the actual classification steps, you should name the file `eePlumB_[YOUR INITIALS]_[MISSION]_[DATE]` based on the selected mission-date combination you are currently working through.   
-8.  Verify that you are in the script that you just saved, then hit 'Run' at the center top of your screen.
+9.  Verify that you are in the script that you just saved, then hit 'Run' at the center top of your screen.
 
 <center>![](www/images/run.png){width="350px"}</center>
 
@@ -175,7 +177,7 @@ Now that you have the script running, you are ready to add labels. Head to the n
 
 ## How to label: Part 2
 
-The purpose of this step is to teach you how to use our Google Earth Engine framework to classify images. Hopefully, this section is an easy reference if you need a refresher in the future. Note that this step assumes you have already done `How to label: Part 1` for the current set of images (either validation or for the specific mission-date you have been assigned).
+The purpose of this step is to teach you how to use our GEE framework to classify images. Hopefully, this section is an easy reference if you need a refresher in the future. Note that this step assumes you have already done `How to label: Part 1` for the current set of images - either for validation or for the specific mission-date you chose during the `Selecting a mission-date to start labeling` step.
 
 ### Adding labels
 
@@ -201,15 +203,15 @@ The purpose of this step is to teach you how to use our Google Earth Engine fram
 
 5.  Continue adding points in the current category by clicking the pixel on the map that you want to label. Zoom in or out and scroll (by clicking and dragging) as needed. For each image, label at least 5 pixels for each category you see. Note that you may not see all categories in a given image.
 
-6.  When you have finished labeling a given tile-date, move on to the next tile by selecting the next 'Tile-Date' in the `eePlumB_validation.js` script:
+6.  When you have finished labeling a given tile-date, move on to the next tile. If you're not sure if you're done, you can click through each tile to make sure there are markers. There should be 5 tiles for each of the workflows.
+
+   -  In the validation workflow, click 'Tile-Date X' to go to the next image.
 
 <center>![](www/images/tiledate.png){width="300px"}</center>
 
-Or the 'Next Tile' button in the `eePlumB.js` script:
+   -  In the mission-date workflow, click 'Next Tile' to go to the next image.
 
 <center>![](www/images/nexttile.png){width="300px"}</center>
-
-If you're not sure if you're done, you can click through each tile to make sure there are markers. There are 5 tiles for the `eePlumB.js` script.
 
   
 
@@ -224,6 +226,8 @@ If you're not sure if you're done, you can click through each tile to make sure 
 <center>![](www/images/reopen.png){width="550px"}</center>
 
   
+
+9. If you have at least 5 markers for each class type you see in all of 5 of your tiles, move on to the `Finishing up the labeling` section. This will guide you through saving and exporting your labeled images. 
 
 ### Editing
 
@@ -257,7 +261,7 @@ When you have completed labeling your image, it's time to export the labels you 
 
   
 
-4.  Click 'RUN' at the bottom of the pop-up:
+4.  Click 'RUN' at the bottom of the pop-up and accept the default entries. Note that for the validation workflow, the `Drive folder` and `Filename` will look different than the example image below. 
 
 <center>![](www/images/popup_run.png){width="550px"}</center>
 
@@ -269,19 +273,23 @@ When you have completed labeling your image, it's time to export the labels you 
 
   
 
-That's all! If you're ready to label another image, repeat from 'How to label: Part 1'. See the section 'Selecting a mission-date for the `eeplumB.js` script'. You do not need to wait for the task to complete to navigate away from this screen or to start a new script.
+That's all! You do not need to wait for the task to complete to navigate away from this screen or to start a new script.
+
+- If you were completing the validation workflow, check your labeled images against our expectations by heading to [this labeled validation set](https://code.earthengine.google.com/7dd1bca1b1a8f80dd51e045487db9a5a?hideCode=true).  Click 'Run' and click through the Tile-Dates, comparing your labels to ours. Did you use the label classes similarly? Remember, it's less about how many pixels you've labeled and more that the 'quality' of the pixel label is high. If you are happy with your results, you are ready to start labeling for real! Head to the `Selecting a mission-date for labeling` section to pick your own mission-date, and then start back at `How to label: Part 1`.
+- If you're ready to label another image, go to `Selecting a mission-date for labeling`, pick a new mission-date, and start again at `How to label: Part 1`. 
 
 ## Selecting a mission-date to start labeling
 
-All mission-date pairs are listed in [this Google Sheet](https://docs.google.com/spreadsheets/d/1g5owPatzZOKuidQccaa5fUGVLnUtHD2na3zjBfQhB-g/edit?usp=sharing). These mission-date pairs have been sorted randomly. As a general rule of thumb, know that Landsat 5 ('mission' = LS5 in the Google sheet) images are 'more difficult' to label because the colors are generally more murky than any other mission. We suggest starting with a LS8 or LS9 image when you start to label.
+We are hoping to recruit quite a few plume-bloom classifiers to label as many images as we can. The more images we can have amazing citizen scientists like you classify, the better our algorithm can learn from us humans and produce better automated results. We are hoping to label a bunch of dates across a few different "missions" (Landsat 8, Landsat 9, etc), currently totaling over 700 mission-date combinations! 
+To help us stay organized and avoid duplication, we have listed all our target mission-date pairs in [this Google Sheet](https://docs.google.com/spreadsheets/d/1g5owPatzZOKuidQccaa5fUGVLnUtHD2na3zjBfQhB-g/edit?usp=sharing). These mission-date pairs have been sorted randomly. As a general rule of thumb, know that Landsat 5 ('mission' = LS5 in the Google sheet) images are 'more difficult' to label because the colors are generally more murky than any other mission. We suggest starting with a LS8 or LS9 image if you are new to satellite imagery.
 
 When you've selected a mission-date to label, put your name and initials in the proper row **when you start** to label the image. This will prevent unnecessary duplication of labeling. When you're finished labeling and have exported the data, add 'yes' to the `finished?` column.
 
-The row values for the 'mission' and 'date' column in the Google Sheet:
+To start labeling your selected mission-date, head to the `How to label: Part 1` section. Note that in steps 6 & 8, you will need to use the row values for the 'mission' and 'date' column from the Google Sheet in addition to editing the script to include your initials (lines 14, 16, and 18) after you've imported the geometry records.
 
 ![](www/images/mission-date.png){width="450px"}
 
-Are those that you enter into your \`eePlumB\_ [INITIALS] \_ [MISSION] \_ [DATE].js\` script in GEE:
+to enter as your `mission` and `date` variables at the top of the script, as well as, to name your script \`eePlumB\_ [INITIALS] \_ [MISSION] \_ [DATE].js\` in GEE.
 
 ![](www/images/m-d-eePlumB.png){width="450px"}
 
