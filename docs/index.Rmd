@@ -20,6 +20,20 @@ To train computer algorithms to detect these features in satellite images we nee
 
 **I've come back to label more &rarr;** If you have completed this workflow before and are returning to contribute more, THANK YOU! Head to `Selecting a mission-date to start labeling` to get going again.
 
+</br>
+
+If you have issues or questions, please contact Lindsay Platt at lrplatt@wisc.edu.
+
+---
+
+*A big thank you to the team and contributors behind this workflow!*
+
+- *B Steele*
+- *Lindsay Platt*
+- *Hilary Dugan*
+- *Matt Ross*
+- [*Global River Obstructions Database (GROD) Project*](https://github.com/GlobalHydrologyLab/GROD)
+
 ## Initial setup
 
 If this is your first time using GEE and this classification workflow, please follow the tutorial below to have your account and permissions setup appropriately. You should only need to do this step once.
