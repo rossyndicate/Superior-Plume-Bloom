@@ -38,10 +38,10 @@ If you have issues or questions, please contact Lindsay Platt at [lrplatt\@wisc.
 
 If this is your first time using GEE and this classification workflow, please follow the tutorial below to have your account and permissions setup appropriately. You should only need to do this step once.
 
-You can also watch the first 2.5 minutes of [this video](https://youtu.be/QXJf9IAF1z4) to visually walk through the setup instructions. Note that the video was originally created for the "GROD workflow", which was the foundation for the workflow here, and you may need to substitute information that is specific for this project.
+You can also watch the first 2.5 minutes of <a href=https://youtu.be/QXJf9IAF1z4 target="_blank" rel="noopener noreferrer">this video</a> to visually walk through the setup instructions. Note that the video was originally created for the "GROD workflow", which was the foundation for the workflow here, and you may need to substitute information that is specific for this project.
 
-1.  Sign up for Google Earth Engine: <https://earthengine.google.com/>. If you don't have an affiliation, you can put University of Wisconsin-Madison.
-2.  Using your Google account (the same one you made your Google Earth Engine account with), open up your [Google drive](https://drive.google.com/drive/my-drive) and make a new folder in your drive to store data from the project. Please include your name in the name of the folder, ex. 'FirstinitialMiddleinitialLastnameData'
+1.  Sign up for Google Earth Engine: <a href=https://earthengine.google.com/ target="_blank" rel="noopener noreferrer">https://earthengine.google.com/</a>. If you don't have an affiliation, you can put University of Wisconsin-Madison.
+2.  Using your Google account (the same one you made your Google Earth Engine account with), open up your <a href=https://drive.google.com/drive/my-drive target="_blank" rel="noopener noreferrer">Google drive</a> and make a new folder in your drive to store data from the project. Please include your name in the name of the folder, ex. 'FirstinitialMiddleinitialLastnameData'
 
 <center>![](www/images/newfolder.png){width="400px"}</center>
 
@@ -53,7 +53,7 @@ You can also watch the first 2.5 minutes of [this video](https://youtu.be/QXJf9I
 
   
 
-4.  Once the folder is created, please share it with the group. To do this, you can click on the folder and click 'Share.' Next, set General Access to 'Anyone with the link' and 'Editor'. Lastly, click 'copy link,' and paste the link in this [Google Sheets document](https://docs.google.com/spreadsheets/d/1Sk7BuA92Mw4A3_ETialeQ9b1WPXK1TWkfDd8wsvVOFc/edit?usp=sharing) alongside your name and initials.
+4.  Once the folder is created, please share it with the group. To do this, you can click on the folder and click 'Share.' Next, set General Access to 'Anyone with the link' and 'Editor'. Lastly, click 'copy link,' and paste the link in this <a href=https://docs.google.com/spreadsheets/d/1Sk7BuA92Mw4A3_ETialeQ9b1WPXK1TWkfDd8wsvVOFc/edit?usp=sharing target="_blank" rel="noopener noreferrer">Google Sheets document</a> alongside your name and initials.
 
 <center>![](www/images/sharelocation.png){width="400"}</center>
 
@@ -139,18 +139,18 @@ These labels, like shore contamination, help us identify points of uncertainty w
 
 The purpose of this step is to walk you through how to setup a script in GEE that will open an image for labeling (see `How to label: Part 2` for adding labels to an open image). You will return to this step and start a fresh script for each new set of mission-date images you complete (e.g. a scene from Landsat 7 on 2001-06-10). If this is your first time reading the tutorial, you will be following our "validation" workflow to practice your labeling skills. When you complete the validation workflow, you will return here to start the mission-date labeling workflow. The workflows are almost identical with slight deviations noted in steps 2 and 8 below.
 
-1.  Go to the project [Github page.](https://github.com/rossyndicate/Superior-Plume-Bloom/tree/main/eePlumB/1_user_interface_script)
+1.  Go to the project <a href=https://github.com/rossyndicate/Superior-Plume-Bloom/tree/main/eePlumB/1_user_interface_script target="_blank" rel="noopener noreferrer">GitHub page</a>.
 
 2.  Copy the appropriate `.js` script.
 
--   If this is your first time through the tutorial, you will be working with the validation script: [`eePlumB_validation.js`](https://github.com/rossyndicate/Superior-Plume-Bloom/blob/5e9d0cd1ad435aa3bdb2f0d2b41c026c0f57c8ab/eePlumB/1_user_interface_script/eePlumB_validation.js). The purpose of this step is to have you go through the full process of classifying a few images for practice and to provide us with data to see how similarly all our volunteers classify a range of conditions. We hope that the examples below will help guide everyone to classify conditions similarly, but we understand that there will be variation as there is a level of subjectivity in this process.
--   If you have already completed the tutorial once using the validation script, you have made it to the main classification workflow and will be working with the classification script: [`eePlumB.js`](https://github.com/rossyndicate/Superior-Plume-Bloom/blob/5e9d0cd1ad435aa3bdb2f0d2b41c026c0f57c8ab/eePlumB/1_user_interface_script/eePlumB.js)
+-   If this is your first time through the tutorial, you will be working with the validation script: <a href=https://github.com/rossyndicate/Superior-Plume-Bloom/blob/main/eePlumB/1_user_interface_script/eePlumB_validation.js target="_blank" rel="noopener noreferrer">eePlumB_validation.js</a>. The purpose of this step is to have you go through the full process of classifying a few images for practice and to provide us with data to see how similarly all our volunteers classify a range of conditions. We hope that the examples below will help guide everyone to classify conditions similarly, but we understand that there will be variation as there is a level of subjectivity in this process.
+-   If you have already completed the tutorial once using the validation script, you have made it to the main classification workflow and will be working with the classification script: <a href=https://github.com/rossyndicate/Superior-Plume-Bloom/blob/main/eePlumB/1_user_interface_script/eePlumB.js target="_blank" rel="noopener noreferrer">eePlumB.js</a>.
 
 <center>![](www/images/copy.png){width="550px"}</center>
 
   
 
-3.  Open a blank script file in the [Google Earth Engine editor](https://code.earthengine.google.com/)
+3.  Open a blank script file in the <a href=https://code.earthengine.google.com/ target="_blank" rel="noopener noreferrer">Google Earth Engine Code editor</a>.
 
 <center>![](www/images/newscript.png){width="200px"}</center>
 
@@ -295,7 +295,7 @@ When you have completed labeling your image, it's time to export the labels you 
 
 That's all! You do not need to wait for the task to complete to navigate away from this screen or to start a new script.
 
--   If you were completing the validation workflow, check your labeled images against our expectations by heading to [this labeled validation set](https://code.earthengine.google.com/7dd1bca1b1a8f80dd51e045487db9a5a?hideCode=true). Click 'Run' and click through the Tile-Dates, comparing your labels to ours. Did you use the label classes similarly? Remember, it's less about how many pixels you've labeled and more that the 'quality' of the pixel label is high. If you are happy with your results, you are ready to start labeling for real! Head to the `Selecting a mission-date for labeling` section to pick your own mission-date, and then start back at `How to label: Part 1`.
+-   If you were completing the validation workflow, check your labeled images against our expectations by heading to <a href=https://code.earthengine.google.com/d5e9fab369956ba2950fd4706dfdea01?hideCode=true target="_blank" rel="noopener noreferrer">this labeled validation set</a>. Click 'Run' and click through the Tile-Dates, comparing your labels to ours. Did you use the label classes similarly? Remember, it's less about how many pixels you've labeled and more that the 'quality' of the pixel label is high. If you are happy with your results, you are ready to start labeling for real! Head to the `Selecting a mission-date for labeling` section to pick your own mission-date, and then start back at `How to label: Part 1`.
 
 -   If you're ready to label another image, go to `Selecting a mission-date for labeling`, pick a new mission-date, and start again at `How to label: Part 1`.
 
@@ -303,7 +303,7 @@ That's all! You do not need to wait for the task to complete to navigate away fr
 
 ## Selecting a mission-date to start labeling
 
-We are hoping to recruit quite a few plume-bloom classifiers to label as many images as we can. The more images we can have amazing citizen scientists like you classify, the better our algorithm can learn from us humans and produce better automated results. We are hoping to label a bunch of dates across a few different "missions" (Landsat 8, Landsat 9, etc), currently totaling over 700 mission-date combinations! To help us stay organized and avoid duplication, we have listed all our target mission-date pairs in [this Google Sheet](https://docs.google.com/spreadsheets/d/1g5owPatzZOKuidQccaa5fUGVLnUtHD2na3zjBfQhB-g/edit?usp=sharing). These mission-date pairs have been sorted randomly. As a general rule of thumb, know that Landsat 5 ('mission' = LS5 in the Google sheet) images are 'more difficult' to label because the colors are generally more murky than any other mission. We suggest starting with a LS8 or LS9 image if you are new to satellite imagery.
+We are hoping to recruit quite a few plume-bloom classifiers to label as many images as we can. The more images we can have amazing citizen scientists like you classify, the better our algorithm can learn from us humans and produce better automated results. We are hoping to label a bunch of dates across a few different "missions" (Landsat 8, Landsat 9, etc), currently totaling over 700 mission-date combinations! To help us stay organized and avoid duplication, we have listed all our target mission-date pairs in <a href=https://docs.google.com/spreadsheets/d/1g5owPatzZOKuidQccaa5fUGVLnUtHD2na3zjBfQhB-g/edit?usp=sharing target="_blank" rel="noopener noreferrer">this Google Sheet</a>. These mission-date pairs have been sorted randomly. As a general rule of thumb, know that Landsat 5 ('mission' = LS5 in the Google sheet) images are 'more difficult' to label because the colors are generally more murky than any other mission. We suggest starting with a LS8 or LS9 image if you are new to satellite imagery.
 
 When you've selected a mission-date to label, put your name and initials in the proper row **when you start** to label the image. This will prevent unnecessary duplication of labeling. When you're finished labeling and have exported the data, add 'yes' to the `finished?` column.
 
