@@ -4,10 +4,10 @@
 // Adapted from code written by Xiao Yang (yangxiao@live.unc.edu)
 // from the GROD labeling workflow: https://github.com/GlobalHydrologyLab/GROD/blob/master/1_user_interface_script/GROD_validation.js
 
-// Last modified 2023-04-20
+// Last modified 2023-04-25
 
 // your initials
-var init = 'BGS';
+var init = 'your initials here'; // three-letter initials
 
 
 // Pixel Types. Mouse over and convert this part to geometry import 
