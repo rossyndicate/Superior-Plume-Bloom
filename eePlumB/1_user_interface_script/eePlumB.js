@@ -2,13 +2,9 @@
 // written by B Steele (b.steele@colostate.edu) and Lindsay Platt (lrplatt@wisc.edu)
 
 // Adapted from code written by Xiao Yang (yangxiao@live.unc.edu)
-// from the GROD labeling workflow: https://github.com/GlobalHydrologyLab/GROD/blob/master/1_user_interface_script/GROD_validation.js
+// from the GROD labeling workflow: https://github.com/GlobalHydrologyLab/GROD/blob/master/1_user_interface_script/GROD.js
 
-// Last modified 2023-04-12
-
-// your initials
-var init = 'BGS';
-
+// Last modified 2023-04-25
 
 // Pixel Types. Mouse over and convert this part to geometry import 
 // so that they can be selected from the map interface.
@@ -21,75 +17,16 @@ var openWater = /* color: #7ff6ff */ee.FeatureCollection([]),
     shorelineContamination = /* color: #0b4a8b*/ee.FeatureCollection([]),
     other = /* color: #820580 */ee.FeatureCollection([]);
 
-// Import Date-Tile images
-var td1 = ee.Image('projects/ee-ross-superior/assets/eePlumB_val_n5/LS89_eePlumB_val_aoi_1_2020-08-27')
-          .select(['SR_B4', 'SR_B3', 'SR_B2'], ['R', 'G', 'B']),
-    td2 = ee.Image('projects/ee-ross-superior/assets/eePlumB_val_n5/LS89_eePlumB_val_aoi_4_2022-10-28')
-          .select(['SR_B4', 'SR_B3', 'SR_B2'], ['R', 'G', 'B']),
-    td3 = ee.Image('projects/ee-ross-superior/assets/eePlumB_val_n5/LS89_eePlumB_val_aoi_5_2013-07-23')
-          .select(['SR_B4', 'SR_B3', 'SR_B2'], ['R', 'G', 'B']),
-    td4 = ee.Image('projects/ee-ross-superior/assets/eePlumB_val_n5/LS4-7_eePlumB_val_aoi_3_2004-06-28')
-          .select(['SR_B3', 'SR_B2', 'SR_B1'], ['R', 'G', 'B']),
-    td5 = ee.Image('projects/ee-ross-superior/assets/eePlumB_val_n5/LS4-7_eePlumB_val_aoi_2_2020-05-31')
-          .select(['SR_B3', 'SR_B2', 'SR_B1'], ['R', 'G', 'B']);
 
-var valTiles = ee.ImageCollection(td1).merge(td2).merge(td3).merge(td4).merge(td5);
+var init = 'enter initials here'; // three letter initials
 
-var Button1 = ui.Button('Tile-Date 1', function() {
-  pickRegionByIndex(0);
-  print('You are currently working on Tile-Date 1');
-});
-var Button2 = ui.Button('Tile-Date 2', function() {
-  pickRegionByIndex(1);
-  print('You are currently working on Tile-Date 2');
-});
-var Button3 = ui.Button('Tile-Date 3', function() {
-  pickRegionByIndex(2);
-  print('You are currently working on Tile-Date 3');
-});
-var Button4 = ui.Button('Tile-Date 4', function() {
-  pickRegionByIndex(3);
-  print('You are currently working on Tile-Date 4');
-});
-var Button5 = ui.Button('Tile-Date 5', function() {
-  pickRegionByIndex(4);
-  print('You are currently working on Tile-Date 5');
-});
+var mission = 'enter mission here'; // two letter, one number: 'LS5', 'LS7', 'LS8', 'LS9'
 
-var validationPanel = ui.Panel([
-  Button1,
-  Button2,
-  Button3,
-  Button4,
-  Button5
-  ], ui.Panel.Layout.flow('horizontal'), {'position': 'bottom-center'});
+var date = 'enter date here'; // this is the mission date, NOT today's date
+// only the format: 'YYYY-MM-DD' accepted here.
 
-Map.add(validationPanel);
 
-var tc_style = {
-  bands: ['R', 'G', 'B'],
-  min: -0.01,
-  max: 0.20
-};
-
-// Program starts
-Map.setOptions('roadmap');
-
-// Define functions
-
-// focus on region add only tile date
-var pickRegionByIndex = function(i) {
-  //on click, clear and re-add panel
-  Map.clear();
-  Map.add(validationPanel);
-  
-  //grab one tile-date
-  var TileDate = ee.Image(valTiles.toList(1, i).get(0));
-
-  //focus on tile
-  Map.centerObject(TileDate, 10); 
-  Map.addLayer(TileDate, tc_style);
-};
+//---- FUNCTIONS ----//
 
 // get xy data for the points
 var addLatLon = function(f) {
@@ -145,6 +82,155 @@ var mergeCollection = function() {
   .map(addLatLon));
 };
 
+//---- MISSIONS ----//
+// load Landsat 4, 5, 7, 8, 9 Surface Reflectance
+var l9 = ee.ImageCollection("LANDSAT/LC09/C02/T1_L2");
+var l8 = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2");
+var l7 = ee.ImageCollection('LANDSAT/LE07/C02/T1_L2');
+var l5 = ee.ImageCollection('LANDSAT/LT05/C02/T1_L2');
+var l4 = ee.ImageCollection('LANDSAT/LT04/C02/T1_L2');
+
+// list bandnames; in part for L7 bands to match l8/9
+var bn457 = ['SR_B1', 'SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B7', 'QA_RADSAT'];
+var bn89 = ['SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7', 'QA_RADSAT'];
+
+// join those with band interoperability
+var l457 = l4.merge(l5).merge(l7).select(bn457, bn89); //join and rename
+var l89 = l8.merge(l9).select(bn89);
+
+// merge all
+var all_ls = l457.merge(l89);
+
+//filter for desired PRs
+var ROWS = ee.List([27, 28]);
+var ls = all_ls
+  .filter(ee.Filter.eq('WRS_PATH', 26))
+  .filter(ee.Filter.inList('WRS_ROW', ROWS));
+  
+// Applies scaling factors to digital numbers
+function applyScaleFactors(image) {
+  var opticalBands = image.select('SR_B.').multiply(0.0000275).add(-0.2);
+  return image.addBands(opticalBands, null, true);
+}
+
+var ls = ls
+  .map(applyScaleFactors);
+  
+//ls.aside(print);
+  
+//---- TILES ----//
+// these do not need to be imported//
+var aoi1 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_1');
+var aoi2 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_2');
+var aoi3 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_3');
+var aoi4 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_4');
+var aoi5 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_5');
+
+var all_aois = ee.FeatureCollection(aoi1)
+  .merge(aoi2)
+  .merge(aoi3)
+  .merge(aoi4)
+  .merge(aoi5);
+  
+// function to find current tile
+var getTileByIndex = function(index) {
+  var i_t = index + 1;
+  var this_tile = all_aois.filter(ee.Filter.eq('rowid', index));
+  return this_tile;
+};
+
+// make satellite-mission dictionary
+var s_m_keys = ['LS4', 'LS5', 'LS7', 'LS8', 'LS9'];
+var s_m_values = ['LANDSAT_4','LANDSAT_5','LANDSAT_7','LANDSAT_8','LANDSAT_9'];
+var sat_miss = ee.Dictionary.fromLists(s_m_keys, s_m_values);
+
+//color style
+var style_tc = {
+  bands: ['SR_B4', 'SR_B3', 'SR_B2'],
+  min: -0.05,
+  max: 0.20
+};
+
+var today = ee.Date(date);
+var tomorrow = today.advance(1, 'days');
+var miss = sat_miss.get(mission);
+
+var ls_oneDay = ls
+  .filterDate(today, tomorrow)
+  .filter(ee.Filter.eq('SPACECRAFT_ID', miss));
+    
+// function on move between tiles
+var updateMapOnClick = function(i, satellite, date) {
+  Map.clear();
+  Map.add(panel1);
+  var currentTile = getTileByIndex(i);
+  var miss = sat_miss.get(satellite);
+
+//  var today = ee.Date(date);
+//  var tomorrow = today.advance(1, 'days');
+  var ls_oneDayTile = ls
+    .filterDate(today, tomorrow)
+    .filter(ee.Filter.eq('SPACECRAFT_ID', miss))
+    .filterBounds(currentTile);
+  var mosOneDay = ls_oneDayTile
+    .mosaic()
+    .set({'date': date,
+          'aoi': i,
+          'mission': miss
+    })
+    .clip(currentTile);
+
+  Map.addLayer(mosOneDay, style_tc);
+  Map.centerObject(currentTile, 12);
+};
+
+//---- DEFINE UI WIDGETS ----//
+
+// 1. buttons and labels
+var layers = Map.layers();
+var label_gridId = ui.Label('', {
+  padding: '4px',
+  color: 'blue',
+  fontWeight: 'bold'});
+var label_tile = ui.Label('', {
+  padding: '4px',
+  color: 'red',
+  fontWeight: 'bold'});
+var button_next = ui.Button({
+  label: 'Next tile',
+  onClick: function() {
+    var sat = mission;
+    var d = date;
+    i = i + 1;
+    updateMapOnClick(i, sat, d);
+    label_tile.setValue('Current tile: ' + i);
+  }
+});
+var button_prev = ui.Button({
+  label: 'Previous tile',
+  onClick: function() {
+    var sat = mission;
+    var d = date;
+    i = i - 1;
+    updateMapOnClick(i, sat, d);
+    label_tile.setValue('Current tile: ' + i);
+  }
+});
+
+// 2. panels
+var panel1 = ui.Panel([button_prev, label_gridId, label_tile, button_next], ui.Panel.Layout.flow('horizontal'));
+panel1.style().set({
+  padding: '0px',
+  position: 'bottom-center'
+});
+
+// Draw UI
+var i = 0; // initiate i value
+
+Map.add(panel1);
+Map.setOptions('roadmap');
+
+//---- EXPORT ----//
 // Function to get and format today's date
 function getTodaysDate() {
   var date = new Date();
@@ -159,14 +245,42 @@ function getTodaysDate() {
 }
 
 // make file name
-var filename = ee.String('validation_').cat(init).cat('_').cat(getTodaysDate());
+var filename = ee.String('eePlumB_').cat(init).cat('_').cat(mission).cat('_').cat(date).cat('_v').cat(getTodaysDate());
 
 // Export data
 var merged = mergeCollection();
 
+
+//define scale
+var scale = 30;
+
+// Define a function to create a point geometry from lat and lon properties
+var createPoint = function(feature) {
+  var lat = feature.get('lat');
+  var lon = feature.get('lon');
+  return ee.Geometry.Point([lon, lat]);
+};
+
+// Map the createPoint function over the feature collection to create a new feature collection
+var pointFC = merged.map(function(feature) {
+  return ee.Feature(createPoint(feature), feature.toDictionary());
+});
+
+//define bands to extract
+var data = ls_oneDay.median().select('SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7').reduceRegions({
+  collection: pointFC,
+  reducer: ee.Reducer.median(),
+  scale: scale,
+  crs: ls_oneDay.geometry().projection().crs()
+});
+
+var removeGeo = function(i){
+  return i.setGeometry(null);
+};
+
 Export.table.toDrive({
-  collection: merged,
+  collection: data,
   description: filename.getInfo(),
-  folder: 'test-val',
+  folder: 'labels',
   fileNamePrefix: filename.getInfo(),
   fileFormat: 'csv'});
