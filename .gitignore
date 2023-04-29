@@ -11,6 +11,7 @@ env/
 #knit output
 reports/images/*
 */.DS_Store
+.DS_Store
 
 #all tmp folders
 */tmp/*

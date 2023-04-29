@@ -4,10 +4,10 @@
 // Adapted from code written by Xiao Yang (yangxiao@live.unc.edu)
 // from the GROD labeling workflow: https://github.com/GlobalHydrologyLab/GROD/blob/master/1_user_interface_script/GROD_validation.js
 
-// Last modified 2023-04-12
+// Last modified 2023-04-25
 
 // your initials
-var init = 'BGS';
+var init = 'your initials here'; // three-letter initials
 
 
 // Pixel Types. Mouse over and convert this part to geometry import 
@@ -22,16 +22,17 @@ var openWater = /* color: #7ff6ff */ee.FeatureCollection([]),
     other = /* color: #820580 */ee.FeatureCollection([]);
 
 // Import Date-Tile images
-var td1 = ee.Image('projects/ee-ross-superior/assets/eePlumB_val_n5/LS89_eePlumB_val_aoi_1_2020-08-27')
+var td1 = ee.Image('projects/ee-ross-superior/assets/eePlumB_val_n5/LS89_eePlumB_val_aoi_4_2022-10-28')
           .select(['SR_B4', 'SR_B3', 'SR_B2'], ['R', 'G', 'B']),
-    td2 = ee.Image('projects/ee-ross-superior/assets/eePlumB_val_n5/LS89_eePlumB_val_aoi_4_2022-10-28')
+    td2 = ee.Image('projects/ee-ross-superior/assets/eePlumB_val_n5/LS89_eePlumB_val_aoi_5_2013-07-23')
           .select(['SR_B4', 'SR_B3', 'SR_B2'], ['R', 'G', 'B']),
-    td3 = ee.Image('projects/ee-ross-superior/assets/eePlumB_val_n5/LS89_eePlumB_val_aoi_5_2013-07-23')
-          .select(['SR_B4', 'SR_B3', 'SR_B2'], ['R', 'G', 'B']),
-    td4 = ee.Image('projects/ee-ross-superior/assets/eePlumB_val_n5/LS4-7_eePlumB_val_aoi_3_2004-06-28')
+    td3 = ee.Image('projects/ee-ross-superior/assets/eePlumB_val_n5/LS4-7_eePlumB_val_aoi_3_2004-06-28')
           .select(['SR_B3', 'SR_B2', 'SR_B1'], ['R', 'G', 'B']),
-    td5 = ee.Image('projects/ee-ross-superior/assets/eePlumB_val_n5/LS4-7_eePlumB_val_aoi_2_2020-05-31')
-          .select(['SR_B3', 'SR_B2', 'SR_B1'], ['R', 'G', 'B']);
+    td4 = ee.Image('projects/ee-ross-superior/assets/eePlumB_val_n5/LS4-7_eePlumB_val_aoi_2_2020-05-31')
+          .select(['SR_B3', 'SR_B2', 'SR_B1'], ['R', 'G', 'B']),
+    td5 = ee.Image('projects/ee-ross-superior/assets/eePlumB_val_n5/LS89_eePlumB_val_aoi_1_2020-08-27')
+      .select(['SR_B4', 'SR_B3', 'SR_B2'], ['R', 'G', 'B']);
+      
 
 var valTiles = ee.ImageCollection(td1).merge(td2).merge(td3).merge(td4).merge(td5);
 
