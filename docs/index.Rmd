@@ -53,7 +53,7 @@ You can also watch the first 2.5 minutes of <a href=https://youtu.be/QXJf9IAF1z4
 
   
 
-4.  Once the folder is created, please share it with the group. To do this, you can click on the folder and click 'Share.' Next, set General Access to 'Anyone with the link' and 'Editor'. Lastly, click 'copy link,' and paste the link in this <a href=https://docs.google.com/spreadsheets/d/1Sk7BuA92Mw4A3_ETialeQ9b1WPXK1TWkfDd8wsvVOFc/edit?usp=sharing target="_blank" rel="noopener noreferrer">Google Sheets document</a> alongside your name and initials.
+4.  Once the folders are created, please share your 'Data' folder with the group. To do this, you can click on the parent folder, (in our example, 'BGSteeleData') and click 'Share.' Next, set General Access to 'Anyone with the link' and 'Editor'. Lastly, click 'copy link,' and paste the link in this <a href=https://docs.google.com/spreadsheets/d/1Sk7BuA92Mw4A3_ETialeQ9b1WPXK1TWkfDd8wsvVOFc/edit?usp=sharing target="_blank" rel="noopener noreferrer">Google Sheets document</a> alongside your name and initials.
 
 <center>![](www/images/sharelocation.png){width="400"}</center>
 
@@ -110,6 +110,8 @@ Clouds can look green or even black, too:
 Sometimes the clouds are barely discernible, but the scene looks 'hazy'. In this case, don't label the haze, but do try to avoid it as you label other classes.
 
 <center>![](www/images/haze.png){width="400"}</center>
+
+If you encounter 'cloud shadows' (dark areas that appear to be shadows of clouds), please do not label them as clouds.
 
   
 
@@ -186,6 +188,8 @@ The purpose of this step is to walk you through how to setup a script in GEE tha
 9.  Verify that you are in the script that you just saved, then hit 'Run' at the center top of your screen. It will seem like nothing has happened, but you'll see 'buttons' at the bottom of the map area appear.
 
 <center>![](www/images/run.png){width="350px"}</center>
+
+\t Note that the 'Tasks' button may also turn orange. You can ignore that at this step.
 
   
 
@@ -266,6 +270,8 @@ When you have completed labeling your image, it's time to export the labels you 
 1.  Hit the 'Run' button at the top of the page:
 
 <center>![](www/images/run.png){width="550px"}</center>
+
+\t **This step is super important! If in doubt, hit 'Run' again.**
 
   
 
