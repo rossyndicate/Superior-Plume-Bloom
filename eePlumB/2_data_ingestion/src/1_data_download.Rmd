@@ -16,12 +16,10 @@ After people have used Google Earth Engine and our `eePlumB.js` script in the th
 
 ```{r setup}
 
-library(tidyverse)
+library(tidyverse)1
 library(googledrive)
 library(lubridate)
-library(listviewer)
 library(readxl)
-library(feather)
 
 tmp_dir = 'eePlumB/2_data_ingestion/data/tmp'
 in_dir = 'eePlumB/2_data_ingestion/data/in'
@@ -91,7 +89,7 @@ And now, we need to check that the contributor initials match the script initial
 
 ```{r}
 checkInitials = function(filename) {
-  init = unlist(str_split(okay_files[22], '_'))[c(1, 3)]
+  init = unlist(str_split(filename, '_'))[c(1, 3)]
   identical(init[1], init[2])
 }
 
