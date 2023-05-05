@@ -47,10 +47,11 @@ driveUp = function(dumpid, directory, filename) {
 And then create the needed directory structure to download/save files to and upload files from.
 
 ```{r}
-dirs = c('eePlumB/2_data_ingestion/data/in', 
+dirs = c('eePlumB/2_data_ingestion/data/',
+         'eePlumB/2_data_ingestion/data/in', 
          'eePlumB/2_data_ingestion/data/out',
          'eePlumB/2_data_ingestion/data/tmp')
-map(dirs, dir.create)
+walk(dirs, dir.create)
 ```
 
 Here, we load the validation worksheet that has all links for the shared drive folders. I have gone through these manually to remove folders that have had permissions revoked (likely due to someone deleting the folder) and those that have linked only the 'labels' folder. For the most part, these had no data in them, as this was initially used as an example for the eePlumB workflow in an undergrad class.
@@ -74,13 +75,6 @@ for(i in 1:nrow(val.sheet)){
     pwalk(list(files$id, paste0(val.sheet$Initials[i], '_', files$name), rep(in_dir, nrow(files))), driveDown)
   }
 }
-```
-
-For now, grab data in lindsay's labels folder
-
-```{r}
-files <- drive_ls(as_id(unlist(strsplit(val.sheet$`Drive Folder Link`[8], '\\?'))[1]))
-pwalk(list(files$id, paste0(val.sheet$Initials[8], '_', files$name), rep(in_dir, nrow(files))), driveDown)
 ```
 
 Some of the files were not exported correctly, so we need to filter out the files that are 1b (no data).
@@ -108,7 +102,7 @@ For posterity, let's upload these to the Drive in case folks delete their folder
 
 ```{r}
 #get the folder info
-raw_loc = drive_ls(as_id(project_folder$id), pattern = 'eePlumB_raw_data', recursive = T, overwrite = T)
+raw_loc = drive_ls(as_id(project_folder$id), pattern = 'eePlumB_raw_data', recursive = T)
 
 pwalk(list(rep(raw_loc$id, length(okay_files)), rep(in_dir, length(okay_files)), okay_files), driveUp)
 ```
