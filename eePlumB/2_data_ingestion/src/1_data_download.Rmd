@@ -38,6 +38,20 @@ driveDown = function(driveid, drivename, dest) {
 findcsv = function(folderid) {
   drive_ls(folderid, pattern = '.csv', recursive = T)
 }
+
+driveUp = function(dumpid, directory, filename) {
+  drive_upload(file.path(directory, filename), filename, overwrite = T, path = as_id(dumpid))
+}
+```
+
+And then create the needed directory structure to download/save files to and upload files from.
+
+```{r}
+dirs = c('eePlumB/2_data_ingestion/data/',
+         'eePlumB/2_data_ingestion/data/in', 
+         'eePlumB/2_data_ingestion/data/out',
+         'eePlumB/2_data_ingestion/data/tmp')
+walk(dirs, dir.create)
 ```
 
 Here, we load the validation worksheet that has all links for the shared drive folders. I have gone through these manually to remove folders that have had permissions revoked (likely due to someone deleting the folder) and those that have linked only the 'labels' folder. For the most part, these had no data in them, as this was initially used as an example for the eePlumB workflow in an undergrad class.
@@ -84,6 +98,15 @@ checkInitials = function(filename) {
 ingest_files = okay_files[unlist(map(okay_files, checkInitials))]
 ```
 
+For posterity, let's upload these to the Drive in case folks delete their folders later.
+
+```{r}
+#get the folder info
+raw_loc = drive_ls(as_id(project_folder$id), pattern = 'eePlumB_raw_data', recursive = T)
+
+pwalk(list(rep(raw_loc$id, length(okay_files)), rep(in_dir, length(okay_files)), okay_files), driveUp)
+```
+
 Now, let's compile all of these files into a two composite files: a validation dataset and a label dataset.
 
 ```{r}
@@ -112,4 +135,21 @@ all_labels <- map_dfr(label,addInitials)
 
 write.csv(all_validation, file.path(out_dir, paste0('collated_validation_data_v', Sys.Date(), '.csv')), row.names = F)
 write.csv(all_labels, file.path(out_dir, paste0('collated_label_data_v', Sys.Date(), '.csv')), row.names = F)
+```
+
+And now, upload those files to the Drive
+
+```{r}
+#get the folder info
+coll_loc = drive_ls(as_id(project_folder$id), pattern = 'eePlumB_collated', recursive = T)
+
+upload_list = list.files(out_dir)
+
+pwalk(list(rep(coll_loc$id, length(upload_list)), rep(out_dir, length(upload_list)), upload_list), driveUp)
+```
+
+## Clean up directory
+
+```{r}
+unlink("eePlumB/2_data_ingestion/data", recursive= T)
 ```
