@@ -246,7 +246,7 @@ ls_GTB_class.first().aside(print);
 var img_crs = ls_GTB_class.first().select('cloud').projection();
 var img_crsTrans = img_crs.getInfo().transform;
 
-var allData = ee.FeatureCollection([])
+var allData = ee.FeatureCollection([]);
 
 //function to calculate area for one year of data
 function calcArea(image) {
@@ -270,14 +270,22 @@ function calcArea(image) {
   return ee.FeatureCollection(a);
 }
 
-var allAreas = ls_GTB_class.map(calcArea).flatten();
+var allAreas = ls_GTB_class.map(calcArea);
 
-calcArea(ls_GTB_class.first()).aside(print);
+allAreas.first().aside(print);
 
 // export to drive	
 Export.table.toDrive({  
   collection: allAreas,
-  description: 'quick_gradientTreeBoost_landsat_stack_v2023-05-06',
+  description: 'quick_gradientTreeBoost_landsat_stack_v2023-05-06_v2',
+  folder: 'eePlumB_classification',
+  fileFormat: 'csv'
+});
+
+// export to drive	- test one feature
+Export.table.toDrive({  
+  collection: allAreas.first(),
+  description: 'quick_gradientTreeBoost_landsat_stack_test',
   folder: 'eePlumB_classification',
   fileFormat: 'csv'
 });
