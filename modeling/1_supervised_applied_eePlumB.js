@@ -270,7 +270,7 @@ allAreas.first().aside(print);
 // export to drive	
 Export.table.toDrive({  
   collection: allAreas,
-  selectors: ['mission', 'date', 'area_ha', 'cloud', 'openWater', 'lightNSSed', 'OSSSed', 'dNSSed'],
+  selectors: ['mission', 'date', 'area_ha', 'cloud', 'openWater', 'lightNSSed', 'OSSed', 'dNSSed'],
   description: 'quick_gradientTreeBoost_landsat_stack_v2023-05-05',
   folder: 'eePlumB_classification',
   fileFormat: 'csv'
