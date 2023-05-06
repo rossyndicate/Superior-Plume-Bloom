@@ -246,6 +246,8 @@ ls_GTB_class.first().aside(print);
 var img_crs = ls_GTB_class.first().select('cloud').projection();
 var img_crsTrans = img_crs.getInfo().transform;
 
+var allData = ee.FeatureCollection([])
+
 //function to calculate area for one year of data
 function calcArea(image) {
   var areaImage =  image.multiply(ee.Image.pixelArea());
@@ -260,16 +262,17 @@ function calcArea(image) {
   var dt = image.get('date');
   
   // Create a feature with the calculated area and properties
-  var a = ee.Feature(area.first()).set({
+  var a = area.first().set({
     'mission': mission,
     'date': dt
   });
 
-  return a;
+  return ee.FeatureCollection(a);
 }
 
 var allAreas = ls_GTB_class.map(calcArea).flatten();
 
+calcArea(ls_GTB_class.first()).aside(print);
 
 // export to drive	
 Export.table.toDrive({  
