@@ -258,20 +258,23 @@ function calcArea(image) {
   });
   var mission = image.get('mission');
   var dt = image.get('date');
-  var a = area.set({
+  
+  // Create a feature with the calculated area and properties
+  var a = ee.Feature(area.first()).set({
     'mission': mission,
-    'date': dt});
+    'date': dt
+  });
+
   return a;
 }
 
 var allAreas = ls_GTB_class.map(calcArea).flatten();
-allAreas.first().aside(print);
+
 
 // export to drive	
 Export.table.toDrive({  
   collection: allAreas,
-  selectors: ['mission', 'date', 'area_ha', 'cloud', 'openWater', 'lightNSSed', 'OSSed', 'dNSSed'],
-  description: 'quick_gradientTreeBoost_landsat_stack_v2023-05-05',
+  description: 'quick_gradientTreeBoost_landsat_stack_v2023-05-06',
   folder: 'eePlumB_classification',
   fileFormat: 'csv'
 });
