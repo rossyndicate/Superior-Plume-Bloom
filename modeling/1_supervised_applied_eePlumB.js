@@ -284,7 +284,7 @@ Export.table.toDrive({
 
 // export to drive	- test one feature
 Export.table.toDrive({  
-  collection: allAreas.first(),
+  collection: ee.FeatureCollection(allAreas.first()),
   description: 'quick_gradientTreeBoost_landsat_stack_test',
   folder: 'eePlumB_classification',
   fileFormat: 'csv'
