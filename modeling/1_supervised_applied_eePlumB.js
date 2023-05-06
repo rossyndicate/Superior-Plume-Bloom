@@ -1,77 +1,133 @@
 // written by B. Steele, ROSSyndicate, Colorado State University
+// last modified 2023-05-05
 
 //////////////////////////////////////
 // Load data                        //
 //////////////////////////////////////
-
-// Load your label data into GEE
-var points_20230124 = ee.FeatureCollection("projects/ee-steele-523/assets/monterey_bay_sed_labels_20230124T185649_20230124T185652_T10SEF")
-  .set('date', '2023-01-24');
-var points_20230218 = ee.FeatureCollection("projects/ee-steele-523/assets/monterey_bay_sed_labels_20230218T185431_20230218T190049_T10SEF")
-  .set('date', '2023-02-18');
-var points_20230315 = ee.FeatureCollection("projects/ee-steele-523/assets/monterey_bay_sed_labels_20230315T185139_20230315T185257_T10SEF")
-  .set('date', '2023-03-15');
-var points_20230325 = ee.FeatureCollection("projects/ee-steele-523/assets/monterey_bay_sed_labels_20230325T185029_20230325T185655_T10SEF")
-  .set('date', '2023-03-25');
-var points_20230330 = ee.FeatureCollection("projects/ee-steele-523/assets/monterey_bay_sed_labels_20230330T184951_20230330T190411_T10SEF")
-  .set('date', '2023-03-30');
-
-// merge label data
-var points = ee.FeatureCollection(points_20230124)
-  .merge(points_20230218)
-  .merge(points_20230315)
-  .merge(points_20230325)
-  .merge(points_20230330)
-  .randomColumn();
+var classValues = ['cloud', 
+  'openWater',
+  'lightNearShoreSediment', 
+  'offShoreSediment', 
+  'darkNearShoreSediment'];
   
-// load images
-var sceneList = ['20230124T185649_20230124T185652_T10SEF',
-                 '20230218T185431_20230218T190049_T10SEF',
-                 '20230315T185139_20230315T185257_T10SEF',
-                 '20230325T185029_20230325T185655_T10SEF',
-                 '20230330T184951_20230330T190411_T10SEF'];
+// Load your label data into GEE
+var labels = ee.FeatureCollection("projects/ee-ross-superior/assets/labels/collated_label_data_v2023-05-05")
+  .filter(ee.Filter.inList('class', classValues));
 
-var mb_sen2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
-  .filter(ee.Filter.inList('system:index', sceneList));
+// Load the image collection
+// load Landsat 4, 5, 7, 8, 9 Surface Reflectance
+var l9 = ee.ImageCollection("LANDSAT/LC09/C02/T1_L2");
+var l8 = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2");
+var l7 = ee.ImageCollection('LANDSAT/LE07/C02/T1_L2');
+var l5 = ee.ImageCollection('LANDSAT/LT05/C02/T1_L2');
+var l4 = ee.ImageCollection('LANDSAT/LT04/C02/T1_L2');
 
-// Load the MODIS land cover dataset
-var modisLandCover = ee.ImageCollection('MODIS/006/MOD44W')
-                      .select('water_mask')
-                      .max(); // Select the maximum value to convert to binary mask
+// list bandnames; in part for L7 bands to match l8/9
+var bn457 = ['SR_B1', 'SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B7', 'QA_RADSAT'];
+var bn89 = ['SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7', 'QA_RADSAT'];
 
-// Define a function to apply the mask to each image in the collection
-var waterOnly = function(image) {
-  // Create a binary mask by thresholding the MODIS land cover image
-  var mask = modisLandCover.eq(1); // 1 represents land, 0 represents water
-  // Apply the mask to the image and return
-  return image.updateMask(mask).divide(10000);
+// join those with band interoperability
+var l457 = l4.merge(l5).merge(l7).select(bn457, bn89); //join and rename
+var l89 = l8.merge(l9).select(bn89);
+
+// merge all
+var all_ls = l457.merge(l89);
+
+//filter for desired PRs
+var ROWS = ee.List([27, 28]);
+var ls = all_ls
+  .filter(ee.Filter.eq('WRS_PATH', 26))
+  .filter(ee.Filter.inList('WRS_ROW', ROWS));
+  
+// Applies scaling factors to digital numbers
+function applyScaleFactors(image) {
+  var opticalBands = image.select('SR_B.').multiply(0.0000275).add(-0.2);
+  return image.addBands(opticalBands, null, true);
+}
+
+var ls = ls
+  .map(applyScaleFactors);
+
+// Load the AOIS
+// these do not need to be imported//
+var aoi1 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_1');
+var aoi2 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_2');
+var aoi3 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_3');
+var aoi4 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_4');
+var aoi5 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_5');
+
+var all_aois = ee.FeatureCollection(aoi1)
+  .merge(aoi2)
+  .merge(aoi3)
+  .merge(aoi4)
+  .merge(aoi5);
+
+all_aois = all_aois.union();
+
+// clip images to aoi
+var ls_aoi = ls.map(function(image) {
+  return image.clip(all_aois.geometry());
+});
+
+/*// make a missiondate field
+var missionDate = function(image) {
+  var miss = ee.String(image.get('SPACECRAFT_ID'));
+  var date = ee.String(image.date().format('YYYY-MM-dd'));
+  var miss_date = miss.cat('_').cat(date);
+  return image.set('miss_date', miss_date);
 };
 
-mb_sen2 = mb_sen2.map(waterOnly)
-mb_sen2.aside(print)
-  
+ls_aoi = ls_aoi.map(missionDate);
+
+ls_aoi.first().aside(print);
+ls_aoi.filter(ee.Filter.eq('miss_date', ee.String('LANDSAT_4_1982-11-15'))).aside(print);
+
+// Get distinct mission-dates
+var miss_dates = ls_aoi.distinct('miss_date')
+  .aggregate_array('miss_date');
+miss_dates.aside(print);
+
+// Create an empty image collection to store the mosaics
+var ls_miss_date = ee.ImageCollection([]);
+
+var mosaic_by_mission_date = function(miss_date) {
+  var filt_coll = ls_aoi.filter(ee.Filter.eq('miss_date', miss_date))
+  var mosaic = filt_coll.mosaic()
+  return(mosaic)
+}
+
+var ls_miss_date = miss_dates.map(mosaic_by_mission_date)
+ls_miss_date.first().aside(print)*/
+
 //////////////////////////////////////
 // Train model                      //
 //////////////////////////////////////
 
 // Define the input features and output labels
-var inputFeatures = ["B2", "B3", "B4", "B8"];
+//var inputFeatures = ["SR_B2", "SR_B3", "SR_B4"]; // GBT 78%
+//var inputFeatures = ["SR_B2", "SR_B3", "SR_B4", "SR_B7"]; // GBT 81%
+var inputFeatures = ["SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", "SR_B7"]; // GBT 83%
 var outputLabel = "class";
 
 // Remap the label values to a 0-based sequential series.
-var classValues = ['cloud', 'openWater', 'lightNearShoreSediment', 'offShoreSediment'];
-var remapValues = ee.List.sequence(0, 3);
-points = points.remap(classValues, remapValues, outputLabel);
-points = points.map(function(feature) {
+var remapValues = ee.List.sequence(0, 4);
+labels = labels.remap(classValues, remapValues, outputLabel);
+labels = labels.map(function(feature) {
   var byteValue = ee.Number(feature.get(outputLabel)).toByte();
   return feature.set('byte_property', byteValue);
 });
 
+print('Filtered labels:');
+labels.aside(print);
+
 // Split the data into training and testing sets
-var split = 0.7; // percentage of data to use for training
-var training = points.filter(ee.Filter.lt("random", split));
-var testing = points.filter(ee.Filter.gte("random", split));
+var split = 0.8; // percentage of data to use for training
+labels = labels.randomColumn('random'); //set up a random column
+var training = labels.filter(ee.Filter.lt("random", split));
+print('Training:');
 training.aside(print);
+var testing = labels.filter(ee.Filter.gte("random", split));
+print('Testing:');
 testing.aside(print);
 
 // Train the CART model
@@ -92,102 +148,132 @@ var acc_values_CART = confusionMatrixCART
   .accuracy();
 print("CART Confusion Overall Accuracy: ", acc_values_CART);
 
+// Train the RF model
+var trainedRF = ee.Classifier.smileRandomForest(10).train({
+  features: training,
+  classProperty: 'byte_property',
+  inputProperties: inputFeatures
+});
+
+// Evaluate the model
+var confusionMatrixRF = testing
+  .classify(trainedRF)
+  .errorMatrix(outputLabel, "classification");
+print('RF Confusion Matrix:');
+confusionMatrixRF.aside(print);
+
+var acc_values_RF = confusionMatrixRF
+  .accuracy();
+print("CART Confusion Overall Accuracy: ", acc_values_RF);
+
+// Train the GTB model
+var trainedGTB = ee.Classifier.smileGradientTreeBoost(10).train({
+  features: training,
+  classProperty: 'byte_property',
+  inputProperties: inputFeatures
+});
+
+// Evaluate the model
+var confusionMatrixGTB = testing
+  .classify(trainedGTB)
+  .errorMatrix(outputLabel, "classification");
+print('GTB Confusion Matrix:');
+confusionMatrixGTB.aside(print);
+
+var acc_values_GTB = confusionMatrixGTB
+  .accuracy();
+print("GTB Confusion Overall Accuracy: ", acc_values_GTB);
+
 //////////////////////////////////////
-// Apply model to imagery           //
+// Apply model to image stack      //
 //////////////////////////////////////
 
 // function to apply the CART model
-var applyCART = function(image) {
+var applyGTB = function(image) {
   // Select the bands that correspond to the input features of the CART model
   var imageFeatures = image.select(inputFeatures);
-  var sys_in = image.get('system:index');
+  var mission = image.get('SPACECRAFT_ID');
+  var date = image.date().format('YYYY-MM-dd');
   // Classify the image using the trained CART model
   var classifiedImage = imageFeatures
     .classify(trainedCART)
-    .set('system:index', sys_in);
+    .set({'mission': mission,
+      'date': date});
   return classifiedImage;
 };
 
-// apply the function to the 5 images
-var mb_sen2_cart = mb_sen2.map(applyCART);
+// apply the function to the image collection
+var ls_miss_date_GTB = ls_aoi.map(applyGTB);
+ls_miss_date_GTB.first().aside(print);
 
 //////////////////////////////////////
-// Visualize results                //
+// Calculate areas for each class  //
 //////////////////////////////////////
 
-var og_viz = {
-  min: 0.0,
-  max: 0.3,
-  bands: ['B4', 'B3', 'B2'],
-};
-var palette = ['0072B2', 'E69F00', '009E73', 'F0E442'];
-var class_viz = {
-  min: 0,
-  max: 3,
-  palette: palette
-};
-
-var dropdown = ui.Select({
-  items: sceneList,
-  onChange: function(selected) {
-    Map.layers().reset();
-    var og_img = mb_sen2.filter(ee.Filter.eq('system:index', selected));
-    var class_img = mb_sen2_cart.filter(ee.Filter.eq('system:index', selected));
-    Map.addLayer(og_img, og_viz, 'Original Image');
-    Map.addLayer(class_img, class_viz, 'Classified Image');
-  }
-});
-
-dropdown.style().set({
-  position: 'top-right'
-});
-
-// Add the dropdown to the map
-Map.add(dropdown);
-
-// Create a custom legend
-var legend = ui.Panel({
-  style: {
-    position: 'bottom-left',
-    padding: '8px 15px',
-    width: '250px'
-  }
-});
-
-// Create the legend title
-var legendTitle = ui.Label({
-  value: 'Class Legend',
-  style: {
-    fontWeight: 'bold',
-    fontSize: '18px',
-    margin: '0 0 4px 0',
-    padding: '0'
-  }
-});
-
-// Add the title to the legend
-legend.add(legendTitle);
-
-// Loop through the class labels and colors to add them to the legend
-for (var i = 0; i < classValues.length; i++) {
-  var label = ui.Label({
-    value: classValues[i],
-    style: {
-      fontSize: '14px',
-      margin: '0 0 4px 8px',
-      padding: '0'
-    }
-  });
-  var colorBox = ui.Label({
-    style: {
-      backgroundColor: palette[i],
-      padding: '6px',
-      margin: '0 0 4px 0',
-    }
-  });
-  legend.add(colorBox);
-  legend.add(label);
+// Calculate total area of AOI
+function calc_area(feat) {
+  var feat_area = feat.geometry().area();
+  var feat_area_ha = ee.Number(feat_area).divide(1e5);
+  return feat.set('area_ha', feat_area_ha);
 }
 
-// Add the legend to the map
-Map.add(legend);
+var aoi_area = all_aois.map(calc_area);
+
+print('Total AOI area:')
+aoi_area.first().get('area_ha').aside(print);
+
+// save each value as its own band and mask 
+function extract_classes(image) {
+  var cl = image.select('classification');
+  var cloud = cl.eq(0).rename('cloud').selfMask();
+  var openWater = cl.eq(1).rename('openWater').selfMask();
+  var lightNSSed = cl.eq(2).rename('lightNSSed').selfMask();
+  var OSSed = cl.eq(3).rename('OSSed').selfMask();
+  var dNSSed = cl.eq(4).rename('dNSSed').selfMask();
+  var img_addBand = image.addBands(cloud)
+    .addBands(openWater)
+    .addBands(lightNSSed)
+    .addBands(OSSed)
+    .addBands(dNSSed);
+  return img_addBand;
+}
+
+//apply function
+var ls_GTB_class = ls_miss_date_GTB.map(extract_classes);
+ls_GTB_class.first().aside(print);
+
+// get CRS info
+var img_crs = ls_GTB_class.first().select('cloud').projection();
+var img_crsTrans = img_crs.getInfo().transform;
+
+//function to calculate area for one year of data
+function calcArea(image) {
+  var areaImage =  image.multiply(ee.Image.pixelArea());
+  
+  var area = areaImage.reduceRegions({
+    collection: aoi_area,
+    reducer: ee.Reducer.sum().forEachBand(areaImage),
+    crs: img_crs,
+    crsTransform: img_crsTrans
+  });
+  var mission = image.get('mission');
+  var dt = image.get('date');
+  var a = area.set({
+    'mission': mission,
+    'date': dt});
+  return a;
+}
+
+var allAreas = ls_GTB_class.map(calcArea).flatten();
+allAreas.first().aside(print);
+
+// export to drive	
+Export.table.toDrive({  
+  collection: allAreas,
+  selectors: ['mission', 'date', 'area_ha', 'cloud', 'openWater', 'lightNSSed', 'OSSSed', 'dNSSed'],
+  description: 'quick_gradientTreeBoost_landsat_stack_v2023-05-05',
+  folder: 'eePlumB_classification',
+  fileFormat: 'csv'
+});
+
+
