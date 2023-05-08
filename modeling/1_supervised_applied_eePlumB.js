@@ -69,36 +69,6 @@ var ls_aoi = ls.map(function(image) {
   return image.clip(all_aois.geometry());
 });
 
-/*// make a missiondate field
-var missionDate = function(image) {
-  var miss = ee.String(image.get('SPACECRAFT_ID'));
-  var date = ee.String(image.date().format('YYYY-MM-dd'));
-  var miss_date = miss.cat('_').cat(date);
-  return image.set('miss_date', miss_date);
-};
-
-ls_aoi = ls_aoi.map(missionDate);
-
-ls_aoi.first().aside(print);
-ls_aoi.filter(ee.Filter.eq('miss_date', ee.String('LANDSAT_4_1982-11-15'))).aside(print);
-
-// Get distinct mission-dates
-var miss_dates = ls_aoi.distinct('miss_date')
-  .aggregate_array('miss_date');
-miss_dates.aside(print);
-
-// Create an empty image collection to store the mosaics
-var ls_miss_date = ee.ImageCollection([]);
-
-var mosaic_by_mission_date = function(miss_date) {
-  var filt_coll = ls_aoi.filter(ee.Filter.eq('miss_date', miss_date))
-  var mosaic = filt_coll.mosaic()
-  return(mosaic)
-}
-
-var ls_miss_date = miss_dates.map(mosaic_by_mission_date)
-ls_miss_date.first().aside(print)*/
-
 //////////////////////////////////////
 // Train model                      //
 //////////////////////////////////////
@@ -219,7 +189,7 @@ function calc_area(feat) {
 
 var aoi_area = all_aois.map(calc_area);
 
-print('Total AOI area:')
+print('Total AOI area:');
 aoi_area.first().get('area_ha').aside(print);
 
 // save each value as its own band and mask 
@@ -246,6 +216,8 @@ ls_GTB_class.first().aside(print);
 var img_crs = ls_GTB_class.first().select('cloud').projection();
 var img_crsTrans = img_crs.getInfo().transform;
 
+var allData = ee.FeatureCollection([]);
+
 //function to calculate area for one year of data
 function calcArea(image) {
   var areaImage =  image.multiply(ee.Image.pixelArea());
@@ -260,23 +232,69 @@ function calcArea(image) {
   var dt = image.get('date');
   
   // Create a feature with the calculated area and properties
-  var a = ee.Feature(area.first()).set({
+  var a = area.first().set({
     'mission': mission,
     'date': dt
   });
 
-  return a;
+  return ee.FeatureCollection(a);
 }
 
-var allAreas = ls_GTB_class.map(calcArea).flatten();
+var allAreas = ls_GTB_class.map(calcArea);
 
+allAreas.first().aside(print);
 
 // export to drive	
 Export.table.toDrive({  
   collection: allAreas,
-  description: 'quick_gradientTreeBoost_landsat_stack_v2023-05-06',
+  description: 'quick_gradientTreeBoost_landsat_stack_v2023-05-06_v2',
   folder: 'eePlumB_classification',
   fileFormat: 'csv'
 });
 
 
+// Add images to map 
+
+var one_image = ls_aoi
+  .filter(ee.Filter.eq('SPACECRAFT_ID', 'LANDSAT_9'))
+  .filter(ee.Filter.lt('CLOUD_COVER', 20))
+  .filterDate('2022-05-01', '2022-09-01');
+one_image.first().aside(print);
+
+var one_classification = allAreas
+  .filter(ee.Filter.eq('mission', 'LANDSAT_9'))
+  .filter(ee.Filter.eq('date', '2022-05-05'));
+one_classification.first().aside(print);
+  
+/*var sat_viz = {
+  bands: ['SR_B4', 'SR_B3', 'SR_B2'],
+  min: 0.0,
+  max: 0.2,
+};
+
+var class_viz = {
+  min: 0,
+  max: 4,
+};
+
+Map.addLayer(one_image.first(), sat_viz, 'Satellite Image');
+Map.addLayer(one_classification.first(), class_viz, 'Classified Image');
+*/
+// If the export has more than 1e8 pixels, set "maxPixels" higher.
+Export.image.toAsset({
+  image: one_image.first(),
+  description: 'Sat_Example_L9_2022-05-05',
+  assetId: 'projects/ee-ross-superior/assets/example_output/L9_2022-05-05',  // <> modify these
+  region: all_aois,
+  scale: 90,
+  maxPixels: 1e13
+});
+// If the export has more than 1e8 pixels, set "maxPixels" higher.
+Export.image.toAsset({
+  image: one_classification.first(),
+  description: 'Class_Example_L9_2022-05-05',
+  assetId: 'projects/ee-ross-superior/assets/example_output/L9_2022-05-05_quickclass',  // <> modify these
+  region: all_aois,
+  scale: 90,
+  maxPixels: 1e13
+});
