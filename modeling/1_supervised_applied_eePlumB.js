@@ -261,7 +261,7 @@ var one_image = ls_aoi
   .filterDate('2022-05-01', '2022-09-01');
 one_image.first().aside(print);
 
-var one_classification = allAreas
+var one_classification = ls_GTB_class
   .filter(ee.Filter.eq('mission', 'LANDSAT_9'))
   .filter(ee.Filter.eq('date', '2022-05-05'));
 one_classification.first().aside(print);
