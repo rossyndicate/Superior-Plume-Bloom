@@ -4,7 +4,7 @@
 // Adapted from code written by Xiao Yang (yangxiao@live.unc.edu)
 // from the GROD labeling workflow: https://github.com/GlobalHydrologyLab/GROD/blob/master/1_user_interface_script/GROD.js
 
-// Last modified 2023-04-25
+// Last modified 2023-05-08
 
 // Pixel Types. Mouse over and convert this part to geometry import 
 // so that they can be selected from the map interface.
@@ -162,7 +162,7 @@ var ls_oneDay = ls
 // function on move between tiles
 var updateMapOnClick = function(i, satellite, date) {
   Map.clear();
-  Map.add(panel1);
+  Map.add(label_Panel);
   var currentTile = getTileByIndex(i);
   var miss = sat_miss.get(satellite);
 
@@ -188,46 +188,33 @@ var updateMapOnClick = function(i, satellite, date) {
 
 // 1. buttons and labels
 var layers = Map.layers();
-var label_gridId = ui.Label('', {
-  padding: '4px',
-  color: 'blue',
-  fontWeight: 'bold'});
-var label_tile = ui.Label('', {
-  padding: '4px',
-  color: 'red',
-  fontWeight: 'bold'});
-var button_next = ui.Button({
-  label: 'Next tile',
-  onClick: function() {
-    var sat = mission;
-    var d = date;
-    i = i + 1;
-    updateMapOnClick(i, sat, d);
-    label_tile.setValue('Current tile: ' + i);
-  }
+var Button1 = ui.Button('Tile 1', function() {
+  updateMapOnClick(1, mission, date);
 });
-var button_prev = ui.Button({
-  label: 'Previous tile',
-  onClick: function() {
-    var sat = mission;
-    var d = date;
-    i = i - 1;
-    updateMapOnClick(i, sat, d);
-    label_tile.setValue('Current tile: ' + i);
-  }
+var Button2 = ui.Button('Tile 2', function() {
+  updateMapOnClick(2, mission, date);
+});
+var Button3 = ui.Button('Tile 3', function() {
+  updateMapOnClick(3, mission, date);
+});
+var Button4 = ui.Button('Tile 4', function() {
+  updateMapOnClick(4, mission, date);
+});
+var Button5 = ui.Button('Tile 5', function() {
+  updateMapOnClick(5, mission, date);
 });
 
 // 2. panels
-var panel1 = ui.Panel([button_prev, label_gridId, label_tile, button_next], ui.Panel.Layout.flow('horizontal'));
-panel1.style().set({
-  padding: '0px',
-  position: 'bottom-center'
-});
+var label_Panel = ui.Panel([
+  Button1,
+  Button2,
+  Button3,
+  Button4,
+  Button5
+  ], ui.Panel.Layout.flow('horizontal'), {'position': 'bottom-center'});
 
-// Draw UI
-var i = 0; // initiate i value
+Map.add(label_Panel);
 
-Map.add(panel1);
 Map.setOptions('roadmap');
 
 //---- EXPORT ----//

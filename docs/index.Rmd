@@ -233,9 +233,9 @@ The purpose of this step is to teach you how to use our GEE framework to classif
 
 <center>![](www/images/tiledate.png){width="300px"}</center>
 
--   In the mission-date workflow, click 'Next Tile' to go to the next image.
+-   In the mission-date workflow, click any 'Tile...' option to go to the next image.
 
-<center>![](www/images/nexttile.png){width="300px"}</center>
+<center>![](www/images/%20nexttile.png){width="300"}</center>
 
   
 
@@ -271,7 +271,7 @@ When you have completed labeling your image, it's time to export the labels you 
 
 <center>![](www/images/run.png){width="550px"}</center>
 
-\t **This step is super important! If in doubt, hit 'Run' again.**
+\t **This step is super important! If in doubt, hit 'Run' again.\*\*
 
   
 
@@ -325,7 +325,7 @@ to enter as your `mission` and `date` variables at the top of the script, as wel
 
 The last two columns of the mission-date Google Sheet lists 'n_PR', which stands for the number of path-rows included in the image. If n_PR = 1, this means that there may be areas of the image that are missing. It's okay if you click through 'tiles' and you don't see imagery - it might look like this, only showing the 'Map' basemap:
 
-![](www/images/nodata.png){width="450px"}
+![](www/images/nodata.png){width="450"}
 
 Also, you might come across mission-dates or tiles that are completely cloud-covered:
 
