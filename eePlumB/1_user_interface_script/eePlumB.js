@@ -4,7 +4,7 @@
 // Adapted from code written by Xiao Yang (yangxiao@live.unc.edu)
 // from the GROD labeling workflow: https://github.com/GlobalHydrologyLab/GROD/blob/master/1_user_interface_script/GROD.js
 
-// Last modified 2023-05-08
+// Last modified 2023-06-26
 
 // Pixel Types. Mouse over and convert this part to geometry import 
 // so that they can be selected from the map interface.
@@ -20,7 +20,7 @@ var openWater = /* color: #7ff6ff */ee.FeatureCollection([]),
 
 var init = 'enter initials here'; // three letter initials
 
-var mission = 'enter mission here'; // two letter, one number: 'LS5', 'LS7', 'LS8', 'LS9'
+var mission = 'enter mission here'; // 'LS5', 'LS7', 'LS8', 'LS9', 'SEN2'
 
 var date = 'enter date here'; // this is the mission date, NOT today's date
 // only the format: 'YYYY-MM-DD' accepted here.
@@ -89,17 +89,19 @@ var l8 = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2");
 var l7 = ee.ImageCollection('LANDSAT/LE07/C02/T1_L2');
 var l5 = ee.ImageCollection('LANDSAT/LT05/C02/T1_L2');
 var l4 = ee.ImageCollection('LANDSAT/LT04/C02/T1_L2');
+var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED');
 
 // list bandnames; in part for L7 bands to match l8/9
 var bn457 = ['SR_B1', 'SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B7', 'QA_RADSAT'];
 var bn89 = ['SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7', 'QA_RADSAT'];
+var bcolor = ['Blue', 'Green', 'Red', 'SR_B5', 'SR_B6', 'SR_B7', 'QA_RADSAT'];
 
 // join those with band interoperability
 var l457 = l4.merge(l5).merge(l7).select(bn457, bn89); //join and rename
 var l89 = l8.merge(l9).select(bn89);
 
 // merge all
-var all_ls = l457.merge(l89);
+var all_ls = l457.merge(l89).select(bn89, bcolor);
 
 //filter for desired PRs
 var ROWS = ee.List([27, 28]);
@@ -115,10 +117,25 @@ function applyScaleFactors(image) {
 
 var ls = ls
   .map(applyScaleFactors);
-  
-//ls.aside(print);
-  
-//---- TILES ----//
+
+//filter for desired tiles for sentinel, rename rgb
+var TILES = ee.List(['15TWN', '15TXN', '15TYN', '15TWM', '15TXM', '15TYM']);
+var s2band = ['B4', 'B3', 'B2', 'B5', 'B6', 'B7', 'B8', 'B11', 'B12'];
+var s2color = ['Red', 'Green', 'Blue', 'B5', 'B6', 'B7', 'B8', 'B11', 'B12'];
+var sen = s2
+  .filter(ee.Filter.inList('MGRS_TILE', TILES));
+
+// apply scaling factor
+function applySenScale(image) {
+  var optical = image.select('B.').multiply(0.0001);
+  return image.addBands(optical, null, true);
+}
+
+var sen = sen.map(applySenScale)
+  .select(s2band, s2color);
+
+
+//---- AOI TILES ----//
 // these do not need to be imported//
 var aoi1 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_1');
 var aoi2 = ee.FeatureCollection('projects/ee-ross-superior/assets/tiledAOI/SuperiorAOI_2');
@@ -140,13 +157,13 @@ var getTileByIndex = function(index) {
 };
 
 // make satellite-mission dictionary
-var s_m_keys = ['LS4', 'LS5', 'LS7', 'LS8', 'LS9'];
-var s_m_values = ['LANDSAT_4','LANDSAT_5','LANDSAT_7','LANDSAT_8','LANDSAT_9'];
+var s_m_keys = ['LS4', 'LS5', 'LS7', 'LS8', 'LS9', 'SEN2'];
+var s_m_values = ['LANDSAT_4','LANDSAT_5','LANDSAT_7','LANDSAT_8','LANDSAT_9', 'SENTINEL'];
 var sat_miss = ee.Dictionary.fromLists(s_m_keys, s_m_values);
 
 //color style
 var style_tc = {
-  bands: ['SR_B4', 'SR_B3', 'SR_B2'],
+  bands: ['Red', 'Green', 'Blue'],
   min: -0.05,
   max: 0.20
 };
@@ -155,10 +172,15 @@ var today = ee.Date(date);
 var tomorrow = today.advance(1, 'days');
 var miss = sat_miss.get(mission);
 
-var ls_oneDay = ls
-  .filterDate(today, tomorrow)
-  .filter(ee.Filter.eq('SPACECRAFT_ID', miss));
-    
+var sr_oneDay = ee.Algorithms.If(
+  miss === 'SENTINEL',
+  sen.filterDate(today, tomorrow),
+  ls
+    .filterDate(today, tomorrow)
+    .filter(ee.Filter.eq('SPACECRAFT_ID', miss))
+);
+
+
 // function on move between tiles
 var updateMapOnClick = function(i, satellite, date) {
   Map.clear();
@@ -168,11 +190,9 @@ var updateMapOnClick = function(i, satellite, date) {
 
 //  var today = ee.Date(date);
 //  var tomorrow = today.advance(1, 'days');
-  var ls_oneDayTile = ls
-    .filterDate(today, tomorrow)
-    .filter(ee.Filter.eq('SPACECRAFT_ID', miss))
+  var sr_oneDayTile = ee.ImageCollection(sr_oneDay)
     .filterBounds(currentTile);
-  var mosOneDay = ls_oneDayTile
+  var mosOneDay = sr_oneDayTile
     .mosaic()
     .set({'date': date,
           'aoi': i,
@@ -254,11 +274,13 @@ var pointFC = merged.map(function(feature) {
 });
 
 //define bands to extract
-var data = ls_oneDay.median().select('SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7').reduceRegions({
-  collection: pointFC,
-  reducer: ee.Reducer.median(),
-  scale: scale,
-  crs: ls_oneDay.geometry().projection().crs()
+var data = ee.ImageCollection(sr_oneDay)
+  .median()
+  .reduceRegions({
+    collection: pointFC,
+    reducer: ee.Reducer.median(),
+    scale: scale,
+    crs: ee.ImageCollection(sr_oneDay).geometry().projection().crs()
 });
 
 var removeGeo = function(i){
