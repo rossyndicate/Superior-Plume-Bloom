@@ -174,7 +174,7 @@ var tomorrow = today.advance(1, 'days');
 var miss = sat_miss.get(mission);
 
 var sr_oneDay = ee.Algorithms.If(
-  miss === 'SENTINEL',
+  miss = 'SENTINEL',
   sen.filterDate(today, tomorrow),
   ls
     .filterDate(today, tomorrow)
