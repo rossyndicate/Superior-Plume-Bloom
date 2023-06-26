@@ -1,6 +1,5 @@
-//just a quick vis of the example rasters - first is a satellite image, second is the GTB model applied to it.
 var sat_img = ee.Image('projects/ee-ross-superior/assets/example_output/L9_2022-05-05');
-var sat_class = ee.Image('projects/ee-ross-superior/assets/example_output/class_L9_2022-05-05');
+var sat_class = ee.Image('projects/ee-ross-superior/assets/example_output/L9_2022-05-05_quickclass');
 
 var sat_viz = {
   bands: ['SR_B4', 'SR_B3', 'SR_B2'],
@@ -9,6 +8,7 @@ var sat_viz = {
 };
 
 var class_viz = {
+  bands: ['classification'],
   min: 0,
   max: 4,
 };
