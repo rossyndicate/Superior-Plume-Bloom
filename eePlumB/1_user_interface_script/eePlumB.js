@@ -101,7 +101,7 @@ var l457 = l4.merge(l5).merge(l7).select(bn457, bn89); //join and rename
 var l89 = l8.merge(l9).select(bn89);
 
 // merge all
-var all_ls = l457.merge(l89).select(bn89, bcolor);
+var all_ls = l457.merge(l89);
 
 //filter for desired PRs
 var ROWS = ee.List([27, 28]);
@@ -116,7 +116,8 @@ function applyScaleFactors(image) {
 }
 
 var ls = ls
-  .map(applyScaleFactors);
+  .map(applyScaleFactors)
+  .select(bn89, bcolor);
 
 //filter for desired tiles for sentinel, rename rgb
 var TILES = ee.List(['15TWN', '15TXN', '15TYN', '15TWM', '15TXM', '15TYM']);
