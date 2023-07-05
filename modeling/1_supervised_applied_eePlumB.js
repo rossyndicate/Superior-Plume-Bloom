@@ -100,7 +100,7 @@ var testing = labels.filter(ee.Filter.gte("random", split));
 print('Testing:');
 testing.aside(print);
 
-// Train the CART model
+/*// Train the CART model
 var trainedCART = ee.Classifier.smileCart(10).train({
   features: training,
   classProperty: 'byte_property',
@@ -134,7 +134,7 @@ confusionMatrixRF.aside(print);
 
 var acc_values_RF = confusionMatrixRF
   .accuracy();
-print("RF Confusion Overall Accuracy: ", acc_values_RF);
+print("RF Confusion Overall Accuracy: ", acc_values_RF);*/
 
 // Train the GTB model
 var trainedGTB = ee.Classifier.smileGradientTreeBoost(10).train({
@@ -169,7 +169,7 @@ var applyGTB = function(image) {
     .classify(trainedGTB)
     .set({'mission': mission,
       'date': date});
-  return classifiedImage;
+  return image.addBands(classifiedImage);
 };
 
 // apply the function to the image collection
@@ -200,23 +200,24 @@ function extract_classes(image) {
   var lightNSSed = cl.eq(2).rename('lightNSSed').selfMask();
   var OSSed = cl.eq(3).rename('OSSed').selfMask();
   var dNSSed = cl.eq(4).rename('dNSSed').selfMask();
+  var classified = cl.gte(0).rename('classified').selfMask();
   var img_addBand = image.addBands(cloud)
     .addBands(openWater)
     .addBands(lightNSSed)
     .addBands(OSSed)
-    .addBands(dNSSed);
+    .addBands(dNSSed)
+    .addBands(classified);
   return img_addBand;
 }
 
 //apply function
 var ls_GTB_class = ls_miss_date_GTB.map(extract_classes);
 ls_GTB_class.first().aside(print);
+ls_GTB_class.aside(print);
 
 // get CRS info
-var img_crs = ls_GTB_class.first().select('cloud').projection();
+var img_crs = ls_GTB_class.first().select('classification').projection();
 var img_crsTrans = img_crs.getInfo().transform;
-
-var allData = ee.FeatureCollection([]);
 
 //function to calculate area for one image
 function calcArea(image) {
@@ -244,6 +245,13 @@ var allAreas = ls_GTB_class.map(calcArea);
 
 allAreas.first().aside(print);
 
+// Remove the geometry column.
+var dropGeo = function(feature) {
+  return feature.set("geometry", null);
+};
+
+allAreas = allAreas.map(dropGeo);
+
 // export to drive	
 Export.table.toDrive({  
   collection: allAreas,
@@ -253,48 +261,37 @@ Export.table.toDrive({
 });
 
 
-// Add images to map 
+// grab one image from the stack and classification
 
 var one_image = ls_aoi
   .filter(ee.Filter.eq('SPACECRAFT_ID', 'LANDSAT_9'))
   .filter(ee.Filter.lt('CLOUD_COVER', 20))
   .filterDate('2022-05-01', '2022-09-01');
+  
 one_image.first().aside(print);
 
 var one_classification = ls_GTB_class
-  .filter(ee.Filter.eq('mission', 'LANDSAT_9'))
-  .filter(ee.Filter.eq('date', '2022-05-05'));
+  .filter(ee.Filter.eq('SPACECRAFT_ID', 'LANDSAT_9'))
+  .filter(ee.Filter.eq('DATE_ACQUIRED', '2022-05-05'));
+  
 one_classification.first().aside(print);
   
-/*var sat_viz = {
-  bands: ['SR_B4', 'SR_B3', 'SR_B2'],
-  min: 0.0,
-  max: 0.2,
-};
-
-var class_viz = {
-  min: 0,
-  max: 4,
-};
-
-Map.addLayer(one_image.first(), sat_viz, 'Satellite Image');
-Map.addLayer(one_classification.first(), class_viz, 'Classified Image');
-*/
 // If the export has more than 1e8 pixels, set "maxPixels" higher.
 Export.image.toAsset({
   image: one_image.first(),
   description: 'Sat_Example_L9_2022-05-05',
   assetId: 'projects/ee-ross-superior/assets/example_output/L9_2022-05-05_GTB',  // <> modify these
   region: all_aois,
-  scale: 90,
+  scale: 30,
   maxPixels: 1e13
 });
+
 // If the export has more than 1e8 pixels, set "maxPixels" higher.
 Export.image.toAsset({
   image: one_classification.first(),
   description: 'Class_Example_L9_2022-05-05',
   assetId: 'projects/ee-ross-superior/assets/example_output/L9_2022-05-05_quickclass_GTB',  // <> modify these
   region: all_aois,
-  scale: 90,
+  scale: 30,
   maxPixels: 1e13
 });
