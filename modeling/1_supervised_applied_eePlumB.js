@@ -1,5 +1,5 @@
 // written by B. Steele, ROSSyndicate, Colorado State University
-// last modified 2023-05-08
+// last modified 2023-07-05
 
 //////////////////////////////////////
 // Load data                        //
@@ -134,7 +134,7 @@ confusionMatrixRF.aside(print);
 
 var acc_values_RF = confusionMatrixRF
   .accuracy();
-print("CART Confusion Overall Accuracy: ", acc_values_RF);
+print("RF Confusion Overall Accuracy: ", acc_values_RF);
 
 // Train the GTB model
 var trainedGTB = ee.Classifier.smileGradientTreeBoost(10).train({
@@ -158,15 +158,15 @@ print("GTB Confusion Overall Accuracy: ", acc_values_GTB);
 // Apply model to image stack      //
 //////////////////////////////////////
 
-// function to apply the CART model
+// function to apply the GTB model
 var applyGTB = function(image) {
   // Select the bands that correspond to the input features of the CART model
   var imageFeatures = image.select(inputFeatures);
   var mission = image.get('SPACECRAFT_ID');
   var date = image.date().format('YYYY-MM-dd');
-  // Classify the image using the trained CART model
+  // Classify the image using the trained GTB model
   var classifiedImage = imageFeatures
-    .classify(trainedCART)
+    .classify(trainedGTB)
     .set({'mission': mission,
       'date': date});
   return classifiedImage;
@@ -218,9 +218,9 @@ var img_crsTrans = img_crs.getInfo().transform;
 
 var allData = ee.FeatureCollection([]);
 
-//function to calculate area for one year of data
+//function to calculate area for one image
 function calcArea(image) {
-  var areaImage =  image.multiply(ee.Image.pixelArea());
+  var areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5);
   
   var area = areaImage.reduceRegions({
     collection: aoi_area,
@@ -247,7 +247,7 @@ allAreas.first().aside(print);
 // export to drive	
 Export.table.toDrive({  
   collection: allAreas,
-  description: 'quick_gradientTreeBoost_landsat_stack_v2023-05-06_v2',
+  description: 'quick_gradientTreeBoost_landsat_stack_v2023-07-05',
   folder: 'eePlumB_classification',
   fileFormat: 'csv'
 });
@@ -284,7 +284,7 @@ Map.addLayer(one_classification.first(), class_viz, 'Classified Image');
 Export.image.toAsset({
   image: one_image.first(),
   description: 'Sat_Example_L9_2022-05-05',
-  assetId: 'projects/ee-ross-superior/assets/example_output/L9_2022-05-05',  // <> modify these
+  assetId: 'projects/ee-ross-superior/assets/example_output/L9_2022-05-05_GTB',  // <> modify these
   region: all_aois,
   scale: 90,
   maxPixels: 1e13
@@ -293,7 +293,7 @@ Export.image.toAsset({
 Export.image.toAsset({
   image: one_classification.first(),
   description: 'Class_Example_L9_2022-05-05',
-  assetId: 'projects/ee-ross-superior/assets/example_output/L9_2022-05-05_quickclass',  // <> modify these
+  assetId: 'projects/ee-ross-superior/assets/example_output/L9_2022-05-05_quickclass_GTB',  // <> modify these
   region: all_aois,
   scale: 90,
   maxPixels: 1e13
