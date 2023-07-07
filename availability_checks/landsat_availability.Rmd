@@ -7,14 +7,13 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-source('availability_checks/pySetup.R')
 library(googledrive)
-
+library(reticulate)
 ```
 
 # Purpose
 
-This script pulls MODIS availability from GEE and summarizes it for the designated AOI in western Lake Superior.
+This script pulls Landsat availability from GEE and summarizes it for the designated AOI in western Lake Superior.
 
 # Dependencies
 
@@ -22,7 +21,19 @@ This script pulls MODIS availability from GEE and summarizes it for the designat
 
 # Setup
 
-Install python module.
+## Activate conda environment
+
+Check for virtual environment and activate, otherwise, set up virtual environment.
+
+```{r conda env}
+if (!dir.exists("env")) {
+  source("pySetup.R")
+} else {
+  use_condaenv(file.path(getwd(), "env"))
+}
+```
+
+Install python modules.
 
 ```{python}
 import ee
