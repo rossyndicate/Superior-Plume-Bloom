@@ -1,5 +1,5 @@
 // written by B. Steele, ROSSyndicate, Colorado State University
-// last modified 2023-07-05
+// last modified 2023-07-06
 
 //////////////////////////////////////
 // Load data                        //
@@ -47,6 +47,7 @@ function applyScaleFactors(image) {
 
 var ls = ls
   .map(applyScaleFactors);
+  
 
 // Load the AOIS
 // these do not need to be imported//
@@ -68,6 +69,7 @@ all_aois = all_aois.union();
 var ls_aoi = ls.map(function(image) {
   return image.clip(all_aois.geometry());
 });
+
 
 //////////////////////////////////////
 // Train model                      //
@@ -100,41 +102,6 @@ var testing = labels.filter(ee.Filter.gte("random", split));
 print('Testing:');
 testing.aside(print);
 
-/*// Train the CART model
-var trainedCART = ee.Classifier.smileCart(10).train({
-  features: training,
-  classProperty: 'byte_property',
-  inputProperties: inputFeatures
-});
-
-// Evaluate the model
-var confusionMatrixCART = testing
-  .classify(trainedCART)
-  .errorMatrix(outputLabel, "classification");
-print('CART Confusion Matrix:');
-confusionMatrixCART.aside(print);
-
-var acc_values_CART = confusionMatrixCART
-  .accuracy();
-print("CART Confusion Overall Accuracy: ", acc_values_CART);
-
-// Train the RF model
-var trainedRF = ee.Classifier.smileRandomForest(10).train({
-  features: training,
-  classProperty: 'byte_property',
-  inputProperties: inputFeatures
-});
-
-// Evaluate the model
-var confusionMatrixRF = testing
-  .classify(trainedRF)
-  .errorMatrix(outputLabel, "classification");
-print('RF Confusion Matrix:');
-confusionMatrixRF.aside(print);
-
-var acc_values_RF = confusionMatrixRF
-  .accuracy();
-print("RF Confusion Overall Accuracy: ", acc_values_RF);*/
 
 // Train the GTB model
 var trainedGTB = ee.Classifier.smileGradientTreeBoost(10).train({
@@ -158,26 +125,23 @@ print("GTB Confusion Overall Accuracy: ", acc_values_GTB);
 // Apply model to image stack      //
 //////////////////////////////////////
 
-// function to apply the GTB model
-var applyGTB = function(image) {
-  // Select the bands that correspond to the input features of the CART model
-  var imageFeatures = image.select(inputFeatures);
+// make mission-date field
+function addImageDate(image) {
   var mission = image.get('SPACECRAFT_ID');
   var date = image.date().format('YYYY-MM-dd');
-  // Classify the image using the trained GTB model
-  var classifiedImage = imageFeatures
-    .classify(trainedGTB)
-    .set({'mission': mission,
-      'date': date});
-  return image.addBands(classifiedImage);
-};
+  var missDate = ee.String(mission).cat('_').cat(ee.String(date));
+  return image.set('missDate', missDate);
+}
 
-// apply the function to the image collection
-var ls_miss_date_GTB = ls_aoi.map(applyGTB);
-ls_miss_date_GTB.first().aside(print);
+ls_aoi = ls_aoi.map(addImageDate);
+
+
+// summarize by missionDate field
+var uniqueMissDate = ls_aoi.aggregate_array('missDate').distinct();
+uniqueMissDate.aside(print);
 
 //////////////////////////////////////
-// Calculate areas for each class  //
+// Helper functions                 //
 //////////////////////////////////////
 
 // Calculate total area of AOI
@@ -191,6 +155,23 @@ var aoi_area = all_aois.map(calc_area);
 
 print('Total AOI area:');
 aoi_area.first().get('area_ha').aside(print);
+
+// get CRS info
+var img_crs = ls_aoi.first().projection();
+var img_crsTrans = img_crs.getInfo().transform;
+
+
+// function to apply the GTB model
+function applyGTB(image) {
+  // Select the bands that correspond to the input features of the CART model
+  var imageFeatures = image.select(inputFeatures);
+  var missDate = image.get('missDate');
+  // Classify the image using the trained GTB model
+  var classifiedImage = imageFeatures
+    .classify(trainedGTB)
+    .set({'missDate': missDate});
+  return image.addBands(classifiedImage);
+}
 
 // save each value as its own band and mask 
 function extract_classes(image) {
@@ -210,14 +191,32 @@ function extract_classes(image) {
   return img_addBand;
 }
 
-//apply function
-var ls_GTB_class = ls_miss_date_GTB.map(extract_classes);
-ls_GTB_class.first().aside(print);
-ls_GTB_class.aside(print);
 
-// get CRS info
-var img_crs = ls_GTB_class.first().select('classification').projection();
-var img_crsTrans = img_crs.getInfo().transform;
+function applyPerMissionDate(missDate) {
+  var mission = ee.String(missDate).slice(0,9);
+  var date = ee.String(missDate).slice(10,20);
+  
+  var short_stack = ls_aoi
+    .filter(ee.Filter.eq('SPACECRAFT_ID', mission))
+    .filter(ee.Filter.eq('DATE_ACQUIRED', date));
+  
+  var oneMissDate = short_stack.mean();
+  
+  var ls_miss_date_GTB = applyGTB(oneMissDate);
+
+  var ls_GTB_class = extract_classes(ls_miss_date_GTB);
+
+  return ls_GTB_class
+    .set('missDate', missDate);
+}
+
+function mosaicStack(missDate) {
+  var md_GTB = applyPerMissionDate(missDate);
+  return md_GTB;
+}
+
+var newStack_list = uniqueMissDate.map(mosaicStack);
+var newStack = ee.ImageCollection(newStack_list);
 
 //function to calculate area for one image
 function calcArea(image) {
@@ -229,69 +228,30 @@ function calcArea(image) {
     crs: img_crs,
     crsTransform: img_crsTrans
   });
-  var mission = image.get('mission');
-  var dt = image.get('date');
   
+  var missDate = image.get('missDate');
+
   // Create a feature with the calculated area and properties
   var a = area.first().set({
-    'mission': mission,
-    'date': dt
+    'missDate': missDate
   });
 
   return ee.FeatureCollection(a);
 }
 
-var allAreas = ls_GTB_class.map(calcArea);
-
-allAreas.first().aside(print);
+var allAreas = newStack.map(calcArea);
 
 // Remove the geometry column.
-var dropGeo = function(feature) {
+function dropGeo(feature) {
   return feature.set("geometry", null);
-};
+}
 
 allAreas = allAreas.map(dropGeo);
 
 // export to drive	
 Export.table.toDrive({  
   collection: allAreas,
-  description: 'quick_gradientTreeBoost_landsat_stack_v2023-07-05',
+  description: 'quick_gradientTreeBoost_landsat_stack_v2023-07-06',
   folder: 'eePlumB_classification',
   fileFormat: 'csv'
-});
-
-
-// grab one image from the stack and classification
-
-var one_image = ls_aoi
-  .filter(ee.Filter.eq('SPACECRAFT_ID', 'LANDSAT_9'))
-  .filter(ee.Filter.lt('CLOUD_COVER', 20))
-  .filterDate('2022-05-01', '2022-09-01');
-  
-one_image.first().aside(print);
-
-var one_classification = ls_GTB_class
-  .filter(ee.Filter.eq('SPACECRAFT_ID', 'LANDSAT_9'))
-  .filter(ee.Filter.eq('DATE_ACQUIRED', '2022-05-05'));
-  
-one_classification.first().aside(print);
-  
-// If the export has more than 1e8 pixels, set "maxPixels" higher.
-Export.image.toAsset({
-  image: one_image.first(),
-  description: 'Sat_Example_L9_2022-05-05',
-  assetId: 'projects/ee-ross-superior/assets/example_output/L9_2022-05-05_GTB',  // <> modify these
-  region: all_aois,
-  scale: 30,
-  maxPixels: 1e13
-});
-
-// If the export has more than 1e8 pixels, set "maxPixels" higher.
-Export.image.toAsset({
-  image: one_classification.first(),
-  description: 'Class_Example_L9_2022-05-05',
-  assetId: 'projects/ee-ross-superior/assets/example_output/L9_2022-05-05_quickclass_GTB',  // <> modify these
-  region: all_aois,
-  scale: 30,
-  maxPixels: 1e13
 });
