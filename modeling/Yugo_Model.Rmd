@@ -316,14 +316,6 @@ def calcArea(image):
 
 allAreas = newStack.map(calcArea)
 
-
-# Remove the geometry column.
-def dropGeo(feature):
-  return feature.set("geometry", None)
-
-
-allAreas = allAreas.map(dropGeo)
-
 ## export to drive	
 export_summary = (ee.batch.Export.table.toDrive( 
   collection = allAreas,

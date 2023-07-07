@@ -241,12 +241,15 @@ function calcArea(image) {
 
 var allAreas = newStack.map(calcArea);
 
-// Remove the geometry column.
+allAreas.aside(print)
+
+/*// Remove the geometry column.
 function dropGeo(feature) {
-  return feature.set("geometry", null);
+  return feature.set('geometry', null);
 }
 
 allAreas = allAreas.map(dropGeo);
+*/
 
 // export to drive	
 Export.table.toDrive({  
