@@ -12,7 +12,7 @@ libs = c('reticulate', 'tidyverse')
 
 package_loader <- function(x) {
     if (x %in% installed.packages()) {
-      library(x, character.only = TRUE) 
+      library(x, character.only = TRUE)
     } else {
       install.packages(x)
       library(x, character.only = TRUE)
@@ -24,7 +24,8 @@ lapply(libs, package_loader)
 
 ## Activate conda environment
 
-Check for virtual environment and activate, otherwise, set up virtual environment.
+Check for virtual environment and activate, otherwise, set up virtual
+environment.
 
 ```{r conda env}
 if (!dir.exists("env")) {
@@ -38,12 +39,15 @@ And then import the needed modules
 
 ```{python}
 import ee
-import time 
+import time
 ```
 
 ## GEE Setup
 
-In order to access the GEE API, we need to authenticate our identity. To do this, you must type `earthengine authenticate` in the terminal window. When your browser states 'You are now authenticated with the gcloud CLI', the authentication is complete. This authentication is valid for 7 days.
+In order to access the GEE API, we need to authenticate our identity. To do
+this, you must type `earthengine authenticate` in the terminal window. When
+your browser states 'You are now authenticated with the gcloud CLI', the
+authentication is complete. This authentication is valid for 7 days.
 
 Now, we need to initialize our GEE session.
 
@@ -56,12 +60,12 @@ ee.Initialize(project = 'ee-ross-superior')
 ## Load label data
 
 ```{python}
-classValues = (['cloud', 
+classValues = (['cloud',
   'openWater',
-  'lightNearShoreSediment', 
-  'offShoreSediment', 
+  'lightNearShoreSediment',
+  'offShoreSediment',
   'darkNearShoreSediment'])
-  
+
 labels = (ee.FeatureCollection("projects/ee-ross-superior/assets/labels/collated_label_data_v2023-05-05")
   .filter(ee.Filter.inList('class', classValues)))
 
@@ -140,7 +144,7 @@ ls_aoi = ls.map(clip)
 ## Define the input features and output labels
 
 ```{python}
-inputFeatures = ["SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", "SR_B7"] 
+inputFeatures = ["SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", "SR_B7"]
 outputLabel = "class"
 ```
 
@@ -229,7 +233,7 @@ def applyGTB(image):
   return image.addBands(classifiedImage)
 
 
-# save each value as its own band and mask 
+# save each value as its own band and mask
 def extract_classes(image):
   cl = image.select('classification')
   cloud = cl.eq(0).rename('cloud').selfMask()
@@ -250,15 +254,15 @@ def extract_classes(image):
 def applyPerMissionDate(missDate):
   mission = ee.String(missDate).slice(0,9)
   date = ee.String(missDate).slice(10,20)
-  
+
   short_stack = (ls_aoi
     .filter(ee.Filter.eq('SPACECRAFT_ID', mission))
     .filter(ee.Filter.eq('DATE_ACQUIRED', date)))
-  
+
   oneMissDate = short_stack.mean()
-  
+
   ls_miss_date_GTB = applyGTB(oneMissDate)
-  
+
   ls_GTB_class = extract_classes(ls_miss_date_GTB)
 
   return (ls_GTB_class.set('missDate', missDate))
@@ -298,14 +302,23 @@ newStack = ee.ImageCollection(newStack_list)
 ```{python}
 def calcArea(image):
   areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
-  
-  area = areaImage.reduceRegions(
+
+  areaImage_light = areaImage.select([
+    'classified',
+    'cloud',
+    'openWater',
+    'lightNSSed',
+    'OSSed',
+    'dNSSed'
+    ])
+
+  area = areaImage_light.reduceRegions(
     collection = aoi_area,
     reducer = ee.Reducer.sum().forEachBand(areaImage),
     crs = img_crs,
     crsTransform = img_crsTrans
   )
-  
+
   missDate = image.get('missDate')
 
   # Create a feature with the calculated area and properties
@@ -314,12 +327,14 @@ def calcArea(image):
   return ee.FeatureCollection(a)
 
 
-allAreas = newStack.map(calcArea)
+allAreas = newStack.map(calcArea).flatten()
 
-## export to drive	
-export_summary = (ee.batch.Export.table.toDrive( 
+for_export = allAreas
+## export to drive
+export_summary = (ee.batch.Export.table.toDrive(
   collection = allAreas,
-  description = 'quick_gradientTreeBoost_landsat_stack_v2023-07-06',
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed'],
+  description = 'quick_gradientTreeBoost_landsat_stack_v2023-07-07',
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
@@ -355,7 +370,12 @@ def maximum_no_of_tasks(MaxNActive, waitingPeriod):
 
 ```
 
-Because the data storage types are different (int32 and float64), we have to export the GTB output and the band data images separately.
+### Raster Export
+
+Because the data storage types are different (int32 and float64), we have to
+export the GTB output and the band data images separately. Note, each image
+export takes 2-3 hours, resulting in a processing time of approximates 3 weeks.
+Do not run these chunks until you're ready to export final files.
 
 ### GTB images
 
@@ -370,14 +390,15 @@ for d in range(date_length):
     .select('classification'))
   export_image = ee.batch.Export.image.toDrive(
     image = image,
+    region = all_aois.geometry(),
     description = 'yugo_GTB_' + str(md.getInfo()),
     folder = 'yugo_GTB',
     scale = 30,
     crs = img_crs,
     maxPixels = 1e13)
-  #Check how many existing tasks are running and take a break of 30 mins if it's >25 
-  maximum_no_of_tasks(25, 30*60)
-  #Send next task.                                        
+  #Check how many existing tasks are running and take a break of 30 mins if it's >25
+  maximum_no_of_tasks(10, 30*60)
+  #Send next task.
   export_image.start()
 
 ```
@@ -393,19 +414,20 @@ for d in range(date_length):
     .select(['SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7']))
   export_image = ee.batch.Export.image.toDrive(
     image = image,
+    region = all_aois.geometry(),
     description = 'B2-B7_' + str(md.getInfo()),
     folder = 'superior_image_stack',
     scale = 30,
     crs = img_crs,
     maxPixels = 1e13)
-  #Check how many existing tasks are running and take a break of 30 mins if it's >25 
+  #Check how many existing tasks are running and take a break of 30 mins if it's >25
   maximum_no_of_tasks(25, 30*60)
-  #Send next task.                                        
+  #Send next task.
   export_image.start()
 
 ```
 
 
 ```{r wrap, echo = F}
-knitr::wrap_rmd('models/Yugo_Model.Rmd', width = 80, backup = NULL)
+knitr::wrap_rmd('modeling/Yugo_Model.Rmd', width = 80, backup = NULL)
 ```
