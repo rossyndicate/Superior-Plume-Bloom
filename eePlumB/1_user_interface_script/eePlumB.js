@@ -171,10 +171,6 @@ var today = ee.Date(date);
 var tomorrow = today.advance(1, 'days');
 var miss = sat_miss.get(mission);
 
-miss.aside(print)
-ee.String(miss).slice(0,7).aside(print)
-ee.String(miss).slice(0,7).equals('LANDSAT').aside(print)
-
 var sr_oneDay = ee.Algorithms.If(
   ee.String(miss).slice(0,7).equals('LANDSAT'),
   ls
