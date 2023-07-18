@@ -4,7 +4,7 @@ author: "ROSSyndicate"
 date: "2023-07-18"
 output: html_document
 ---
- 
+
 ```{r setup, echo = FALSE}
 packages <- c('tidyverse',
               'sf')
@@ -37,7 +37,7 @@ plot(superior['OBJECTID'])
 
 The additional AOIs:
 
-We will read in tile 1 that has been manually edited to remove the harbor area. 
+We will read in tile 1 that has been manually edited to remove the harbor area.
 
 ```{r}
 aoi1 = read_sf(file.path(shp_dir, 'tiledAOI', 'Superior_AOI_1_noharbor.shp'))
@@ -57,10 +57,10 @@ plot(aoi5)
 Merge aois into one shape (without the harbor)
 
 ```{r}
-aoi <- st_union(aoi1, aoi2) %>% 
-  st_union(., aoi3) %>% 
-  st_union(., aoi4) %>% 
-  st_union(., aoi5) %>% 
+aoi <- st_union(aoi1, aoi2) %>%
+  st_union(., aoi3) %>%
+  st_union(., aoi4) %>%
+  st_union(., aoi5) %>%
   select(rowid)
 
 plot(aoi)
@@ -72,3 +72,7 @@ Save the modeling aoi.
 st_write(aoi, file.path(shp_dir, 'Superior_AOI_no_harbor.shp'))
 ```
 
+
+```{r, echo = F}
+knitr::wrap_rmd('eePlumB/A_PrepAOI/02_Modeling_AOI.Rmd', width = 80, backup = NULL)
+```

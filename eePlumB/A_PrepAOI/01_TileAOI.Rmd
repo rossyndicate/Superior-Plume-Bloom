@@ -7,7 +7,9 @@ output: html_document
 
 # Purpose
 
-This script takes an area of interest (AOI) and creates tiles within the extent for use in eePlumB. While this script is built around Lake Superior, it could easily be adapted to any other lake.
+This script takes an area of interest (AOI) and creates tiles within the extent
+for use in eePlumB. While this script is built around Lake Superior, it could
+easily be adapted to any other lake.
 
 ```{r}
 library(tidyverse)
@@ -43,7 +45,8 @@ plot(aoi['OBJECTID'])
 
 ## Tile shapefile using `st_make_grid`
 
-You might need to play around with the cellsize to adjust the grid your your needs and so that it 'makes sense' for your purposes.
+You might need to play around with the cellsize to adjust the grid your your
+needs and so that it 'makes sense' for your purposes.
 
 ```{r}
 tiles = st_make_grid(aoi,
@@ -54,7 +57,9 @@ plot(tiles)
 plot(aoi['OBJECTID'], add = T)
 ```
 
-Now, we need to merge a few tiles for better context. We'll split out the unmerged tiles into two sets so that we can maintain the left to right, bottom to top numbering
+Now, we need to merge a few tiles for better context. We'll split out the
+unmerged tiles into two sets so that we can maintain the left to right, bottom
+to top numbering
 
 ```{r}
 tiles_toMerge_1 = tiles[c(1, 5)]
@@ -63,20 +68,20 @@ tiles_toMerge_3 = tiles[c(3, 4)]
 tiles_toMerge_4 = tiles[c(7, 11)]
 tiles_toMerge_5 = tiles[c(8, 12)]
 
-tiles_merged_1 = st_union(tiles_toMerge_1) 
-tiles_merged_2 = st_union(tiles_toMerge_2) 
-tiles_merged_3 = st_union(tiles_toMerge_3) 
-tiles_merged_4 = st_union(tiles_toMerge_4) 
-tiles_merged_5 = st_union(tiles_toMerge_5) 
+tiles_merged_1 = st_union(tiles_toMerge_1)
+tiles_merged_2 = st_union(tiles_toMerge_2)
+tiles_merged_3 = st_union(tiles_toMerge_3)
+tiles_merged_4 = st_union(tiles_toMerge_4)
+tiles_merged_5 = st_union(tiles_toMerge_5)
 
 # sadly, there's no 'easy' way to join these two sfc's with any dplyr or sf method that I can find, so we'll convert to a data frame, join, then convert back to sf
 
 tiles_forLabel = full_join(as.data.frame(tiles_merged_1),
-                           as.data.frame(tiles_merged_2)) %>% 
-  full_join(as.data.frame(tiles_merged_3)) %>% 
-  full_join(as.data.frame(tiles_merged_4)) %>% 
-  full_join(as.data.frame(tiles_merged_5)) %>% 
-  st_as_sf() 
+                           as.data.frame(tiles_merged_2)) %>%
+  full_join(as.data.frame(tiles_merged_3)) %>%
+  full_join(as.data.frame(tiles_merged_4)) %>%
+  full_join(as.data.frame(tiles_merged_5)) %>%
+  st_as_sf()
 
 plot(tiles_forLabel)
 plot(aoi['OBJECTID'], add = T, col = alpha('Green', 0.7))
@@ -95,8 +100,8 @@ plot(shape_tiles['OBJECTID'][1,])
 ## Save each of the tiles as individual features
 
 ```{r}
-shape_tiles <- shape_tiles %>% 
-  rowid_to_column() %>% 
+shape_tiles <- shape_tiles %>%
+  rowid_to_column() %>%
   select(-c(OBJECTID:VPUID))
 
 try(dir.create('data/aoi/tiledAOI/'))
@@ -108,6 +113,10 @@ for(l in 1:nrow(shape_tiles)) {
 
 # Upload to GEE
 
-Go to the GEE IDE and upload the assets you just made to your project of choice.
+Go to the GEE IDE and upload the assets you just made to your project of
+choice.
 
 
+```{r, echo = F}
+knitr::wrap_rmd('eePlumB/A_PrepAOI/01_TileAOI.Rmd', width = 80, backup = NULL)
+```
