@@ -4,7 +4,7 @@
 // Adapted from code written by Xiao Yang (yangxiao@live.unc.edu)
 // from the GROD labeling workflow: https://github.com/GlobalHydrologyLab/GROD/blob/master/1_user_interface_script/GROD.js
 
-// Last modified 2023-06-26
+// Last modified 2023-07-13
 
 // Pixel Types. Mouse over and convert this part to geometry import 
 // so that they can be selected from the map interface.
@@ -23,8 +23,6 @@ var init = 'enter initials here'; // three letter initials
 var mission = 'enter mission here'; // 'LS5', 'LS7', 'LS8', 'LS9', 'SEN2'
 
 var date = 'enter date here'; // this is the mission date, NOT today's date
-// only the format: 'YYYY-MM-DD' accepted here.
-
 
 //---- FUNCTIONS ----//
 
@@ -174,13 +172,20 @@ var tomorrow = today.advance(1, 'days');
 var miss = sat_miss.get(mission);
 
 var sr_oneDay = ee.Algorithms.If(
-  miss = 'SENTINEL',
-  sen.filterDate(today, tomorrow),
+  ee.String(miss).slice(0,7).equals('LANDSAT'),
   ls
     .filterDate(today, tomorrow)
-    .filter(ee.Filter.eq('SPACECRAFT_ID', miss))
+    .filter(ee.Filter.eq('SPACECRAFT_ID', miss)),
+  print('')
 );
 
+sr_oneDay = ee.Algorithms.If(
+  ee.String(miss).equals('SENTINEL'),
+  sen.filterDate(today, tomorrow),
+  sr_oneDay
+);
+
+sr_oneDay.aside(print);
 
 // function on move between tiles
 var updateMapOnClick = function(i, satellite, date) {
