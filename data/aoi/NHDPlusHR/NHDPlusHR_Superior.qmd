@@ -1,0 +1,44 @@
+<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>
+<qgis version="3.22.13-Białowieża">
+  <identifier>NHDWaterbody</identifier>
+  <parentidentifier></parentidentifier>
+  <language>ENG</language>
+  <type>dataset</type>
+  <title>NHDWaterbody</title>
+  <abstract>The National Hydrography Dataset (NHD) is a feature-based database that interconnects and uniquely identifies the stream segments or reaches that make up the nation's surface water drainage system. NHD data was originally developed at 1:100,000-scale and exists at that scale for the whole country. This high-resolution NHD, generally developed at 1:24,000/1:12,000 scale, adds detail to the original 1:100,000-scale NHD. (Data for Alaska, Puerto Rico and the Virgin Islands was developed at high-resolution, not 1:100,000 scale.) Local resolution NHD is being developed where partners and data exist. The NHD contains reach codes for networked features, flow direction, names, and centerline representations for areal water bodies. Reaches are also defined on waterbodies and the approximate shorelines of the Great Lakes, the Atlantic and Pacific Oceans and the Gulf of Mexico. The NHD also incorporates the National Spatial Data Infrastructure framework criteria established by the Federal Geographic Data Committee.
+
+The NHD is a national framework for assigning reach addresses to water-related entities, such as industrial discharges, drinking water supplies, fish habitat areas, wild and scenic rivers. Reach addresses establish the locations of these entities relative to one another within the NHD surface water drainage network, much like addresses on streets. Once linked to the NHD by their reach addresses, the upstream/downstream relationships of these water-related entities--and any associated information about them--can be analyzed using software tools ranging from spreadsheets to geographic information systems (GIS). GIS can also be used to combine NHD-based network analysis with other data layers, such as soils, land use and population, to help understand and display their respective effects upon one another. Furthermore, because the NHD provides a nationally consistent framework for addressing and analysis, water-related information linked to reach addresses by one organization (national, state, local) can be shared with other organizations and easily integrated into many different types of applications to the benefit of all.</abstract>
+  <keywords vocabulary="gmd:topicCategory">
+    <keyword>FWHydrography</keyword>
+  </keywords>
+  <contact>
+    <name>Earth Science Information Center, U.S. Geological Survey</name>
+    <organization>Earth Science Information Center, U.S. Geological Survey</organization>
+    <position></position>
+    <voice>1 888 ASK USGS</voice>
+    <fax></fax>
+    <email>ask@usgs.gov</email>
+    <role>Point of contact</role>
+  </contact>
+  <links>
+    <link mimeType="" name="File Geodatabase Feature Class" format="" size="" type="Local Area Network" description="" url="file://\\igskbthisusy01\nhdgeo\oracle_export\GDBExtractServer\Template\NHD_File_Template_High_92v210.gdb"/>
+  </links>
+  <fees></fees>
+  <constraints type="Access">None</constraints>
+  <rights>None. Acknowledgment of the originating agencies would be appreciated in products derived from these data.</rights>
+  <encoding></encoding>
+  <crs>
+    <spatialrefsys>
+      <wkt>GEOGCRS["NAD83",DATUM["North American Datum 1983",ELLIPSOID["GRS 1980",6378137,298.257222101,LENGTHUNIT["metre",1]]],PRIMEM["Greenwich",0,ANGLEUNIT["degree",0.0174532925199433]],CS[ellipsoidal,2],AXIS["geodetic latitude (Lat)",north,ORDER[1],ANGLEUNIT["degree",0.0174532925199433]],AXIS["geodetic longitude (Lon)",east,ORDER[2],ANGLEUNIT["degree",0.0174532925199433]],USAGE[SCOPE["unknown"],AREA["North America - NAD83"],BBOX[14.92,167.65,86.46,-47.74]],ID["EPSG",4269]]</wkt>
+      <proj4>+proj=longlat +datum=NAD83 +no_defs</proj4>
+      <srsid>3401</srsid>
+      <srid>4269</srid>
+      <authid>EPSG:4269</authid>
+      <description>NAD83</description>
+      <projectionacronym>longlat</projectionacronym>
+      <ellipsoidacronym>EPSG:7019</ellipsoidacronym>
+      <geographicflag>true</geographicflag>
+    </spatialrefsys>
+  </crs>
+  <extent/>
+</qgis>

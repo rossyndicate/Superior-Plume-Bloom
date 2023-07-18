@@ -21,6 +21,8 @@ shp_dir = '/Users/steeleb/Documents/GitHub/Superior-Plume-Bloom/data/aoi/'
 
 ## Read in AOI shapefile
 
+For this project, we'll use the NHDPlusHR Superior waterbody shapefile.
+
 ```{r}
 shape = read_sf(file.path(shp_dir, 'NHDPlusHR', 'NHDPlusHR_Superior.shp'))
 
@@ -97,6 +99,7 @@ shape_tiles <- shape_tiles %>%
   rowid_to_column() %>% 
   select(-c(OBJECTID:VPUID))
 
+try(dir.create('data/aoi/tiledAOI/'))
 for(l in 1:nrow(shape_tiles)) {
   filename = paste0('SuperiorAOI_', l, '.shp')
   st_write(shape_tiles[shape_tiles$rowid == l,], file.path(shp_dir, 'tiledAOI', filename))
@@ -106,3 +109,5 @@ for(l in 1:nrow(shape_tiles)) {
 # Upload to GEE
 
 Go to the GEE IDE and upload the assets you just made to your project of choice.
+
+
