@@ -142,6 +142,7 @@ mapview(aoi_no_sc)
 And finally, write the shapefile
 
 ```{r}
+st_write(sc_buff_1, 'data/aoi/Superior_shoreline_contamination.shp')
 st_write(aoi_no_sc, 'data/aoi/Superior_AOI_minus_shoreline_contamination.shp')
 ```
 
