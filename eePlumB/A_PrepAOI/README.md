@@ -1,3 +1,7 @@
 ## superior-plume-bloom/eePlumB/A_PrepAOI/
 
-The scripts in this subdirectory create tiles for labeling from a shapefile. In the case of this project, we take the NHDPlusHR waterbody shapefile for Lake Superior and create tiled AOI shapes for use in GEE. These files are manually uplaoded as assets to GEE using the GEE IDE. The output is stored in the superior-plume-bloom/data/aoi/tiledAOI directory. An additional file named 'SuperiorAOI_1_noharbor.shp' was created using QGIS in order to remove the harbor from our AOI for use in modeling. 
+The scripts in this subdirectory create tiles for labeling from a shapefile. In 
+the case of this project, we take the NHDPlusHR waterbody shapefile for Lake 
+Superior and create tiled AOI shapes for use in GEE. These files are manually 
+uploaded as assets to GEE using the GEE IDE. The output is stored in the 
+superior-plume-bloom/data/aoi/tiledAOI directory. 
