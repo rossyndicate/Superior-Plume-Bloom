@@ -26,23 +26,13 @@ shp_dir = 'data/aoi/'
 
 # Read in shapefiles and create AOI for modeling
 
-The original Superior shapefile:
-
-```{r}
-superior = read_sf(file.path(shp_dir, 'NHDPlusHR', 'NHDPlusHR_Superior.shp'))
-
-#plot quickly to confirm
-plot(superior['OBJECTID'])
-```
-
-The additional AOIs:
-
-We will read in tile 1 that has been manually edited to remove the harbor area.
+We will read in the tiles that have been manually edited to remove bay and/or
+harbor areas.
 
 ```{r}
 aoi1 = read_sf(file.path(shp_dir, 'tiledAOI', 'Superior_AOI_1_noharbor.shp'))
-aoi2 = read_sf(file.path(shp_dir, 'tiledAOI', 'SuperiorAOI_2.shp'))
-aoi3 = read_sf(file.path(shp_dir, 'tiledAOI', 'SuperiorAOI_3.shp'))
+aoi2 = read_sf(file.path(shp_dir, 'tiledAOI', 'Superior_AOI_2_no_bay.shp'))
+aoi3 = read_sf(file.path(shp_dir, 'tiledAOI', 'Superior_AOI_3_no_bay.shp'))
 aoi4 = read_sf(file.path(shp_dir, 'tiledAOI', 'SuperiorAOI_4.shp'))
 aoi5 = read_sf(file.path(shp_dir, 'tiledAOI', 'SuperiorAOI_5.shp'))
 
@@ -69,7 +59,7 @@ plot(aoi)
 Save the modeling aoi.
 
 ```{r}
-st_write(aoi, file.path(shp_dir, 'Superior_AOI_no_harbor.shp'))
+st_write(aoi, file.path(shp_dir, 'Superior_AOI_modeling.shp'))
 ```
 
 
