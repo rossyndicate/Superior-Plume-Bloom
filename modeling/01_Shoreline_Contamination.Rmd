@@ -1,0 +1,159 @@
+---
+title: "03_Shoreline_Contamination.Rmd"
+author: "ROSSyndicate"
+date: "2023-07-18"
+output: html_document
+---
+
+# Purpose
+
+This script creates a quick visualization of user-labeled shoreline
+contamination (SC) and creates a new shapefile that has been edited to remove
+areas where SC has been detected so that we can add some uncertainty measures
+later in the model.
+
+
+```{r setup, echo = FALSE}
+packages <- c('tidyverse',
+              'googledrive',
+              'sf',
+              'mapview')
+
+package_loader <- function(x) {
+    if (x %in% installed.packages()) {
+      library(x, character.only = TRUE)
+    } else {
+      install.packages(x)
+      library(x, character.only = TRUE)
+    }
+}
+
+lapply(packages, package_loader)
+
+# point to directories
+shp_dir = 'data/aoi/'
+tmp_dir = 'tmp/'
+
+#create temporary directory for drive downloads
+try(dir.create('tmp'))
+
+v_date = '2023-07-18'
+```
+
+# Download collated files from eePlumB users
+
+Authenticate Drive
+
+```{r}
+drive_auth()
+```
+
+Some helper functions
+
+```{r}
+drive_downloader = function(driveid, drivename, dest) {
+  drive_download(as_id(driveid), path = file.path(dest, drivename), overwrite = T)
+}
+
+driveUp = function(dumpid, directory, filename) {
+  drive_upload(file.path(directory, filename), filename, overwrite = T, path = as_id(dumpid))
+}
+```
+
+Find the collated labels data file for our version date
+
+```{r}
+collated = drive_ls(path = 'eePlumB_collated_data')
+collated_version = collated[grepl(v_date, collated$name),]
+labels = collated_version[grepl('label', collated_version$name),]
+```
+
+Download the file to the temporary folder and then read into environment
+
+```{r}
+drive_downloader(labels$id[1], labels$name[1], tmp_dir)
+coll_labels <- read_csv(file.path(tmp_dir, labels$name[1]))
+```
+
+## Load the aoi
+
+```{r}
+aoi <-  st_read('data/aoi/Superior_AOI_modeling.shp')
+```
+
+
+## Grab the shoreline contamination labels and plot on map
+
+Filter for 'shorelineContamination'
+
+```{r}
+sc_labels <- coll_labels %>%
+  filter(class == 'shorelineContamination')
+```
+
+The crs is WGS 84, so let's save these as a sf
+
+```{r}
+sc <- st_as_sf(sc_labels, coords = c('lon', 'lat'), crs = 'EPSG:4326')
+
+#and then convert to the crs of the aoi
+aoi_crs <- st_crs(aoi)
+
+sc <- st_transform(sc, aoi_crs)
+```
+
+And plot to see where they are in conjunction with the shapefile
+
+```{r}
+ggplot() +
+  geom_sf(data = aoi) +
+  geom_sf(data = sc, color = 'red') +
+  theme_minimal()
+```
+
+As expected, this has pretty good coverage, especially since there are `r
+nrow(sc)` labels.
+
+Let's buffer these points by 60m and snip the polygon to account for these
+areas of contamination.
+
+```{r}
+sc_buff <- st_buffer(sc, dist = 60)
+# then perform a union so that there's only one feature
+sc_buff_1 <- st_union(sc_buff)
+# check to make sure
+mapview(aoi) +
+  mapview(sc_buff_1)
+```
+
+And now remove those areas from the polygon
+
+```{r}
+# make geometries valid
+aoi <- st_make_valid(aoi)
+sc_buff_1 <- st_make_valid(sc_buff_1)
+
+# remove areas of sc_buff from original aoi
+aoi_no_sc <- st_difference(aoi, sc_buff_1)
+
+mapview(aoi_no_sc)
+```
+
+And finally, write the shapefile
+
+```{r}
+st_write(sc_buff_1, 'data/aoi/Superior_shoreline_contamination.shp')
+st_write(aoi_no_sc, 'data/aoi/Superior_AOI_minus_shoreline_contamination.shp')
+```
+
+
+And clean up temp folder
+
+```{r}
+unlink('tmp', recursive = F)
+```
+
+
+```{r, echo = F}
+knitr::wrap_rmd('modeling/01_Shoreline_Contamination.Rmd', width = 80, backup = NULL)
+```

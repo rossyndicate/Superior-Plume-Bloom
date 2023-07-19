@@ -10,9 +10,3 @@ Lake Superior is a large lake, and relying on human observations of blooms restr
 To train computer algorithms to detect these features in satellite images we need a training dataset. That's where we need your help! In this exercise, we ask you to participate in identify changes in surface conditions in the western arm of Lake Superior. All you need is a computer and your eyes. 
 
 
-## Future plans
-
-The GROD workflow (folders 1_user_interface_script, 2_data_ingestion) will be adapted to using all available scenes instead of the most recent cloud-free scene.
-
-Z_PrepAOI: auto upload of ee.FeatureCollections into Assets.
-
