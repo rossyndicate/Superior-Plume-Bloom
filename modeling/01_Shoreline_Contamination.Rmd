@@ -1,5 +1,5 @@
 ---
-title: "03_Shoreline_Contamination.Rmd"
+title: "Shoreline Contamination Workflow"
 author: "ROSSyndicate"
 date: "2023-07-18"
 output: html_document
@@ -49,7 +49,7 @@ aoi <-  st_read('data/aoi/Superior_AOI_modeling.shp')
 Filter for 'shorelineContamination'
 
 ```{r}
-sc_labels <- coll_labels %>%
+sc_labels <- labels %>%
   filter(class == 'shorelineContamination')
 ```
 

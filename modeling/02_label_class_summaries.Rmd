@@ -112,7 +112,7 @@ label data should make a good training dataset.
 Create a list of bands for Landsat
 
 ```{r}
-ls_bands = c(expr(Red), expr(Green), expr(Blue), expr(SR_B5), expr(SR_B6), expr(SR_B7))
+ls_bands = c(expr(Red), expr(Green), expr(Blue), expr(B5), expr(B6), expr(B7))
 ```
 
 Create some helper functions. First to get count and add a label below the y =
