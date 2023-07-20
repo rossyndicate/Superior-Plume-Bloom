@@ -15,7 +15,6 @@ This script was adapted from the GROD data download script authored by Matt Ross
 After people have used Google Earth Engine and our `eePlumB.js` script in the the `1_user_interface` script to identify plumes and blooms, we must download the data and bind it together before checking it for quality. This script does that.
 
 ```{r setup}
-
 library(tidyverse)
 library(googledrive)
 library(lubridate)
@@ -26,7 +25,6 @@ in_dir = 'eePlumB/2_data_ingestion/data/in'
 out_dir = 'eePlumB/2_data_ingestion/data/out'
 
 drive_auth()
-
 ```
 
 Some helper functions
@@ -145,9 +143,57 @@ Map that helper function and create a dataframe of the validation and labels.
 ```{r}
 all_validation <- map_dfr(val, addInitials)
 all_labels <- map_dfr(label,addInitMissDate)
+```
 
-write.csv(all_validation, file.path(out_dir, paste0('collated_validation_data_v', Sys.Date(), '.csv')), row.names = F)
-write.csv(all_labels, file.path(out_dir, paste0('collated_label_data_v', Sys.Date(), '.csv')), row.names = F)
+## Data harmonization
+
+The label data need some clean up for column names/data types. Just due to the nature of the data, we've got some wonky stuff going on in here.
+
+First, harmonize the RGB column. RGB = B4, 3, 2 for both LS and Sentinel. Looks like it's just Landsat where RGB are missing and instead stored in SR_Bx columns.
+
+```{r}
+all_labels_harmonized <- all_labels %>% 
+  mutate(Red = if_else(is.na(Red), 
+                       SR_B4, 
+                       Red),
+         Green = if_else(is.na(Green),
+                         SR_B3,
+                         Green),
+         Blue = if_else(is.na(Blue),
+                        SR_B2,
+                        Blue)) %>% 
+  select(-c(SR_B2, SR_B3, SR_B4))
+```
+
+And then rename the Landsat SR 5-7 as just B5-7 to match Sentinel data
+
+```{r}
+all_labels_harmonized  <- all_labels_harmonized %>%
+  mutate(B5 = if_else(is.na(B5),
+                      SR_B5,
+                      B5),
+         B6 = if_else(is.na(B6),
+                      SR_B6,
+                      B6),
+         B7 = if_else(is.na(B7),
+                      SR_B7,
+                      B7)) %>% 
+  select(-c(SR_B5, SR_B6, SR_B7))
+```
+
+And now let's re-org some of the column names for future us. 
+
+```{r}
+all_labels_harmonized <- all_labels_harmonized %>% 
+  select(date, mission, lat, lon, class, Red, Green, Blue, B5, B6, B7, B8, B11, B12, vol_init)
+```
+
+Save the .csv to the temp folder
+
+```{r}
+write_csv(all_validation, file.path(out_dir, paste0('collated_validation_data_v', Sys.Date(), '.csv')))
+write_csv(all_labels_harmonized, file.path(out_dir, paste0('collated_label_data_v', Sys.Date(), '.csv')))
+
 ```
 
 And now, upload those files to the Drive
