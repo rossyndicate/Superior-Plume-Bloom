@@ -37,7 +37,7 @@ tmp_dir = 'tmp/'
 #create temporary directory for drive downloads
 try(dir.create('tmp'))
 
-v_date = '2023-07-18'
+v_date = '2023-07-19'
 ```
 
 # Download collated files from eePlumB users
@@ -142,8 +142,8 @@ mapview(aoi_no_sc)
 And finally, write the shapefile
 
 ```{r}
-st_write(sc_buff_1, 'data/aoi/Superior_shoreline_contamination.shp')
-st_write(aoi_no_sc, 'data/aoi/Superior_AOI_minus_shoreline_contamination.shp')
+st_write(sc_buff_1, 'data/aoi/Superior_shoreline_contamination.shp', append = F)
+st_write(aoi_no_sc, 'data/aoi/Superior_AOI_minus_shoreline_contamination.shp', append = F)
 ```
 
 

@@ -1,0 +1,216 @@
+---
+title: "Label Class Summaries"
+author: "ROSSyndicate"
+date: "2023-07-19"
+output: html_document
+---
+
+```{r setup, echo = FALSE}
+packages <- c('tidyverse',
+              'googledrive')
+
+package_loader <- function(x) {
+    if (x %in% installed.packages()) {
+      library(x, character.only = TRUE)
+    } else {
+      install.packages(x)
+      library(x, character.only = TRUE)
+    }
+}
+
+lapply(packages, package_loader)
+
+v_date = '2023-07-19'
+```
+
+# Download collated files from eePlumB users
+
+Authenticate Drive
+
+```{r}
+drive_auth(email = 'steeleb@rams.colostate.edu')
+```
+
+Some helper functions
+
+```{r}
+drive_downloader = function(driveid, drivename, dest) {
+  drive_download(as_id(driveid), path = file.path(dest, drivename), overwrite = T)
+}
+
+driveUp = function(dumpid, directory, filename) {
+  drive_upload(file.path(directory, filename), filename, overwrite = T, path = as_id(dumpid))
+}
+```
+
+Point to a temp folder and create it.
+
+```{r}
+# point to directories
+tmp_dir = 'tmp/'
+
+#create temporary directory for drive downloads
+try(dir.create('tmp'))
+```
+
+Find the collated labels data file for our version date
+
+```{r}
+collated = drive_ls(path = 'eePlumB_collated_data')
+collated_version = collated[grepl(v_date, collated$name),]
+labels = collated_version[grepl('label', collated_version$name),]
+```
+
+Download the file to the temporary folder and then read into environment
+
+```{r}
+drive_downloader(labels$id[1], labels$name[1], tmp_dir)
+coll_labels <- read_csv(file.path(tmp_dir, labels$name[1]))
+```
+
+And clean up temp folder
+
+```{r}
+unlink('tmp', recursive = F)
+```
+
+## Display data per band and per mission by class
+
+First, let's arrange the classes in a way that makes sense.
+
+```{r}
+coll_labels <- coll_labels %>%
+  mutate(class = factor(class,
+         c('openWater', 'lightNearShoreSediment', 'darkNearShoreSediment',
+           'offShoreSediment', 'algalBloom', 'other', 'cloud', 'shorelineContamination')))
+```
+
+Since the Landsat and Sentinel data are definitely different, let's split those
+out first.
+
+```{r}
+landsat_labels = coll_labels %>% filter(grepl('LS', mission, ignore.case = T))
+sen_labels = coll_labels %>% filter(grepl('sen', mission, ignore.case = T))
+```
+
+### Look at the Sentinel data first
+
+Create a list of bands for Sen-2
+
+```{r}
+sen_bands = c(expr(Red), expr(Green), expr(Blue), expr(B5), expr(B6), expr(B7), expr(B8), expr(B11), expr(B12))
+```
+
+Create some helper functions. First to get count and add a label below the y =
+0, then another to create a boxplot for each class per band.
+
+```{r}
+add_n <- function(x) {
+  if (max(x) > 2) {
+    return(c(y = -200, label = length(x)))
+  } else {
+  return(c(y = -0.05, label = length(x)))
+  }
+}
+
+make_class_plot_sen = function(x) {
+  ggplot(sen_labels, aes(x = class, y = {{ x }})) +
+    geom_boxplot() +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    stat_summary(fun.data = add_n, geom = 'text', fun.y = median)
+}
+```
+
+And map those through the sentinel band names
+
+```{r}
+map(sen_bands, make_class_plot_sen)
+```
+
+Since the cloud, shoreline contamination and other classes seem to be rather
+different, let's drop those to see the differences for the sediment label
+classes
+
+```{r}
+sen_labels_select <- sen_labels %>%
+  filter(!class %in% c('cloud', 'shorelineContamination', 'other'))
+
+add_n_select <- function(x) {
+  if (max(x) > 2) {
+    return(c(y = -50, label = length(x)))
+  } else {
+  return(c(y = -0.01, label = length(x)))
+  }
+}
+
+make_class_plot_sen_sel = function(x) {
+  ggplot(sen_labels_select, aes(x = class, y = {{ x }})) +
+    geom_boxplot() +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    stat_summary(fun.data = add_n_select, geom = 'text', fun.y = median)
+}
+
+map(sen_bands, make_class_plot_sen_sel)
+```
+
+These all look different from each other which is GREAT. Presumably, these
+label data should make a good training dataset.
+
+### And now for Landsat
+
+Create a list of bands for Landsat
+
+```{r}
+ls_bands = c(expr(Red), expr(Green), expr(Blue), expr(SR_B5), expr(SR_B6), expr(SR_B7))
+```
+
+Create some helper functions. First to get count and add a label below the y =
+0, then another to create a boxplot for each class per band.
+
+```{r}
+make_class_plot_ls = function(x) {
+  landsat_labels %>%
+    group_by(mission) %>%
+    ggplot(., aes(x = class, y = {{ x }}, color = mission)) +
+    geom_boxplot() +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    scale_color_viridis_d()
+}
+```
+
+And map those through the Landsat band names
+
+```{r}
+map(ls_bands, make_class_plot_ls)
+```
+
+These also have more range for those three classes, let's limit to the classes
+we are especially interested in.
+
+```{r}
+landsat_labels_select = landsat_labels %>%
+  filter(!class %in% c('cloud', 'shorelineContamination', 'other'))
+
+make_class_plot_ls_sel = function(x) {
+  landsat_labels_select %>%
+    group_by(mission) %>%
+    ggplot(., aes(x = class, y = {{ x }}, color = mission)) +
+    geom_boxplot() +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    scale_color_viridis_d()
+}
+
+map(ls_bands, make_class_plot_ls_sel)
+```
+
+In an ideal world, I think we should create models for each Landsat mission.
+There are some slight range differences between each of the missions that may
+introduce confusion by aggregating 5/7 and 8/9.
+
+```{r, echo = F}
+knitr::wrap_rmd('modeling/02_label_class_summaries.Rmd', width = 80, backup = NULL)
+```
