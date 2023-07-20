@@ -15,7 +15,6 @@ later in the model.
 
 ```{r setup, echo = FALSE}
 packages <- c('tidyverse',
-              'googledrive',
               'sf',
               'mapview')
 
@@ -29,53 +28,16 @@ package_loader <- function(x) {
 }
 
 lapply(packages, package_loader)
-
-# point to directories
-shp_dir = 'data/aoi/'
-tmp_dir = 'tmp/'
-
-#create temporary directory for drive downloads
-try(dir.create('tmp'))
-
-v_date = '2023-07-19'
 ```
 
-# Download collated files from eePlumB users
-
-Authenticate Drive
+## Load the labels file into the environment
 
 ```{r}
-drive_auth()
+labels_file <- list.files('data/labels/', full.names = T)
+labels <- read_csv(labels_file)
 ```
 
-Some helper functions
-
-```{r}
-drive_downloader = function(driveid, drivename, dest) {
-  drive_download(as_id(driveid), path = file.path(dest, drivename), overwrite = T)
-}
-
-driveUp = function(dumpid, directory, filename) {
-  drive_upload(file.path(directory, filename), filename, overwrite = T, path = as_id(dumpid))
-}
-```
-
-Find the collated labels data file for our version date
-
-```{r}
-collated = drive_ls(path = 'eePlumB_collated_data')
-collated_version = collated[grepl(v_date, collated$name),]
-labels = collated_version[grepl('label', collated_version$name),]
-```
-
-Download the file to the temporary folder and then read into environment
-
-```{r}
-drive_downloader(labels$id[1], labels$name[1], tmp_dir)
-coll_labels <- read_csv(file.path(tmp_dir, labels$name[1]))
-```
-
-## Load the aoi
+## Load the aoi into the environment
 
 ```{r}
 aoi <-  st_read('data/aoi/Superior_AOI_modeling.shp')
@@ -150,7 +112,7 @@ st_write(aoi_no_sc, 'data/aoi/Superior_AOI_minus_shoreline_contamination.shp', a
 And clean up temp folder
 
 ```{r}
-unlink('tmp', recursive = F)
+unlink('tmp', recursive = T)
 ```
 
 
