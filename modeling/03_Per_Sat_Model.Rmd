@@ -1,0 +1,1047 @@
+---
+title: "eePlumB per-Satellite Model"
+author: "ROSSyndicate"
+date: "2023-07-20"
+output: html_document
+---
+
+```{r setup, echo = F}
+libs = c('reticulate', 'tidyverse')
+
+package_loader <- function(x) {
+    if (x %in% installed.packages()) {
+      library(x, character.only = TRUE)
+    } else {
+      install.packages(x)
+      library(x, character.only = TRUE)
+    }
+}
+
+lapply(libs, package_loader)
+```
+
+## Activate conda environment
+
+Check for virtual environment and activate, otherwise, set up virtual
+environment.
+
+```{r conda env}
+if (!dir.exists("env")) {
+  source("pySetup.R")
+} else {
+  use_condaenv(file.path(getwd(), "env"))
+}
+```
+
+And then import the needed modules
+
+```{python}
+import ee
+import os
+import time
+import pandas as pd
+import fiona
+```
+
+## GEE Setup
+
+In order to access the GEE API, we need to authenticate our identity. To do
+this, you must type `earthengine authenticate` in the terminal window. When
+your browser states 'You are now authenticated with the gcloud CLI', the
+authentication is complete. This authentication is valid for 7 days.
+
+Now, we need to initialize our GEE session.
+
+```{python}
+ee.Initialize(project = 'ee-ross-superior')
+```
+
+# Import assets
+
+## Load the labels file into the environment
+
+Because of how the later function is written, it works best to read these into R. I couldn't tell you why other than my function doesn't work with pandas dataframes.
+
+```{r}
+labels_file <- list.files('data/labels/', full.names = T)
+labels <- read_csv(labels_file)
+
+# subset for sen/ls
+sen_labels = labels %>% 
+  filter(mission == 'SEN2')
+ls_labels = labels %>% 
+  filter(mission != 'SEN2')
+
+# and for 5/7/8/9
+ls5_labels = labels %>% 
+  filter(mission == 'LS5')
+ls7_labels = labels %>% 
+  filter(mission == 'LS7')
+ls8_labels = labels %>% 
+  filter(mission == 'LS8')
+ls9_labels = labels %>% 
+  filter(mission == 'LS9')
+```
+
+### Quick QAQC of the labels
+
+We know there are some outliers in here. To create a good model, we'll want to remove any 'outliers' from each of the label sets. Because we're creating models for each mission, we'll perform these outlier clean ups for each mission. We'll define 'outliers' as the outer 0.02 and 0.98 percentiles. 
+
+Make some helper lists
+
+```{r}
+class_list = c("cloud", "other", "openWater", "lightNearShoreSediment",
+               "darkNearShoreSediment", "offShoreSediment")
+
+ls_band_list = c(expr(Red), expr(Green), expr(Blue), expr(B5), expr(B6), expr(B7))
+sen_band_list = c(expr(Red), expr(Green), expr(Blue), expr(B5), expr(B6), expr(B7), expr(B8), expr(B11), expr(B12))
+```
+
+#### Landsat 5
+
+Maybe a tidyfail, maybe a me problem, but we're creating new, very similar functions for each dataset. 
+
+```{r}
+qaqc_filter_ls5 <- function(band, cl) {
+  df <- ls5_labels %>% filter(class == cl)
+  values = df[{{ band }}] %>% as.vector(.)
+  df_sub = df %>% select(date, mission, lat, lon, class, vol_init, {{ band }})
+  cuts = quantile(values[[1]], c(0.02, 0.98), na.rm = T)
+  df_sub %>% 
+    filter(cuts[1] < {{ band }}, {{ band }} < cuts[2])
+}
+
+apply_qaqc_bands_ls5 <- function(bn) {
+  map2_dfr(c(bn, bn, bn, bn, bn, bn),
+           class_list,
+           qaqc_filter_ls5)
+}
+ls_5_filtered <-  map(ls_band_list, apply_qaqc_bands_ls5)
+
+ls_5_filt <- full_join(ls_5_filtered[[1]], ls_5_filtered[[2]]) %>% 
+  full_join(., ls_5_filtered[[3]]) %>% 
+  full_join(., ls_5_filtered[[4]]) %>% 
+  full_join(., ls_5_filtered[[5]]) %>% 
+  full_join(., ls_5_filtered[[6]]) %>% 
+  distinct()
+
+```
+
+
+#### Landsat 7
+
+```{r}
+qaqc_filter_ls7 <- function(band, cl) {
+  df <- ls7_labels %>% filter(class == cl)
+  values = df[{{ band }}] %>% as.vector(.)
+  df_sub = df %>% select(date, mission, lat, lon, class, vol_init, {{ band }})
+  cuts = quantile(values[[1]], c(0.02, 0.98), na.rm = T)
+  df_sub %>% 
+    filter(cuts[1] < {{ band }}, {{ band }} < cuts[2])
+}
+
+apply_qaqc_bands_ls7 <- function(bn) {
+  map2_dfr(c(bn, bn, bn, bn, bn, bn),
+           class_list,
+           qaqc_filter_ls7)
+}
+ls_7_filtered <-  map(ls_band_list, apply_qaqc_bands_ls7)
+
+ls_7_filt <- full_join(ls_7_filtered[[1]], ls_7_filtered[[2]]) %>% 
+  full_join(., ls_7_filtered[[3]]) %>% 
+  full_join(., ls_7_filtered[[4]]) %>% 
+  full_join(., ls_7_filtered[[5]]) %>% 
+  full_join(., ls_7_filtered[[6]]) %>% 
+  distinct()
+```
+
+
+#### Landsat 8
+
+```{r}
+qaqc_filter_ls8 <- function(band, cl) {
+  df <- ls8_labels %>% filter(class == cl)
+  values = df[{{ band }}] %>% as.vector(.)
+  df_sub = df %>% select(date, mission, lat, lon, class, vol_init, {{ band }})
+  cuts = quantile(values[[1]], c(0.02, 0.98), na.rm = T)
+  df_sub %>% 
+    filter(cuts[1] < {{ band }}, {{ band }} < cuts[2])
+}
+
+apply_qaqc_bands_ls8 <- function(bn) {
+  map2_dfr(c(bn, bn, bn, bn, bn, bn),
+           class_list,
+           qaqc_filter_ls8)
+}
+
+ls_8_filtered <-  map(ls_band_list, apply_qaqc_bands_ls8)
+
+ls_8_filt <- full_join(ls_8_filtered[[1]], ls_8_filtered[[2]]) %>% 
+  full_join(., ls_8_filtered[[3]]) %>% 
+  full_join(., ls_8_filtered[[4]]) %>% 
+  full_join(., ls_8_filtered[[5]]) %>% 
+  full_join(., ls_8_filtered[[6]]) %>% 
+  distinct()
+
+```
+
+
+#### Landsat 8
+
+```{r}
+qaqc_filter_ls9 <- function(band, cl) {
+  df <- ls9_labels %>% filter(class == cl)
+  values = df[{{ band }}] %>% as.vector(.)
+  df_sub = df %>% select(date, mission, lat, lon, class, vol_init, {{ band }})
+  cuts = quantile(values[[1]], c(0.02, 0.98), na.rm = T)
+  df_sub %>% 
+    filter(cuts[1] < {{ band }}, {{ band }} < cuts[2])
+}
+
+apply_qaqc_bands_ls9 <- function(bn) {
+  map2_dfr(c(bn, bn, bn, bn, bn, bn),
+           class_list,
+           qaqc_filter_ls9)
+}
+
+ls_9_filtered <-  map(ls_band_list, apply_qaqc_bands_ls9)
+
+ls_9_filt <- full_join(ls_9_filtered[[1]], ls_9_filtered[[2]]) %>% 
+  full_join(., ls_9_filtered[[3]]) %>% 
+  full_join(., ls_9_filtered[[4]]) %>% 
+  full_join(., ls_9_filtered[[5]]) %>% 
+  full_join(., ls_9_filtered[[6]]) %>% 
+  distinct()
+
+```
+
+#### Sentinel
+
+```{r}
+qaqc_filter_sen <- function(band, cl) {
+  df <- sen_labels %>% filter(class == cl)
+  values = df[{{ band }}] %>% as.vector(.)
+  df_sub = df %>% select(date, mission, lat, lon, class, vol_init, {{ band }})
+  cuts = quantile(values[[1]], c(0.02, 0.98), na.rm = T)
+  df_sub %>% 
+    filter(cuts[1] < {{ band }}, {{ band }} < cuts[2])
+}
+
+apply_qaqc_bands_sen <- function(bn) {
+  map2_dfr(c(bn, bn, bn, bn, bn, bn),
+           class_list,
+           qaqc_filter_sen)
+}
+
+sen_filtered <-  map(sen_band_list, apply_qaqc_bands_sen)
+
+sen_filt <- full_join(sen_filtered[[1]], sen_filtered[[2]]) %>% 
+  full_join(., sen_filtered[[3]]) %>% 
+  full_join(., sen_filtered[[4]]) %>% 
+  full_join(., sen_filtered[[5]]) %>% 
+  full_join(., sen_filtered[[6]]) %>% 
+  full_join(., sen_filtered[[7]]) %>% 
+  full_join(., sen_filtered[[8]]) %>% 
+  full_join(., sen_filtered[[9]]) %>% 
+  distinct()
+
+```
+
+#### Check for complete obs
+
+```{r}
+ls_bands_text = c('Red', 'Green', 'Blue', 'B5', 'B6', 'B7')
+sen_bands_text = c('Red', 'Green', 'Blue', 'B5', 'B6', 'B7', 'B8', 'B11', 'B12')
+
+ls_5_filt <- ls_5_filt %>% 
+  filter_at(vars(all_of(ls_bands_text)), all_vars(!is.na(.)))
+ls_7_filt <- ls_7_filt %>% 
+  filter_at(vars(all_of(ls_bands_text)), all_vars(!is.na(.)))
+ls_8_filt <- ls_8_filt %>% 
+  filter_at(vars(all_of(ls_bands_text)), all_vars(!is.na(.)))
+ls_9_filt <- ls_9_filt %>% 
+  filter_at(vars(all_of(ls_bands_text)), all_vars(!is.na(.)))
+sen_filt <- sen_filt %>% 
+  filter_at(vars(all_of(sen_bands_text)), all_vars(!is.na(.)))
+```
+
+### Make ee feature collections
+
+Transform each of the r dataframes to ee feature collections
+
+```{python}
+def ls_to_eeFeat(df):
+  features=[]
+  for i in range(df.shape[0]):
+    x,y = df.lon[i],df.lat[i]
+    latlong =[x,y]
+    loc_properties = ({'class': str(df['class'][i]), # note 'class' is a special word, must use different syntax
+      'mission': str(df.mission[i]), 
+      'Red': df.Red[i],
+      'Green': df.Green[i],
+      'Blue': df.Blue[i],
+      'B5': df.B5[i],
+      'B6': df.B6[i],
+      'B7': df.B7[i]
+      })
+    g = ee.Geometry.Point(latlong, 'EPSG:4326')
+    feature = ee.Feature(g, loc_properties)
+    features.append(feature)
+  ee_object = ee.FeatureCollection(features)
+  return ee_object
+
+ee_ls5_labels = ls_to_eeFeat(r.ls_5_filt)
+ee_ls7_labels = ls_to_eeFeat(r.ls_7_filt)
+ee_ls8_labels = ls_to_eeFeat(r.ls_8_filt)
+ee_ls9_labels = ls_to_eeFeat(r.ls_9_filt)
+
+def sen_to_eeFeat(df):
+  features=[]
+  for i in range(df.shape[0]):
+    x,y = df.lon[i],df.lat[i]
+    latlong =[x,y]
+    loc_properties = ({'class': str(df['class'][i]), # note 'class' is a special word, must use different syntax
+      'mission': str(df.mission[i]), 
+      'Red': df.Red[i],
+      'Green': df.Green[i],
+      'Blue': df.Blue[i],
+      'B5': df.B5[i],
+      'B6': df.B6[i],
+      'B7': df.B7[i],
+      'B8': df.B8[i],
+      'B11': df.B11[i],
+      'B12': df.B12[i]
+      })
+    g = ee.Geometry.Point(latlong, 'EPSG:4326')
+    feature = ee.Feature(g, loc_properties)
+    features.append(feature)
+  ee_object = ee.FeatureCollection(features)
+  return ee_object
+
+ee_sen_labels = sen_to_eeFeat(r.sen_filt)
+```
+
+Filter the label sets for the classes we're interested in labeling
+
+```{python}
+# point to class values we're interested in labeling
+class_values = (['cloud',
+  'openWater',
+  'lightNearShoreSediment',
+  'offShoreSediment',
+  'darkNearShoreSediment',
+  'other'])
+
+ee_ls5_labels_filt = ee_ls5_labels.filter(ee.Filter.inList('class', class_values))
+ee_ls7_labels_filt = ee_ls7_labels.filter(ee.Filter.inList('class', class_values))
+ee_ls8_labels_filt = ee_ls8_labels.filter(ee.Filter.inList('class', class_values))
+ee_ls9_labels_filt = ee_ls9_labels.filter(ee.Filter.inList('class', class_values))
+
+ee_sen_labels_filt = ee_sen_labels.filter(ee.Filter.inList('class', class_values))
+```
+
+#  Create Gradient Boost Tree Model
+
+## Define the input features and output labels
+
+```{python}
+ls_input_feat = ["Red", "Green", "Blue", "B5", "B6", "B7"]
+sen_input_feat = ["Red", "Green", "Blue", "B5", "B6", "B7", 'B8', 'B11', 'B12']
+output_label = "class"
+```
+
+## Remap the label values to a 0-based sequential series.
+
+```{python}
+remap_values = ee.List.sequence(0, 5)
+labels_ls5_map = ee_ls5_labels_filt.remap(ee.List(class_values), remap_values, ee.String(output_label))
+labels_ls7_map = ee_ls7_labels_filt.remap(ee.List(class_values), remap_values, ee.String(output_label))
+labels_ls8_map = ee_ls8_labels_filt.remap(ee.List(class_values), remap_values, ee.String(output_label))
+labels_ls9_map = ee_ls9_labels_filt.remap(ee.List(class_values), remap_values, ee.String(output_label))
+labels_sen_map = ee_sen_labels_filt.remap(ee.List(class_values), remap_values, ee.String(output_label))
+
+def class_to_byte(feature):
+  byte_value = ee.Number(feature.get(output_label)).toByte()
+  return feature.set('byte_property', byte_value)
+
+labels_ls5_map = labels_ls5_map.map(class_to_byte)
+labels_ls7_map = labels_ls7_map.map(class_to_byte)
+labels_ls8_map = labels_ls8_map.map(class_to_byte)
+labels_ls9_map = labels_ls9_map.map(class_to_byte)
+labels_sen_map = labels_sen_map.map(class_to_byte)
+
+def add_class_by_remap(feature):
+  class_no = ee.Number(feature.get(output_label))
+  return feature.set('class', ee.List(class_values).get(class_no))
+
+labels_ls5_map = labels_ls5_map.map(add_class_by_remap)
+labels_ls7_map = labels_ls7_map.map(add_class_by_remap)
+labels_ls8_map = labels_ls8_map.map(add_class_by_remap)
+labels_ls9_map = labels_ls9_map.map(add_class_by_remap)
+labels_sen_map = labels_sen_map.map(add_class_by_remap)
+```
+
+## Split labels into train/test sets
+
+```{python}
+split = 0.8 # percentage of data to use for training
+labels_ls5_map = labels_ls5_map.randomColumn('random') #set up a random column
+labels_ls7_map = labels_ls7_map.randomColumn('random') #set up a random column
+labels_ls8_map = labels_ls8_map.randomColumn('random') #set up a random column
+labels_ls9_map = labels_ls9_map.randomColumn('random') #set up a random column
+labels_sen_map = labels_sen_map.randomColumn('random') #set up a random column
+
+training_ls5 = labels_ls5_map.filter(ee.Filter.lt("random", split))
+training_ls7 = labels_ls7_map.filter(ee.Filter.lt("random", split))
+training_ls8 = labels_ls8_map.filter(ee.Filter.lt("random", split))
+training_ls9 = labels_ls9_map.filter(ee.Filter.lt("random", split))
+training_sen = labels_sen_map.filter(ee.Filter.lt("random", split))
+print('Training:')
+print(training_ls5.aggregate_histogram('class').getInfo())
+print(training_ls7.aggregate_histogram('class').getInfo())
+print(training_ls8.aggregate_histogram('class').getInfo())
+print(training_ls9.aggregate_histogram('class').getInfo())
+print(training_sen.aggregate_histogram('class').getInfo())
+
+testing_ls5 = labels_ls5_map.filter(ee.Filter.gte("random", split))
+testing_ls7 = labels_ls7_map.filter(ee.Filter.gte("random", split))
+testing_ls8 = labels_ls8_map.filter(ee.Filter.gte("random", split))
+testing_ls9 = labels_ls9_map.filter(ee.Filter.gte("random", split))
+testing_sen = labels_sen_map.filter(ee.Filter.gte("random", split))
+print('Testing:')
+print(testing_ls5.aggregate_histogram('class').getInfo())
+print(testing_ls7.aggregate_histogram('class').getInfo())
+print(testing_ls8.aggregate_histogram('class').getInfo())
+print(testing_ls9.aggregate_histogram('class').getInfo())
+print(testing_sen.aggregate_histogram('class').getInfo())
+```
+
+## Train the GTB model
+
+### Landsat 5
+
+```{python}
+trainedGTB_ls5 = (ee.Classifier.smileGradientTreeBoost(10).train(
+  features = training_ls5,
+  classProperty = 'byte_property',
+  inputProperties = ls_input_feat
+))
+```
+
+### Landsat 7
+
+```{python}
+trainedGTB_ls7 = (ee.Classifier.smileGradientTreeBoost(10).train(
+  features = training_ls7,
+  classProperty = 'byte_property',
+  inputProperties = ls_input_feat
+))
+```
+
+### Landsat 8
+
+```{python}
+trainedGTB_ls8 = (ee.Classifier.smileGradientTreeBoost(10).train(
+  features = training_ls8,
+  classProperty = 'byte_property',
+  inputProperties = ls_input_feat
+))
+```
+
+### Landsat 9
+
+```{python}
+trainedGTB_ls9 = (ee.Classifier.smileGradientTreeBoost(10).train(
+  features = training_ls9,
+  classProperty = 'byte_property',
+  inputProperties = ls_input_feat
+))
+```
+
+### Sentinel
+
+```{python}
+trainedGTB_sen = (ee.Classifier.smileGradientTreeBoost(10).train(
+  features = training_sen,
+  classProperty = 'byte_property',
+  inputProperties = sen_input_feat
+))
+```
+
+## Evaluate the models
+
+### Landsat 5
+
+```{python}
+confusionMatrixGTB_ls5 = (testing_ls5
+  .classify(trainedGTB_ls5)
+  .errorMatrix('byte_property', "classification"))
+print('GTB Confusion Matrix for Landsat 5:')
+print(confusionMatrixGTB_ls5.getInfo())
+
+acc_values_GTB_ls5 = (confusionMatrixGTB_ls5
+  .accuracy())
+print("GTB Confusion Overall Accuracy for Landsat 5: ", acc_values_GTB_ls5.getInfo())
+```
+
+### Landsat 7
+
+```{python}
+confusionMatrixGTB_ls7 = (testing_ls7
+  .classify(trainedGTB_ls7)
+  .errorMatrix('byte_property', "classification"))
+print('GTB Confusion Matrix for Landsat 7:')
+print(confusionMatrixGTB_ls7.getInfo())
+
+acc_values_GTB_ls7 = (confusionMatrixGTB_ls7
+  .accuracy())
+print("GTB Confusion Overall Accuracy for Landsat 7: ", acc_values_GTB_ls7.getInfo())
+```
+
+### Landsat 8
+
+```{python}
+confusionMatrixGTB_ls8 = (testing_ls8
+  .classify(trainedGTB_ls8)
+  .errorMatrix('byte_property', "classification"))
+print('GTB Confusion Matrix for Landsat 8:')
+print(confusionMatrixGTB_ls8.getInfo())
+
+acc_values_GTB_ls8 = (confusionMatrixGTB_ls8
+  .accuracy())
+print("GTB Confusion Overall Accuracy for Landsat 8: ", acc_values_GTB_ls8.getInfo())
+```
+
+### Landsat 9
+
+```{python}
+confusionMatrixGTB_ls9 = (testing_ls9
+  .classify(trainedGTB_ls9)
+  .errorMatrix('byte_property', "classification"))
+print('GTB Confusion Matrix for Landsat 9:')
+print(confusionMatrixGTB_ls9.getInfo())
+
+acc_values_GTB_ls9 = (confusionMatrixGTB_ls9
+  .accuracy())
+print("GTB Confusion Overall Accuracy for Landsat 9: ", acc_values_GTB_ls9.getInfo())
+```
+
+### Sentinel 2
+
+```{python}
+confusionMatrixGTB_sen = (testing_sen
+  .classify(trainedGTB_sen)
+  .errorMatrix('byte_property', "classification"))
+print('GTB Confusion Matrix for Sentinel 2: ')
+print(confusionMatrixGTB_sen.getInfo())
+
+acc_values_GTB_sen = (confusionMatrixGTB_sen
+  .accuracy())
+print("GTB Confusion Overall Accuracy for Sentinel 2: ", acc_values_GTB_sen.getInfo())
+```
+
+## Apply model to image stack for Landsat
+
+### Load the image collection
+
+```{python}
+# list bandnames; in part for L7 bands to match l8/9
+bn457 = ['SR_B1', 'SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B7']
+bn89 = ['SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7']
+bn = ['Blue', 'Green', 'Red', 'B5', 'B6', 'B7']
+
+# filter stack for desired PRs
+ROWS = ee.List([27, 28])
+
+def applyScaleFactors(image):
+  opticalBands = image.select(bn).multiply(0.0000275).add(-0.2)
+  return image.addBands(opticalBands, None, True)
+
+# load Landsat 5, 7, 8, 9 Surface Reflectance and rename bands
+l9 = (ee.ImageCollection("LANDSAT/LC09/C02/T1_L2")
+  .select(bn89, bn)
+  .filter(ee.Filter.eq('WRS_PATH', 26))
+  .filter(ee.Filter.inList('WRS_ROW', ROWS))
+  .map(applyScaleFactors))
+l8 = (ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
+  .select(bn89, bn)
+  .filter(ee.Filter.eq('WRS_PATH', 26))
+  .filter(ee.Filter.inList('WRS_ROW', ROWS))
+  .map(applyScaleFactors))
+l7 = (ee.ImageCollection('LANDSAT/LE07/C02/T1_L2')
+  .select(bn457, bn)
+  .filter(ee.Filter.eq('WRS_PATH', 26))
+  .filter(ee.Filter.inList('WRS_ROW', ROWS))
+  .map(applyScaleFactors))
+l5 = (ee.ImageCollection('LANDSAT/LT05/C02/T1_L2')
+  .select(bn457, bn)
+  .filter(ee.Filter.eq('WRS_PATH', 26))
+  .filter(ee.Filter.inList('WRS_ROW', ROWS))
+  .map(applyScaleFactors))
+```
+
+### Load modeling AOIs and clip stack
+
+```{python}
+with fiona.open('data/aoi/Superior_AOI_modeling.shp') as src:
+  shapes = ([ee.Geometry.Polygon(
+    [[x[0], x[1]] for x in feature['geometry']['coordinates'][0]]
+    ) for feature in src])
+# Create an ee.Feature for each shape
+features = [ee.Feature(shape, {}) for shape in shapes]
+# Create an ee.FeatureCollection from the ee.Features
+whole_aoi = ee.FeatureCollection(features)
+```
+
+And then clip each image by that aoi
+
+```{python}
+# clip images to aoi
+def clip(image):
+  return image.clip(whole_aoi.geometry())
+
+l5_aoi = l5.map(clip)
+l7_aoi = l7.map(clip)
+l8_aoi = l8.map(clip)
+l9_aoi = l9.map(clip)
+```
+
+#### Helper functions
+
+```{python}
+#Calculate total area of AOI
+def calc_area(feat):
+  feat_area = feat.geometry().area()
+  feat_area_ha = ee.Number(feat_area).divide(1e5)
+  return feat.set('area_ha', feat_area_ha)
+
+aoi_area = whole_aoi.map(calc_area)
+print('total AOI area: ', aoi_area.first().get('area_ha').getInfo())
+
+# get CRS info
+img_crs = l5.first().projection()
+img_crsTrans = img_crs.getInfo().get('transform')
+
+#function to apply the GTB model
+def applyGTB_ls5(image):
+  # Select the bands that correspond to the input features of the CART model
+  imageFeatures = image.select(ls_input_feat)
+  missDate = image.get('missDate')
+  # Classify the image using the trained GTB model
+  classifiedImage = (imageFeatures
+    .classify(trainedGTB_ls5)
+    .set('missDate', missDate))
+  return image.addBands(classifiedImage)
+
+def applyGTB_ls7(image):
+  # Select the bands that correspond to the input features of the CART model
+  imageFeatures = image.select(ls_input_feat)
+  missDate = image.get('missDate')
+  # Classify the image using the trained GTB model
+  classifiedImage = (imageFeatures
+    .classify(trainedGTB_ls7)
+    .set('missDate', missDate))
+  return image.addBands(classifiedImage)
+
+def applyGTB_ls8(image):
+  # Select the bands that correspond to the input features of the CART model
+  imageFeatures = image.select(ls_input_feat)
+  missDate = image.get('missDate')
+  # Classify the image using the trained GTB model
+  classifiedImage = (imageFeatures
+    .classify(trainedGTB_ls8)
+    .set('missDate', missDate))
+  return image.addBands(classifiedImage)
+
+def applyGTB_ls9(image):
+  # Select the bands that correspond to the input features of the CART model
+  imageFeatures = image.select(ls_input_feat)
+  missDate = image.get('missDate')
+  # Classify the image using the trained GTB model
+  classifiedImage = (imageFeatures
+    .classify(trainedGTB_ls9)
+    .set('missDate', missDate))
+  return image.addBands(classifiedImage)
+
+
+# save each value as its own band and mask
+def extract_classes(image):
+  cl = image.select('classification')
+  cloud = cl.eq(0).rename('cloud').selfMask()
+  openWater = cl.eq(1).rename('openWater').selfMask()
+  lightNSSed = cl.eq(2).rename('lightNSSed').selfMask()
+  OSSed = cl.eq(3).rename('OSSed').selfMask()
+  dNSSed = cl.eq(4).rename('dNSSed').selfMask()
+  other = cl.eq(5).rename('other').selfMask()
+  classified = cl.gte(0).rename('classified').selfMask()
+  img_addBand = (image.addBands(cloud)
+    .addBands(openWater)
+    .addBands(lightNSSed)
+    .addBands(OSSed)
+    .addBands(dNSSed)
+    .addBands(other)
+    .addBands(classified))
+  return img_addBand
+
+
+def applyPerMissionDate_ls5(missDate):
+  mission = ee.String(missDate).slice(0,9)
+  date = ee.String(missDate).slice(10,20)
+  short_stack = (l5
+    .filter(ee.Filter.eq('SPACECRAFT_ID', mission))
+    .filter(ee.Filter.eq('DATE_ACQUIRED', date)))
+  oneMissDate = short_stack.mean()
+  ls_miss_date_GTB = applyGTB_ls5(oneMissDate)
+  ls_GTB_class = extract_classes(ls_miss_date_GTB)
+  return (ls_GTB_class.set('missDate', missDate))
+
+def applyPerMissionDate_ls7(missDate):
+  mission = ee.String(missDate).slice(0,9)
+  date = ee.String(missDate).slice(10,20)
+  short_stack = (l7
+    .filter(ee.Filter.eq('SPACECRAFT_ID', mission))
+    .filter(ee.Filter.eq('DATE_ACQUIRED', date)))
+  oneMissDate = short_stack.mean()
+  ls_miss_date_GTB = applyGTB_ls5(oneMissDate)
+  ls_GTB_class = extract_classes(ls_miss_date_GTB)
+  return (ls_GTB_class.set('missDate', missDate))
+
+def applyPerMissionDate_ls8(missDate):
+  mission = ee.String(missDate).slice(0,9)
+  date = ee.String(missDate).slice(10,20)
+  short_stack = (l8
+    .filter(ee.Filter.eq('SPACECRAFT_ID', mission))
+    .filter(ee.Filter.eq('DATE_ACQUIRED', date)))
+  oneMissDate = short_stack.mean()
+  ls_miss_date_GTB = applyGTB_ls5(oneMissDate)
+  ls_GTB_class = extract_classes(ls_miss_date_GTB)
+  return (ls_GTB_class.set('missDate', missDate))
+
+def applyPerMissionDate_ls9(missDate):
+  mission = ee.String(missDate).slice(0,9)
+  date = ee.String(missDate).slice(10,20)
+  short_stack = (l9
+    .filter(ee.Filter.eq('SPACECRAFT_ID', mission))
+    .filter(ee.Filter.eq('DATE_ACQUIRED', date)))
+  oneMissDate = short_stack.mean()
+  ls_miss_date_GTB = applyGTB_ls5(oneMissDate)
+  ls_GTB_class = extract_classes(ls_miss_date_GTB)
+  return (ls_GTB_class.set('missDate', missDate))
+
+
+```
+
+### consolidate stack by image date
+
+```{python}
+def addImageDate(image):
+  mission = image.get('SPACECRAFT_ID')
+  date = image.date().format('YYYY-MM-dd')
+  missDate = ee.String(mission).cat('_').cat(ee.String(date))
+  return image.set('missDate', missDate)
+
+l5_aoi = l5_aoi.map(addImageDate)
+l7_aoi = l7_aoi.map(addImageDate)
+l8_aoi = l8_aoi.map(addImageDate)
+l9_aoi = l9_aoi.map(addImageDate)
+
+# summarize by missionDate field
+uniqueMissDate_l5 = l5_aoi.aggregate_array('missDate').distinct()
+uniqueMissDate_l7 = l7_aoi.aggregate_array('missDate').distinct()
+uniqueMissDate_l8 = l8_aoi.aggregate_array('missDate').distinct()
+uniqueMissDate_l9 = l9_aoi.aggregate_array('missDate').distinct()
+
+```
+
+### Create mosaics
+
+```{python}
+def mosaicStack_l5(missDate):
+  md_GTB = applyPerMissionDate_ls5(missDate)
+  return md_GTB
+
+def mosaicStack_l7(missDate):
+  md_GTB = applyPerMissionDate_ls7(missDate)
+  return md_GTB
+
+def mosaicStack_l8(missDate):
+  md_GTB = applyPerMissionDate_ls8(missDate)
+  return md_GTB
+
+def mosaicStack_l9(missDate):
+  md_GTB = applyPerMissionDate_ls9(missDate)
+  return md_GTB
+
+newStack_list_l5 = uniqueMissDate_l5.map(mosaicStack_l5)
+newStack_l5 = ee.ImageCollection(newStack_list_l5)
+
+newStack_list_l7 = uniqueMissDate_l7.map(mosaicStack_l7)
+newStack_l7 = ee.ImageCollection(newStack_list_l7)
+
+newStack_list_l8 = uniqueMissDate_l8.map(mosaicStack_l8)
+newStack_l8 = ee.ImageCollection(newStack_list_l8)
+
+newStack_list_l9 = uniqueMissDate_l9.map(mosaicStack_l9)
+newStack_l9 = ee.ImageCollection(newStack_list_l9)
+
+```
+
+### Calculate area per image and export
+
+```{python}
+def calcArea(image):
+  areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
+
+  areaImage_light = areaImage.select([
+    'classified',
+    'cloud',
+    'openWater',
+    'lightNSSed',
+    'OSSed',
+    'dNSSed',
+    'other'
+    ])
+
+  area = areaImage_light.reduceRegions(
+    collection = aoi_area,
+    reducer = ee.Reducer.sum().forEachBand(areaImage_light),
+    crs = img_crs,
+    crsTransform = img_crsTrans
+  )
+
+  missDate = image.get('missDate')
+
+  # Create a feature with the calculated area and properties
+  a = area.first().set('missDate', missDate)
+
+  return ee.FeatureCollection(a)
+
+
+allAreas_l5 = newStack_l5.map(calcArea)
+allAreas_l7 = newStack_l7.map(calcArea)
+allAreas_l8 = newStack_l8.map(calcArea)
+allAreas_l9 = newStack_l9.map(calcArea)
+
+## export to drive
+export_summary_5 = (ee.batch.Export.table.toDrive(
+  collection = allAreas_l5,
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other'],
+  description = 'quick_gradientTreeBoost_landsat_5_stack_v2023-07-20',
+  folder = 'eePlumB_classification',
+  fileFormat = 'csv'))
+
+export_summary_5.start()
+
+export_summary_7 = (ee.batch.Export.table.toDrive(
+  collection = allAreas_l7,
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other'],
+  description = 'quick_gradientTreeBoost_landsat_7_stack_v2023-07-20',
+  folder = 'eePlumB_classification',
+  fileFormat = 'csv'))
+
+export_summary_7.start()
+
+
+export_summary_8 = (ee.batch.Export.table.toDrive(
+  collection = allAreas_l8,
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other'],
+  description = 'quick_gradientTreeBoost_landsat_8_stack_v2023-07-20',
+  folder = 'eePlumB_classification',
+  fileFormat = 'csv'))
+
+export_summary_8.start()
+
+
+export_summary_9 = (ee.batch.Export.table.toDrive(
+  collection = allAreas_l9,
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other'],
+  description = 'quick_gradientTreeBoost_landsat_9_stack_v2023-07-20',
+  folder = 'eePlumB_classification',
+  fileFormat = 'csv'))
+
+export_summary_9.start()
+
+```
+
+
+------------STOP HERE--------------------
+
+<!-- ## Apply model to image stack for Sentinel -->
+
+<!-- ### Load the image collection -->
+
+<!-- ```{python} -->
+<!-- # list bandnames; in part for L7 bands to match l8/9 -->
+<!-- bnsen = ['B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B11', 'B12'] -->
+<!-- bn = ['Blue', 'Green', 'Red', 'B5', 'B6', 'B7', 'B8', 'B11', 'B12'] -->
+
+<!-- # filter stack for desired tiles -->
+<!-- TILES = ee.List(['15TWN', '15TXN', '15TYN', '15TWM', '15TXM', '15TYM']) -->
+
+<!-- s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED') -->
+
+<!-- sen = (s2 -->
+<!--   .filter(ee.Filter.inList('MGRS_TILE', TILES)) -->
+<!--   .select(bnsen, bn)) -->
+<!-- ``` -->
+
+<!-- And then clip each image by the aoi -->
+
+<!-- ```{python} -->
+<!-- sen_aoi = sen.map(clip) -->
+<!-- ``` -->
+
+<!-- ## Helper functions -->
+
+<!-- ```{python} -->
+<!-- # get CRS info -->
+<!-- img_crs_sen_RGB = sen.first().select('Red').projection() -->
+<!-- img_crsTrans_sen_RGB = img_crs_sen.getInfo().get('transform') -->
+
+<!-- #function to apply the GTB model -->
+<!-- def applyGTB_sen(image): -->
+<!--   # Select the bands that correspond to the input features of the CART model -->
+<!--   imageFeatures = image.select(sen_input_feat) -->
+<!--   missDate = image.get('missDate') -->
+<!--   # Classify the image using the trained GTB model -->
+<!--   classifiedImage = (imageFeatures -->
+<!--     .classify(trainedGTB_sen) -->
+<!--     .set('missDate', missDate)) -->
+<!--   return image.addBands(classifiedImage) -->
+
+
+<!-- # save each value as its own band and mask -->
+<!-- def extract_classes(image): -->
+<!--   cl = image.select('classification') -->
+<!--   cloud = cl.eq(0).rename('cloud').selfMask() -->
+<!--   openWater = cl.eq(1).rename('openWater').selfMask() -->
+<!--   lightNSSed = cl.eq(2).rename('lightNSSed').selfMask() -->
+<!--   OSSed = cl.eq(3).rename('OSSed').selfMask() -->
+<!--   dNSSed = cl.eq(4).rename('dNSSed').selfMask() -->
+<!--   other = cl.eq(5).rename('other').selfMask() -->
+<!--   classified = cl.gte(0).rename('classified').selfMask() -->
+<!--   img_addBand = (image.addBands(cloud) -->
+<!--     .addBands(openWater) -->
+<!--     .addBands(lightNSSed) -->
+<!--     .addBands(OSSed) -->
+<!--     .addBands(dNSSed) -->
+<!--     .addBands(other) -->
+<!--     .addBands(classified)) -->
+<!--   return img_addBand -->
+
+
+<!-- def applyPerMissionDate_sen(missDate): -->
+<!--   mission = ee.String(missDate).slice(0,9) -->
+<!--   date = ee.String(missDate).slice(10,20) -->
+<!--   short_stack = (sen -->
+<!--     .filter(ee.Filter.eq('SPACECRAFT_ID', mission)) -->
+<!--     .filter(ee.Filter.eq('DATE_ACQUIRED', date))) -->
+<!--   oneMissDate = short_stack.mean() -->
+<!--   sen_miss_date_GTB = applyGTB_sen(oneMissDate) -->
+<!--   sen_GTB_class = extract_classes(sen_miss_date_GTB) -->
+<!--   return (sen_GTB_class.set('missDate', missDate)) -->
+<!-- ``` -->
+
+<!-- ## consolidate stack by image date -->
+
+<!-- ```{python} -->
+<!-- def addImageDate(image): -->
+<!--   mission = image.get('SPACECRAFT_ID') -->
+<!--   date = image.date().format('YYYY-MM-dd') -->
+<!--   missDate = ee.String(mission).cat('_').cat(ee.String(date)) -->
+<!--   return image.set('missDate', missDate) -->
+
+<!-- sen_aoi = sen_aoi.map(addImageDate) -->
+
+<!-- # summarize by missionDate field -->
+<!-- uniqueMissDate_sen = sen_aoi.aggregate_array('missDate').distinct() -->
+
+<!-- ``` -->
+
+
+<!-- ```{python} -->
+<!-- def mosaicStack_sen(missDate): -->
+<!--   md_GTB = applyPerMissionDate_sen(missDate) -->
+<!--   return md_GTB -->
+
+<!-- newStack_list_sen = uniqueMissDate_sen.map(mosaicStack_sen) -->
+<!-- newStack_sen = ee.ImageCollection(newStack_list_sen) -->
+<!-- ``` -->
+
+<!-- ## Calculate area per image and export -->
+
+<!-- ```{python} -->
+<!-- def calcArea(image): -->
+<!--   areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5) -->
+
+<!--   areaImage_light = areaImage.select([ -->
+<!--     'classified', -->
+<!--     'cloud', -->
+<!--     'openWater', -->
+<!--     'lightNSSed', -->
+<!--     'OSSed', -->
+<!--     'dNSSed', -->
+<!--     'other' -->
+<!--     ]) -->
+
+<!--   area = areaImage_light.reduceRegions( -->
+<!--     collection = aoi_area, -->
+<!--     reducer = ee.Reducer.sum().forEachBand(areaImage_light), -->
+<!--     crs = img_crs, -->
+<!--     crsTransform = img_crsTrans -->
+<!--   ) -->
+
+<!--   missDate = image.get('missDate') -->
+
+<!--   # Create a feature with the calculated area and properties -->
+<!--   a = area.first().set('missDate', missDate) -->
+
+<!--   return ee.FeatureCollection(a) -->
+
+
+<!-- allAreas_l5 = newStack_l5.map(calcArea).flatten() -->
+<!-- allAreas_l7 = newStack_l7.map(calcArea).flatten() -->
+<!-- allAreas_l8 = newStack_l8.map(calcArea).flatten() -->
+<!-- allAreas_l9 = newStack_l9.map(calcArea).flatten() -->
+
+<!-- ## export to drive -->
+<!-- export_summary_5 = (ee.batch.Export.table.toDrive( -->
+<!--   collection = allAreas_l5, -->
+<!--   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other'], -->
+<!--   description = 'quick_gradientTreeBoost_landsat_5_stack_v2023-07-20', -->
+<!--   folder = 'eePlumB_classification', -->
+<!--   fileFormat = 'csv')) -->
+
+<!-- export_summary_5.start() -->
+
+<!-- export_summary_7 = (ee.batch.Export.table.toDrive( -->
+<!--   collection = allAreas_l7, -->
+<!--   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other'], -->
+<!--   description = 'quick_gradientTreeBoost_landsat_7_stack_v2023-07-20', -->
+<!--   folder = 'eePlumB_classification', -->
+<!--   fileFormat = 'csv')) -->
+
+<!-- export_summary_7.start() -->
+
+
+<!-- export_summary_8 = (ee.batch.Export.table.toDrive( -->
+<!--   collection = allAreas_l8, -->
+<!--   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other'], -->
+<!--   description = 'quick_gradientTreeBoost_landsat_8_stack_v2023-07-20', -->
+<!--   folder = 'eePlumB_classification', -->
+<!--   fileFormat = 'csv')) -->
+
+<!-- export_summary_8.start() -->
+
+
+<!-- export_summary_9 = (ee.batch.Export.table.toDrive( -->
+<!--   collection = allAreas_l9, -->
+<!--   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other'], -->
+<!--   description = 'quick_gradientTreeBoost_landsat_9_stack_v2023-07-20', -->
+<!--   folder = 'eePlumB_classification', -->
+<!--   fileFormat = 'csv')) -->
+
+<!-- export_summary_9.start() -->
+
+<!-- ``` -->
+
