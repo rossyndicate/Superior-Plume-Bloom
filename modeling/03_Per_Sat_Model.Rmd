@@ -183,7 +183,7 @@ ls_8_filt <- full_join(ls_8_filtered[[1]], ls_8_filtered[[2]]) %>%
 ```
 
 
-#### Landsat 8
+#### Landsat 9
 
 ```{r}
 qaqc_filter_ls9 <- function(band, cl) {
