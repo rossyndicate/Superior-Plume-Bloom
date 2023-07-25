@@ -19,7 +19,7 @@ package_loader <- function(x) {
 
 lapply(libs, package_loader)
 
-v_date = '2023-07-20'
+v_date = '2023-07-25'
 ```
 
 # Purpose
@@ -73,7 +73,7 @@ rs <- map_dfr(landsat_GTB$name, read_in_files)
 
 rs_subset <- rs %>%
   select(missDate, 
-         #area_ha,
+         area_ha,
          classified_ha = classified,
          openWater_ha = openWater,
          cloud_ha = cloud,
@@ -90,8 +90,6 @@ Note that the proportion of total area may be greater than 100% due to that
 measurement mis-match.
 
 ```{r}
-area_ha = 77102.7869 #need to export this.
-
 # calculate proportion of AOI that is classified
 rs_subset <- rs_subset %>%
   mutate(proportion_AOI_classified = (classified_ha/area_ha)*100)
@@ -122,7 +120,7 @@ rs_subset <- rs_subset %>%
 Write to tmp folder
 
 ```{r}
-write_csv(rs_subset, 'data/output/GTB_by_LS_mission_first_pass.csv')
+write_csv(rs_subset, paste0('data/output/GTB_by_LS_mission_pass_v', v_date, '.csv'))
 ```
 
 ## Save to the Superior Drive
@@ -138,9 +136,8 @@ Find the folder
 drive_folder = drive_ls(path = 'Superior Plume-Bloom Project')
 upload_to = drive_folder[grepl('classification', drive_folder$name),]
 
-drive_upload('data/output/GTB_by_LS_mission_first_pass.csv', as_id(upload_to$id[1]))
+drive_upload(paste0('data/output/GTB_by_LS_mission_pass_v', v_date, '.csv'), as_id(upload_to$id[1]))
 ```
-
 
 
 ```{r wrap, echo = F}
