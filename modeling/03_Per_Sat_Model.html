@@ -11,7 +11,7 @@
 
 <meta name="author" content="ROSSyndicate" />
 
-<meta name="date" content="2023-07-20" />
+<meta name="date" content="2023-07-25" />
 
 <title>eePlumB per-Satellite Model</title>
 
@@ -352,7 +352,7 @@ display: none;
 
 <h1 class="title toc-ignore">eePlumB per-Satellite Model</h1>
 <h4 class="author">ROSSyndicate</h4>
-<h4 class="date">2023-07-20</h4>
+<h4 class="date">2023-07-25</h4>
 
 </div>
 
@@ -560,8 +560,8 @@ ls_9_filt &lt;- ls_9_filtered %&gt;%
 ## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
 ## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
 </div>
-<div id="sentinel" class="section level4">
-<h4>Sentinel</h4>
+<div id="sentinel-2" class="section level4">
+<h4>Sentinel 2</h4>
 <pre class="r"><code>qaqc_filter_sen &lt;- function(band, cl) {
   df &lt;- sen_labels %&gt;% filter(class == cl)
   values = df[{{ band }}] %&gt;% as.vector(.)
@@ -790,8 +790,8 @@ print(&#39;Testing:&#39;)</code></pre>
   inputProperties = ls_input_feat
 ))</code></pre>
 </div>
-<div id="sentinel-1" class="section level3">
-<h3>Sentinel</h3>
+<div id="sentinel-2-1" class="section level3">
+<h3>Sentinel 2</h3>
 <pre class="python"><code>trainedGTB_sen = (ee.Classifier.smileGradientTreeBoost(10).train(
   features = training_sen,
   classProperty = &#39;byte_property&#39;,
@@ -857,7 +857,7 @@ print(&#39;GTB Confusion Matrix for Landsat 9:&#39;)</code></pre>
 print(&quot;GTB Confusion Overall Accuracy for Landsat 9: &quot;, acc_values_GTB_ls9.getInfo())</code></pre>
 <pre><code>## GTB Confusion Overall Accuracy for Landsat 9:  0.7719298245614035</code></pre>
 </div>
-<div id="sentinel-2" class="section level3">
+<div id="sentinel-2-2" class="section level3">
 <h3>Sentinel 2</h3>
 <pre class="python"><code>confusionMatrixGTB_sen = (testing_sen
   .classify(trainedGTB_sen)
@@ -947,7 +947,7 @@ img_crsTrans = img_crs.getInfo().get(&#39;transform&#39;)
 
 #function to apply the GTB model
 def applyGTB_ls5(image):
-  # Select the bands that correspond to the input features of the CART model
+  # Select the bands that correspond to the input features of the GTB model
   imageFeatures = image.select(ls_input_feat)
   missDate = image.get(&#39;missDate&#39;)
   # Classify the image using the trained GTB model
@@ -957,7 +957,7 @@ def applyGTB_ls5(image):
   return image.addBands(classifiedImage)
 
 def applyGTB_ls7(image):
-  # Select the bands that correspond to the input features of the CART model
+  # Select the bands that correspond to the input features of the GTB model
   imageFeatures = image.select(ls_input_feat)
   missDate = image.get(&#39;missDate&#39;)
   # Classify the image using the trained GTB model
@@ -967,7 +967,7 @@ def applyGTB_ls7(image):
   return image.addBands(classifiedImage)
 
 def applyGTB_ls8(image):
-  # Select the bands that correspond to the input features of the CART model
+  # Select the bands that correspond to the input features of the GTB model
   imageFeatures = image.select(ls_input_feat)
   missDate = image.get(&#39;missDate&#39;)
   # Classify the image using the trained GTB model
@@ -977,7 +977,7 @@ def applyGTB_ls8(image):
   return image.addBands(classifiedImage)
 
 def applyGTB_ls9(image):
-  # Select the bands that correspond to the input features of the CART model
+  # Select the bands that correspond to the input features of the GTB model
   imageFeatures = image.select(ls_input_feat)
   missDate = image.get(&#39;missDate&#39;)
   # Classify the image using the trained GTB model
@@ -1149,7 +1149,7 @@ export_summary_5 = (ee.batch.Export.table.toDrive(
   folder = &#39;eePlumB_classification&#39;,
   fileFormat = &#39;csv&#39;))
 
-export_summary_5.start()
+#export_summary_5.start()
 
 export_summary_7 = (ee.batch.Export.table.toDrive(
   collection = allAreas_l7,
@@ -1158,7 +1158,7 @@ export_summary_7 = (ee.batch.Export.table.toDrive(
   folder = &#39;eePlumB_classification&#39;,
   fileFormat = &#39;csv&#39;))
 
-export_summary_7.start()
+#export_summary_7.start()
 
 
 export_summary_8 = (ee.batch.Export.table.toDrive(
@@ -1168,7 +1168,7 @@ export_summary_8 = (ee.batch.Export.table.toDrive(
   folder = &#39;eePlumB_classification&#39;,
   fileFormat = &#39;csv&#39;))
 
-export_summary_8.start()
+#export_summary_8.start()
 
 
 export_summary_9 = (ee.batch.Export.table.toDrive(
@@ -1178,145 +1178,123 @@ export_summary_9 = (ee.batch.Export.table.toDrive(
   folder = &#39;eePlumB_classification&#39;,
   fileFormat = &#39;csv&#39;))
 
-export_summary_9.start()</code></pre>
-<p>————STOP HERE——————–</p>
-<!-- ## Apply model to image stack for Sentinel -->
-<!-- ### Load the image collection -->
-<!-- ```{python} -->
-<!-- # list bandnames; in part for L7 bands to match l8/9 -->
-<!-- bnsen = ['B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B11', 'B12'] -->
-<!-- bn = ['Blue', 'Green', 'Red', 'B5', 'B6', 'B7', 'B8', 'B11', 'B12'] -->
-<!-- # filter stack for desired tiles -->
-<!-- TILES = ee.List(['15TWN', '15TXN', '15TYN', '15TWM', '15TXM', '15TYM']) -->
-<!-- s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED') -->
-<!-- sen = (s2 -->
-<!--   .filter(ee.Filter.inList('MGRS_TILE', TILES)) -->
-<!--   .select(bnsen, bn)) -->
-<!-- ``` -->
-<!-- And then clip each image by the aoi -->
-<!-- ```{python} -->
-<!-- sen_aoi = sen.map(clip) -->
-<!-- ``` -->
-<!-- ## Helper functions -->
-<!-- ```{python} -->
-<!-- # get CRS info -->
-<!-- img_crs_sen_RGB = sen.first().select('Red').projection() -->
-<!-- img_crsTrans_sen_RGB = img_crs_sen.getInfo().get('transform') -->
-<!-- #function to apply the GTB model -->
-<!-- def applyGTB_sen(image): -->
-<!--   # Select the bands that correspond to the input features of the CART model -->
-<!--   imageFeatures = image.select(sen_input_feat) -->
-<!--   missDate = image.get('missDate') -->
-<!--   # Classify the image using the trained GTB model -->
-<!--   classifiedImage = (imageFeatures -->
-<!--     .classify(trainedGTB_sen) -->
-<!--     .set('missDate', missDate)) -->
-<!--   return image.addBands(classifiedImage) -->
-<!-- # save each value as its own band and mask -->
-<!-- def extract_classes(image): -->
-<!--   cl = image.select('classification') -->
-<!--   cloud = cl.eq(0).rename('cloud').selfMask() -->
-<!--   openWater = cl.eq(1).rename('openWater').selfMask() -->
-<!--   lightNSSed = cl.eq(2).rename('lightNSSed').selfMask() -->
-<!--   OSSed = cl.eq(3).rename('OSSed').selfMask() -->
-<!--   dNSSed = cl.eq(4).rename('dNSSed').selfMask() -->
-<!--   other = cl.eq(5).rename('other').selfMask() -->
-<!--   classified = cl.gte(0).rename('classified').selfMask() -->
-<!--   img_addBand = (image.addBands(cloud) -->
-<!--     .addBands(openWater) -->
-<!--     .addBands(lightNSSed) -->
-<!--     .addBands(OSSed) -->
-<!--     .addBands(dNSSed) -->
-<!--     .addBands(other) -->
-<!--     .addBands(classified)) -->
-<!--   return img_addBand -->
-<!-- def applyPerMissionDate_sen(missDate): -->
-<!--   mission = ee.String(missDate).slice(0,9) -->
-<!--   date = ee.String(missDate).slice(10,20) -->
-<!--   short_stack = (sen -->
-<!--     .filter(ee.Filter.eq('SPACECRAFT_ID', mission)) -->
-<!--     .filter(ee.Filter.eq('DATE_ACQUIRED', date))) -->
-<!--   oneMissDate = short_stack.mean() -->
-<!--   sen_miss_date_GTB = applyGTB_sen(oneMissDate) -->
-<!--   sen_GTB_class = extract_classes(sen_miss_date_GTB) -->
-<!--   return (sen_GTB_class.set('missDate', missDate)) -->
-<!-- ``` -->
-<!-- ## consolidate stack by image date -->
-<!-- ```{python} -->
-<!-- def addImageDate(image): -->
-<!--   mission = image.get('SPACECRAFT_ID') -->
-<!--   date = image.date().format('YYYY-MM-dd') -->
-<!--   missDate = ee.String(mission).cat('_').cat(ee.String(date)) -->
-<!--   return image.set('missDate', missDate) -->
-<!-- sen_aoi = sen_aoi.map(addImageDate) -->
-<!-- # summarize by missionDate field -->
-<!-- uniqueMissDate_sen = sen_aoi.aggregate_array('missDate').distinct() -->
-<!-- ``` -->
-<!-- ```{python} -->
-<!-- def mosaicStack_sen(missDate): -->
-<!--   md_GTB = applyPerMissionDate_sen(missDate) -->
-<!--   return md_GTB -->
-<!-- newStack_list_sen = uniqueMissDate_sen.map(mosaicStack_sen) -->
-<!-- newStack_sen = ee.ImageCollection(newStack_list_sen) -->
-<!-- ``` -->
-<!-- ## Calculate area per image and export -->
-<!-- ```{python} -->
-<!-- def calcArea(image): -->
-<!--   areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5) -->
-<!--   areaImage_light = areaImage.select([ -->
-<!--     'classified', -->
-<!--     'cloud', -->
-<!--     'openWater', -->
-<!--     'lightNSSed', -->
-<!--     'OSSed', -->
-<!--     'dNSSed', -->
-<!--     'other' -->
-<!--     ]) -->
-<!--   area = areaImage_light.reduceRegions( -->
-<!--     collection = aoi_area, -->
-<!--     reducer = ee.Reducer.sum().forEachBand(areaImage_light), -->
-<!--     crs = img_crs, -->
-<!--     crsTransform = img_crsTrans -->
-<!--   ) -->
-<!--   missDate = image.get('missDate') -->
-<!--   # Create a feature with the calculated area and properties -->
-<!--   a = area.first().set('missDate', missDate) -->
-<!--   return ee.FeatureCollection(a) -->
-<!-- allAreas_l5 = newStack_l5.map(calcArea).flatten() -->
-<!-- allAreas_l7 = newStack_l7.map(calcArea).flatten() -->
-<!-- allAreas_l8 = newStack_l8.map(calcArea).flatten() -->
-<!-- allAreas_l9 = newStack_l9.map(calcArea).flatten() -->
-<!-- ## export to drive -->
-<!-- export_summary_5 = (ee.batch.Export.table.toDrive( -->
-<!--   collection = allAreas_l5, -->
-<!--   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other'], -->
-<!--   description = 'quick_gradientTreeBoost_landsat_5_stack_v2023-07-20', -->
-<!--   folder = 'eePlumB_classification', -->
-<!--   fileFormat = 'csv')) -->
-<!-- export_summary_5.start() -->
-<!-- export_summary_7 = (ee.batch.Export.table.toDrive( -->
-<!--   collection = allAreas_l7, -->
-<!--   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other'], -->
-<!--   description = 'quick_gradientTreeBoost_landsat_7_stack_v2023-07-20', -->
-<!--   folder = 'eePlumB_classification', -->
-<!--   fileFormat = 'csv')) -->
-<!-- export_summary_7.start() -->
-<!-- export_summary_8 = (ee.batch.Export.table.toDrive( -->
-<!--   collection = allAreas_l8, -->
-<!--   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other'], -->
-<!--   description = 'quick_gradientTreeBoost_landsat_8_stack_v2023-07-20', -->
-<!--   folder = 'eePlumB_classification', -->
-<!--   fileFormat = 'csv')) -->
-<!-- export_summary_8.start() -->
-<!-- export_summary_9 = (ee.batch.Export.table.toDrive( -->
-<!--   collection = allAreas_l9, -->
-<!--   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other'], -->
-<!--   description = 'quick_gradientTreeBoost_landsat_9_stack_v2023-07-20', -->
-<!--   folder = 'eePlumB_classification', -->
-<!--   fileFormat = 'csv')) -->
-<!-- export_summary_9.start() -->
-<!-- ``` -->
+#export_summary_9.start()</code></pre>
 </div>
+</div>
+<div id="apply-model-to-image-stack-for-sentinel" class="section level2">
+<h2>Apply model to image stack for Sentinel</h2>
+<div id="load-the-image-collection-1" class="section level3">
+<h3>Load the image collection</h3>
+<pre class="python"><code># list bandnames; in part for L7 bands to match l8/9
+bnsen = [&#39;B2&#39;, &#39;B3&#39;, &#39;B4&#39;, &#39;B5&#39;, &#39;B6&#39;, &#39;B7&#39;, &#39;B8&#39;, &#39;B11&#39;, &#39;B12&#39;]
+bn = [&#39;Blue&#39;, &#39;Green&#39;, &#39;Red&#39;, &#39;B5&#39;, &#39;B6&#39;, &#39;B7&#39;, &#39;B8&#39;, &#39;B11&#39;, &#39;B12&#39;]
+
+# filter stack for desired tiles
+TILES = ee.List([&#39;15TWN&#39;, &#39;15TXN&#39;, &#39;15TYN&#39;, &#39;15TWM&#39;, &#39;15TXM&#39;, &#39;15TYM&#39;])
+
+s2 = ee.ImageCollection(&#39;COPERNICUS/S2_SR_HARMONIZED&#39;)
+
+# apply scaling factor
+def applySenScale(image):
+  optical = image.select(&#39;B.&#39;).multiply(0.0001)
+  return image.addBands(optical, None, True)
+
+sen = (s2
+  .filter(ee.Filter.inList(&#39;MGRS_TILE&#39;, TILES))
+  .map(applySenScale)
+  .select(bnsen, bn))</code></pre>
+<p>And then clip each image by the aoi</p>
+<pre class="python"><code>sen_aoi = sen.map(clip)</code></pre>
+</div>
+</div>
+<div id="helper-functions-1" class="section level2">
+<h2>Helper functions</h2>
+<pre class="python"><code>#function to apply the GTB model
+def applyGTB_sen(image):
+  # Select the bands that correspond to the input features of the GTB model
+  imageFeatures = image.select(sen_input_feat)
+  missDate = image.get(&#39;missDate&#39;)
+  # Classify the image using the trained GTB model
+  classifiedImage = (imageFeatures
+    .classify(trainedGTB_sen)
+    .set(&#39;missDate&#39;, missDate))
+  return image.addBands(classifiedImage)
+
+def applyPerMissionDate_sen(missDate):
+  mission = ee.String(missDate).slice(0,11)
+  date = ee.String(missDate).slice(12,22)
+  short_stack = (sen
+    .filter(ee.Filter.eq(&#39;SPACECRAFT_NAME&#39;, mission))
+    .filterDate(date, ee.Date(date).advance(1,&#39;day&#39;)))
+  oneMissDate = short_stack.mean()
+  sen_miss_date_GTB = applyGTB_sen(oneMissDate)
+  sen_GTB_class = extract_classes(sen_miss_date_GTB)
+  return (sen_GTB_class.set(&#39;missDate&#39;, missDate))</code></pre>
+</div>
+<div id="consolidate-stack-by-image-date-1" class="section level2">
+<h2>consolidate stack by image date</h2>
+<pre class="python"><code>def addImageDate(image):
+  mission = image.get(&#39;SPACECRAFT_NAME&#39;)
+  date = image.date().format(&#39;YYYY-MM-dd&#39;)
+  missDate = ee.String(mission).cat(&#39;_&#39;).cat(ee.String(date))
+  return image.set(&#39;missDate&#39;, missDate)
+
+sen_aoi = sen_aoi.map(addImageDate)
+
+# summarize by missionDate field
+uniqueMissDate_sen = sen_aoi.aggregate_array(&#39;missDate&#39;).distinct()</code></pre>
+<pre class="python"><code>def mosaicStack_sen(missDate):
+  md_GTB = applyPerMissionDate_sen(missDate)
+  return md_GTB
+
+newStack_list_sen = uniqueMissDate_sen.map(mosaicStack_sen)
+newStack_sen = ee.ImageCollection(newStack_list_sen)
+
+# get CRS info
+img_crs_sen = newStack_sen.first().select(&#39;classification&#39;).projection()
+img_crsTrans_sen = img_crs_sen.getInfo().get(&#39;transform&#39;)</code></pre>
+</div>
+<div id="calculate-area-per-image-and-export-1" class="section level2">
+<h2>Calculate area per image and export</h2>
+<pre class="python"><code>def calcArea_sen(image):
+  areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
+  
+  areaImage_light = areaImage.select([
+    &#39;classified&#39;,
+    &#39;cloud&#39;,
+    &#39;openWater&#39;,
+    &#39;lightNSSed&#39;,
+    &#39;OSSed&#39;,
+    &#39;dNSSed&#39;,
+    &#39;other&#39;
+    ])
+  
+  area = areaImage_light.reduceRegions(
+    collection = aoi_area,
+    reducer = ee.Reducer.sum().forEachBand(areaImage_light),
+    crs = img_crs_sen,
+    crsTransform = img_crsTrans_sen
+  )
+  
+  missDate = image.get(&#39;missDate&#39;)
+  
+  # Create a feature with the calculated area and properties
+  a = area.first().set({&#39;missDate&#39;: missDate, &#39;area_ha&#39;: area_ha})
+  
+  return ee.FeatureCollection(a)
+
+
+allAreas_sen = newStack_sen.map(calcArea_sen)
+
+## export to drive
+export_summary_sen = (ee.batch.Export.table.toDrive(
+  collection = allAreas_sen,
+  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;other&#39;, &#39;area_ha&#39;],
+  description = &#39;quick_gradientTreeBoost_sen2_stack_v2023-07-25&#39;,
+  folder = &#39;eePlumB_classification&#39;,
+  fileFormat = &#39;csv&#39;))
+
+export_summary_sen.start()</code></pre>
 </div>
 </div>
 
