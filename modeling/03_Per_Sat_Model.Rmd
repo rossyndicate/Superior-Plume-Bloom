@@ -710,7 +710,7 @@ def applyPerMissionDate_ls8(missDate):
     .filter(ee.Filter.eq('SPACECRAFT_ID', mission))
     .filter(ee.Filter.eq('DATE_ACQUIRED', date)))
   oneMissDate = short_stack.mean()
-  ls_miss_date_GTB = applyGTB_ls5(oneMissDate)
+  ls_miss_date_GTB = applyGTB_ls8(oneMissDate)
   ls_GTB_class = extract_classes(ls_miss_date_GTB)
   return (ls_GTB_class.set('missDate', missDate))
 
