@@ -771,6 +771,8 @@ newStack_l9 = ee.ImageCollection(newStack_list_l9)
 ### Calculate area per image and export
 
 ```{python}
+area_ha = aoi_area.first().get('area_ha').getInfo()
+
 def calcArea(image):
   areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
 
@@ -781,8 +783,7 @@ def calcArea(image):
     'lightNSSed',
     'OSSed',
     'dNSSed',
-    'other',
-    'area_ha'
+    'other'
     ])
 
   area = areaImage_light.reduceRegions(
@@ -795,9 +796,10 @@ def calcArea(image):
   missDate = image.get('missDate')
 
   # Create a feature with the calculated area and properties
-  a = area.first().set('missDate', missDate)
-
+  a = area.first().set({'missDate': missDate, 'area_ha': area_ha})
+  
   return ee.FeatureCollection(a)
+
 
 total_area = aoi_area.first().get('area_ha').getInfo()
 

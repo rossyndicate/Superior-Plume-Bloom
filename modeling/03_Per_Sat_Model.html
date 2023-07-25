@@ -468,42 +468,14 @@ apply_qaqc_bands_ls5 &lt;- function(bn) {
 }
 ls_5_filtered &lt;-  map(ls_band_list, apply_qaqc_bands_ls5)
 
-ls_5_filt &lt;- full_join(ls_5_filtered[[1]], ls_5_filtered[[2]]) %&gt;% 
-  full_join(., ls_5_filtered[[3]]) %&gt;% 
-  full_join(., ls_5_filtered[[4]]) %&gt;% 
-  full_join(., ls_5_filtered[[5]]) %&gt;% 
-  full_join(., ls_5_filtered[[6]]) %&gt;% 
+ls_5_filt &lt;- ls_5_filtered %&gt;% 
+  reduce(full_join) %&gt;%
   distinct()</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
-<pre><code>## Warning in full_join(ls_5_filtered[[1]], ls_5_filtered[[2]]): Detected an unexpected many-to-many relationship between `x` and `y`.
-## ℹ Row 547 of `x` matches multiple rows in `y`.
-## ℹ Row 540 of `y` matches multiple rows in `x`.
-## ℹ If a many-to-many relationship is expected, set `relationship =
-##   &quot;many-to-many&quot;` to silence this warning.</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
-<pre><code>## Warning in full_join(., ls_5_filtered[[3]]): Detected an unexpected many-to-many relationship between `x` and `y`.
-## ℹ Row 547 of `x` matches multiple rows in `y`.
-## ℹ Row 363 of `y` matches multiple rows in `x`.
-## ℹ If a many-to-many relationship is expected, set `relationship =
-##   &quot;many-to-many&quot;` to silence this warning.</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
-<pre><code>## Warning in full_join(., ls_5_filtered[[4]]): Detected an unexpected many-to-many relationship between `x` and `y`.
-## ℹ Row 547 of `x` matches multiple rows in `y`.
-## ℹ Row 547 of `y` matches multiple rows in `x`.
-## ℹ If a many-to-many relationship is expected, set `relationship =
-##   &quot;many-to-many&quot;` to silence this warning.</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
-<pre><code>## Warning in full_join(., ls_5_filtered[[5]]): Detected an unexpected many-to-many relationship between `x` and `y`.
-## ℹ Row 547 of `x` matches multiple rows in `y`.
-## ℹ Row 538 of `y` matches multiple rows in `x`.
-## ℹ If a many-to-many relationship is expected, set `relationship =
-##   &quot;many-to-many&quot;` to silence this warning.</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
-<pre><code>## Warning in full_join(., ls_5_filtered[[6]]): Detected an unexpected many-to-many relationship between `x` and `y`.
-## ℹ Row 547 of `x` matches multiple rows in `y`.
-## ℹ Row 551 of `y` matches multiple rows in `x`.
-## ℹ If a many-to-many relationship is expected, set `relationship =
-##   &quot;many-to-many&quot;` to silence this warning.</code></pre>
+<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
+## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
+## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
+## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
+## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
 </div>
 <div id="landsat-7" class="section level4">
 <h4>Landsat 7</h4>
@@ -523,42 +495,14 @@ apply_qaqc_bands_ls7 &lt;- function(bn) {
 }
 ls_7_filtered &lt;-  map(ls_band_list, apply_qaqc_bands_ls7)
 
-ls_7_filt &lt;- full_join(ls_7_filtered[[1]], ls_7_filtered[[2]]) %&gt;% 
-  full_join(., ls_7_filtered[[3]]) %&gt;% 
-  full_join(., ls_7_filtered[[4]]) %&gt;% 
-  full_join(., ls_7_filtered[[5]]) %&gt;% 
-  full_join(., ls_7_filtered[[6]]) %&gt;% 
+ls_7_filt &lt;- ls_7_filtered %&gt;% 
+  reduce(full_join) %&gt;% 
   distinct()</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
-<pre><code>## Warning in full_join(ls_7_filtered[[1]], ls_7_filtered[[2]]): Detected an unexpected many-to-many relationship between `x` and `y`.
-## ℹ Row 353 of `x` matches multiple rows in `y`.
-## ℹ Row 370 of `y` matches multiple rows in `x`.
-## ℹ If a many-to-many relationship is expected, set `relationship =
-##   &quot;many-to-many&quot;` to silence this warning.</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
-<pre><code>## Warning in full_join(., ls_7_filtered[[3]]): Detected an unexpected many-to-many relationship between `x` and `y`.
-## ℹ Row 353 of `x` matches multiple rows in `y`.
-## ℹ Row 323 of `y` matches multiple rows in `x`.
-## ℹ If a many-to-many relationship is expected, set `relationship =
-##   &quot;many-to-many&quot;` to silence this warning.</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
-<pre><code>## Warning in full_join(., ls_7_filtered[[4]]): Detected an unexpected many-to-many relationship between `x` and `y`.
-## ℹ Row 353 of `x` matches multiple rows in `y`.
-## ℹ Row 437 of `y` matches multiple rows in `x`.
-## ℹ If a many-to-many relationship is expected, set `relationship =
-##   &quot;many-to-many&quot;` to silence this warning.</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
-<pre><code>## Warning in full_join(., ls_7_filtered[[5]]): Detected an unexpected many-to-many relationship between `x` and `y`.
-## ℹ Row 353 of `x` matches multiple rows in `y`.
-## ℹ Row 425 of `y` matches multiple rows in `x`.
-## ℹ If a many-to-many relationship is expected, set `relationship =
-##   &quot;many-to-many&quot;` to silence this warning.</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
-<pre><code>## Warning in full_join(., ls_7_filtered[[6]]): Detected an unexpected many-to-many relationship between `x` and `y`.
-## ℹ Row 353 of `x` matches multiple rows in `y`.
-## ℹ Row 424 of `y` matches multiple rows in `x`.
-## ℹ If a many-to-many relationship is expected, set `relationship =
-##   &quot;many-to-many&quot;` to silence this warning.</code></pre>
+<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
+## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
+## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
+## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
+## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
 </div>
 <div id="landsat-8" class="section level4">
 <h4>Landsat 8</h4>
@@ -579,11 +523,8 @@ apply_qaqc_bands_ls8 &lt;- function(bn) {
 
 ls_8_filtered &lt;-  map(ls_band_list, apply_qaqc_bands_ls8)
 
-ls_8_filt &lt;- full_join(ls_8_filtered[[1]], ls_8_filtered[[2]]) %&gt;% 
-  full_join(., ls_8_filtered[[3]]) %&gt;% 
-  full_join(., ls_8_filtered[[4]]) %&gt;% 
-  full_join(., ls_8_filtered[[5]]) %&gt;% 
-  full_join(., ls_8_filtered[[6]]) %&gt;% 
+ls_8_filt &lt;- ls_8_filtered %&gt;% 
+  reduce(full_join) %&gt;% 
   distinct()</code></pre>
 <pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
 ## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
@@ -591,8 +532,8 @@ ls_8_filt &lt;- full_join(ls_8_filtered[[1]], ls_8_filtered[[2]]) %&gt;%
 ## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
 ## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
 </div>
-<div id="landsat-8-1" class="section level4">
-<h4>Landsat 8</h4>
+<div id="landsat-9" class="section level4">
+<h4>Landsat 9</h4>
 <pre class="r"><code>qaqc_filter_ls9 &lt;- function(band, cl) {
   df &lt;- ls9_labels %&gt;% filter(class == cl)
   values = df[{{ band }}] %&gt;% as.vector(.)
@@ -610,11 +551,8 @@ apply_qaqc_bands_ls9 &lt;- function(bn) {
 
 ls_9_filtered &lt;-  map(ls_band_list, apply_qaqc_bands_ls9)
 
-ls_9_filt &lt;- full_join(ls_9_filtered[[1]], ls_9_filtered[[2]]) %&gt;% 
-  full_join(., ls_9_filtered[[3]]) %&gt;% 
-  full_join(., ls_9_filtered[[4]]) %&gt;% 
-  full_join(., ls_9_filtered[[5]]) %&gt;% 
-  full_join(., ls_9_filtered[[6]]) %&gt;% 
+ls_9_filt &lt;- ls_9_filtered %&gt;% 
+  reduce(full_join) %&gt;% 
   distinct()</code></pre>
 <pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
 ## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
@@ -639,65 +577,19 @@ apply_qaqc_bands_sen &lt;- function(bn) {
            qaqc_filter_sen)
 }
 
-sen_filtered &lt;-  map(sen_band_list, apply_qaqc_bands_sen)
+sen_filtered &lt;- map(sen_band_list, apply_qaqc_bands_sen)
 
-sen_filt &lt;- full_join(sen_filtered[[1]], sen_filtered[[2]]) %&gt;% 
-  full_join(., sen_filtered[[3]]) %&gt;% 
-  full_join(., sen_filtered[[4]]) %&gt;% 
-  full_join(., sen_filtered[[5]]) %&gt;% 
-  full_join(., sen_filtered[[6]]) %&gt;% 
-  full_join(., sen_filtered[[7]]) %&gt;% 
-  full_join(., sen_filtered[[8]]) %&gt;% 
-  full_join(., sen_filtered[[9]]) %&gt;% 
+sen_filt &lt;- sen_filtered %&gt;% 
+  reduce(full_join) %&gt;% 
   distinct()</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
-<pre><code>## Warning in full_join(sen_filtered[[1]], sen_filtered[[2]]): Detected an unexpected many-to-many relationship between `x` and `y`.
-## ℹ Row 924 of `x` matches multiple rows in `y`.
-## ℹ Row 925 of `y` matches multiple rows in `x`.
-## ℹ If a many-to-many relationship is expected, set `relationship =
-##   &quot;many-to-many&quot;` to silence this warning.</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
-<pre><code>## Warning in full_join(., sen_filtered[[3]]): Detected an unexpected many-to-many relationship between `x` and `y`.
-## ℹ Row 924 of `x` matches multiple rows in `y`.
-## ℹ Row 925 of `y` matches multiple rows in `x`.
-## ℹ If a many-to-many relationship is expected, set `relationship =
-##   &quot;many-to-many&quot;` to silence this warning.</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
-<pre><code>## Warning in full_join(., sen_filtered[[4]]): Detected an unexpected many-to-many relationship between `x` and `y`.
-## ℹ Row 924 of `x` matches multiple rows in `y`.
-## ℹ Row 917 of `y` matches multiple rows in `x`.
-## ℹ If a many-to-many relationship is expected, set `relationship =
-##   &quot;many-to-many&quot;` to silence this warning.</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
-<pre><code>## Warning in full_join(., sen_filtered[[5]]): Detected an unexpected many-to-many relationship between `x` and `y`.
-## ℹ Row 924 of `x` matches multiple rows in `y`.
-## ℹ Row 900 of `y` matches multiple rows in `x`.
-## ℹ If a many-to-many relationship is expected, set `relationship =
-##   &quot;many-to-many&quot;` to silence this warning.</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
-<pre><code>## Warning in full_join(., sen_filtered[[6]]): Detected an unexpected many-to-many relationship between `x` and `y`.
-## ℹ Row 924 of `x` matches multiple rows in `y`.
-## ℹ Row 896 of `y` matches multiple rows in `x`.
-## ℹ If a many-to-many relationship is expected, set `relationship =
-##   &quot;many-to-many&quot;` to silence this warning.</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
-<pre><code>## Warning in full_join(., sen_filtered[[7]]): Detected an unexpected many-to-many relationship between `x` and `y`.
-## ℹ Row 924 of `x` matches multiple rows in `y`.
-## ℹ Row 899 of `y` matches multiple rows in `x`.
-## ℹ If a many-to-many relationship is expected, set `relationship =
-##   &quot;many-to-many&quot;` to silence this warning.</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
-<pre><code>## Warning in full_join(., sen_filtered[[8]]): Detected an unexpected many-to-many relationship between `x` and `y`.
-## ℹ Row 924 of `x` matches multiple rows in `y`.
-## ℹ Row 913 of `y` matches multiple rows in `x`.
-## ℹ If a many-to-many relationship is expected, set `relationship =
-##   &quot;many-to-many&quot;` to silence this warning.</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
-<pre><code>## Warning in full_join(., sen_filtered[[9]]): Detected an unexpected many-to-many relationship between `x` and `y`.
-## ℹ Row 924 of `x` matches multiple rows in `y`.
-## ℹ Row 923 of `y` matches multiple rows in `x`.
-## ℹ If a many-to-many relationship is expected, set `relationship =
-##   &quot;many-to-many&quot;` to silence this warning.</code></pre>
+<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
+## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
+## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
+## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
+## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
+## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
+## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
+## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
 </div>
 <div id="check-for-complete-obs" class="section level4">
 <h4>Check for complete obs</h4>
@@ -786,17 +678,13 @@ ee_ls9_labels_filt = ee_ls9_labels.filter(ee.Filter.inList(&#39;class&#39;, clas
 ee_sen_labels_filt = ee_sen_labels.filter(ee.Filter.inList(&#39;class&#39;, class_values))</code></pre>
 </div>
 </div>
-</div>
-<div id="create-gradient-boost-tree-model" class="section level1">
-<h1>Create Gradient Boost Tree Model</h1>
-<div id="define-the-input-features-and-output-labels" class="section level2">
-<h2>Define the input features and output labels</h2>
+<div id="create-gradient-boost-tree-model" class="section level2">
+<h2>Create Gradient Boost Tree Model</h2>
+<p>Define the input features and output labels</p>
 <pre class="python"><code>ls_input_feat = [&quot;Red&quot;, &quot;Green&quot;, &quot;Blue&quot;, &quot;B5&quot;, &quot;B6&quot;, &quot;B7&quot;]
 sen_input_feat = [&quot;Red&quot;, &quot;Green&quot;, &quot;Blue&quot;, &quot;B5&quot;, &quot;B6&quot;, &quot;B7&quot;, &#39;B8&#39;, &#39;B11&#39;, &#39;B12&#39;]
 output_label = &quot;class&quot;</code></pre>
-</div>
-<div id="remap-the-label-values-to-a-0-based-sequential-series." class="section level2">
-<h2>Remap the label values to a 0-based sequential series.</h2>
+<p>Remap the label values to a 0-based sequential series.</p>
 <pre class="python"><code>remap_values = ee.List.sequence(0, 5)
 labels_ls5_map = ee_ls5_labels_filt.remap(ee.List(class_values), remap_values, ee.String(output_label))
 labels_ls7_map = ee_ls7_labels_filt.remap(ee.List(class_values), remap_values, ee.String(output_label))
@@ -886,7 +774,7 @@ print(&#39;Testing:&#39;)</code></pre>
   inputProperties = ls_input_feat
 ))</code></pre>
 </div>
-<div id="landsat-8-2" class="section level3">
+<div id="landsat-8-1" class="section level3">
 <h3>Landsat 8</h3>
 <pre class="python"><code>trainedGTB_ls8 = (ee.Classifier.smileGradientTreeBoost(10).train(
   features = training_ls8,
@@ -894,7 +782,7 @@ print(&#39;Testing:&#39;)</code></pre>
   inputProperties = ls_input_feat
 ))</code></pre>
 </div>
-<div id="landsat-9" class="section level3">
+<div id="landsat-9-1" class="section level3">
 <h3>Landsat 9</h3>
 <pre class="python"><code>trainedGTB_ls9 = (ee.Classifier.smileGradientTreeBoost(10).train(
   features = training_ls9,
@@ -941,7 +829,7 @@ print(&#39;GTB Confusion Matrix for Landsat 7:&#39;)</code></pre>
 print(&quot;GTB Confusion Overall Accuracy for Landsat 7: &quot;, acc_values_GTB_ls7.getInfo())</code></pre>
 <pre><code>## GTB Confusion Overall Accuracy for Landsat 7:  0.8862068965517241</code></pre>
 </div>
-<div id="landsat-8-3" class="section level3">
+<div id="landsat-8-2" class="section level3">
 <h3>Landsat 8</h3>
 <pre class="python"><code>confusionMatrixGTB_ls8 = (testing_ls8
   .classify(trainedGTB_ls8)
@@ -955,7 +843,7 @@ print(&#39;GTB Confusion Matrix for Landsat 8:&#39;)</code></pre>
 print(&quot;GTB Confusion Overall Accuracy for Landsat 8: &quot;, acc_values_GTB_ls8.getInfo())</code></pre>
 <pre><code>## GTB Confusion Overall Accuracy for Landsat 8:  0.8846153846153846</code></pre>
 </div>
-<div id="landsat-9-1" class="section level3">
+<div id="landsat-9-2" class="section level3">
 <h3>Landsat 9</h3>
 <pre class="python"><code>confusionMatrixGTB_ls9 = (testing_ls9
   .classify(trainedGTB_ls9)
@@ -1137,7 +1025,7 @@ def applyPerMissionDate_ls7(missDate):
     .filter(ee.Filter.eq(&#39;SPACECRAFT_ID&#39;, mission))
     .filter(ee.Filter.eq(&#39;DATE_ACQUIRED&#39;, date)))
   oneMissDate = short_stack.mean()
-  ls_miss_date_GTB = applyGTB_ls5(oneMissDate)
+  ls_miss_date_GTB = applyGTB_ls7(oneMissDate)
   ls_GTB_class = extract_classes(ls_miss_date_GTB)
   return (ls_GTB_class.set(&#39;missDate&#39;, missDate))
 
@@ -1148,7 +1036,7 @@ def applyPerMissionDate_ls8(missDate):
     .filter(ee.Filter.eq(&#39;SPACECRAFT_ID&#39;, mission))
     .filter(ee.Filter.eq(&#39;DATE_ACQUIRED&#39;, date)))
   oneMissDate = short_stack.mean()
-  ls_miss_date_GTB = applyGTB_ls5(oneMissDate)
+  ls_miss_date_GTB = applyGTB_ls8(oneMissDate)
   ls_GTB_class = extract_classes(ls_miss_date_GTB)
   return (ls_GTB_class.set(&#39;missDate&#39;, missDate))
 
@@ -1159,7 +1047,7 @@ def applyPerMissionDate_ls9(missDate):
     .filter(ee.Filter.eq(&#39;SPACECRAFT_ID&#39;, mission))
     .filter(ee.Filter.eq(&#39;DATE_ACQUIRED&#39;, date)))
   oneMissDate = short_stack.mean()
-  ls_miss_date_GTB = applyGTB_ls5(oneMissDate)
+  ls_miss_date_GTB = applyGTB_ls9(oneMissDate)
   ls_GTB_class = extract_classes(ls_miss_date_GTB)
   return (ls_GTB_class.set(&#39;missDate&#39;, missDate))
 </code></pre>
@@ -1216,7 +1104,9 @@ newStack_l9 = ee.ImageCollection(newStack_list_l9)</code></pre>
 </div>
 <div id="calculate-area-per-image-and-export" class="section level3">
 <h3>Calculate area per image and export</h3>
-<pre class="python"><code>def calcArea(image):
+<pre class="python"><code>area_ha = aoi_area.first().get(&#39;area_ha&#39;).getInfo()
+
+def calcArea(image):
   areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
 
   areaImage_light = areaImage.select([
@@ -1239,54 +1129,56 @@ newStack_l9 = ee.ImageCollection(newStack_list_l9)</code></pre>
   missDate = image.get(&#39;missDate&#39;)
 
   # Create a feature with the calculated area and properties
-  a = area.first().set(&#39;missDate&#39;, missDate)
-
+  a = area.first().set({&#39;missDate&#39;: missDate, &#39;area_ha&#39;: area_ha})
+  
   return ee.FeatureCollection(a)
 
 
-allAreas_l5 = newStack_l5.map(calcArea).flatten()
-allAreas_l7 = newStack_l7.map(calcArea).flatten()
-allAreas_l8 = newStack_l8.map(calcArea).flatten()
-allAreas_l9 = newStack_l9.map(calcArea).flatten()
+total_area = aoi_area.first().get(&#39;area_ha&#39;).getInfo()
+
+allAreas_l5 = newStack_l5.map(calcArea)
+allAreas_l7 = newStack_l7.map(calcArea)
+allAreas_l8 = newStack_l8.map(calcArea)
+allAreas_l9 = newStack_l9.map(calcArea)
 
 ## export to drive
 export_summary_5 = (ee.batch.Export.table.toDrive(
   collection = allAreas_l5,
-  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;other&#39;],
-  description = &#39;quick_gradientTreeBoost_landsat_5_stack_v2023-07-20&#39;,
+  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;other&#39;, &#39;area_ha&#39;],
+  description = &#39;quick_gradientTreeBoost_landsat_5_stack_v2023-07-25&#39;,
   folder = &#39;eePlumB_classification&#39;,
   fileFormat = &#39;csv&#39;))
 
-#export_summary_5.start()
+export_summary_5.start()
 
 export_summary_7 = (ee.batch.Export.table.toDrive(
   collection = allAreas_l7,
-  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;other&#39;],
-  description = &#39;quick_gradientTreeBoost_landsat_7_stack_v2023-07-20&#39;,
+  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;other&#39;, &#39;area_ha&#39;],
+  description = &#39;quick_gradientTreeBoost_landsat_7_stack_v2023-07-25&#39;,
   folder = &#39;eePlumB_classification&#39;,
   fileFormat = &#39;csv&#39;))
 
-#export_summary_7.start()
+export_summary_7.start()
 
 
 export_summary_8 = (ee.batch.Export.table.toDrive(
   collection = allAreas_l8,
-  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;other&#39;],
-  description = &#39;quick_gradientTreeBoost_landsat_8_stack_v2023-07-20&#39;,
+  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;other&#39;, &#39;area_ha&#39;],
+  description = &#39;quick_gradientTreeBoost_landsat_8_stack_v2023-07-25&#39;,
   folder = &#39;eePlumB_classification&#39;,
   fileFormat = &#39;csv&#39;))
 
-#export_summary_8.start()
+export_summary_8.start()
 
 
 export_summary_9 = (ee.batch.Export.table.toDrive(
   collection = allAreas_l9,
-  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;other&#39;],
-  description = &#39;quick_gradientTreeBoost_landsat_9_stack_v2023-07-20&#39;,
+  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;other&#39;, &#39;area_ha&#39;],
+  description = &#39;quick_gradientTreeBoost_landsat_9_stack_v2023-07-25&#39;,
   folder = &#39;eePlumB_classification&#39;,
   fileFormat = &#39;csv&#39;))
 
-#export_summary_9.start()</code></pre>
+export_summary_9.start()</code></pre>
 <p>————STOP HERE——————–</p>
 <!-- ## Apply model to image stack for Sentinel -->
 <!-- ### Load the image collection -->
