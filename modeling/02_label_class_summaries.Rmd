@@ -6,72 +6,21 @@ output: html_document
 ---
 
 ```{r setup, echo = FALSE}
-packages <- c('tidyverse',
-              'googledrive')
+x = 'tidyverse'
 
-package_loader <- function(x) {
-    if (x %in% installed.packages()) {
-      library(x, character.only = TRUE)
-    } else {
-      install.packages(x)
-      library(x, character.only = TRUE)
-    }
-}
-
-lapply(packages, package_loader)
-
-v_date = '2023-07-19'
-```
-
-# Download collated files from eePlumB users
-
-Authenticate Drive
-
-```{r}
-drive_auth(email = 'steeleb@rams.colostate.edu')
-```
-
-Some helper functions
-
-```{r}
-drive_downloader = function(driveid, drivename, dest) {
-  drive_download(as_id(driveid), path = file.path(dest, drivename), overwrite = T)
-}
-
-driveUp = function(dumpid, directory, filename) {
-  drive_upload(file.path(directory, filename), filename, overwrite = T, path = as_id(dumpid))
+if (x %in% installed.packages()) {
+  library(x, character.only = TRUE)
+} else {
+  install.packages(x)
+  library(x, character.only = TRUE)
 }
 ```
 
-Point to a temp folder and create it.
+## Load the labels file into the environment
 
 ```{r}
-# point to directories
-tmp_dir = 'tmp/'
-
-#create temporary directory for drive downloads
-try(dir.create('tmp'))
-```
-
-Find the collated labels data file for our version date
-
-```{r}
-collated = drive_ls(path = 'eePlumB_collated_data')
-collated_version = collated[grepl(v_date, collated$name),]
-labels = collated_version[grepl('label', collated_version$name),]
-```
-
-Download the file to the temporary folder and then read into environment
-
-```{r}
-drive_downloader(labels$id[1], labels$name[1], tmp_dir)
-coll_labels <- read_csv(file.path(tmp_dir, labels$name[1]))
-```
-
-And clean up temp folder
-
-```{r}
-unlink('tmp', recursive = F)
+labels_file <- list.files('data/labels/', full.names = T)
+labels <- read_csv(labels_file)
 ```
 
 ## Display data per band and per mission by class
@@ -79,7 +28,7 @@ unlink('tmp', recursive = F)
 First, let's arrange the classes in a way that makes sense.
 
 ```{r}
-coll_labels <- coll_labels %>%
+labels <- labels %>%
   mutate(class = factor(class,
          c('openWater', 'lightNearShoreSediment', 'darkNearShoreSediment',
            'offShoreSediment', 'algalBloom', 'other', 'cloud', 'shorelineContamination')))
@@ -89,8 +38,8 @@ Since the Landsat and Sentinel data are definitely different, let's split those
 out first.
 
 ```{r}
-landsat_labels = coll_labels %>% filter(grepl('LS', mission, ignore.case = T))
-sen_labels = coll_labels %>% filter(grepl('sen', mission, ignore.case = T))
+landsat_labels = labels %>% filter(grepl('LS', mission, ignore.case = T))
+sen_labels = labels %>% filter(grepl('sen', mission, ignore.case = T))
 ```
 
 ### Look at the Sentinel data first
@@ -163,7 +112,7 @@ label data should make a good training dataset.
 Create a list of bands for Landsat
 
 ```{r}
-ls_bands = c(expr(Red), expr(Green), expr(Blue), expr(SR_B5), expr(SR_B6), expr(SR_B7))
+ls_bands = c(expr(Red), expr(Green), expr(Blue), expr(B5), expr(B6), expr(B7))
 ```
 
 Create some helper functions. First to get count and add a label below the y =
