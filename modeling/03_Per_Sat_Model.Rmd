@@ -119,7 +119,7 @@ apply_qaqc_bands_ls5 <- function(bn) {
 ls_5_filtered <-  map(ls_band_list, apply_qaqc_bands_ls5)
 
 ls_5_filt <- ls_5_filtered %>% 
-  purrr::reduce(full_join) %>%
+  reduce(full_join) %>%
   distinct()
 
 ```
@@ -144,11 +144,8 @@ apply_qaqc_bands_ls7 <- function(bn) {
 }
 ls_7_filtered <-  map(ls_band_list, apply_qaqc_bands_ls7)
 
-ls_7_filt <- full_join(ls_7_filtered[[1]], ls_7_filtered[[2]]) %>% 
-  full_join(., ls_7_filtered[[3]]) %>% 
-  full_join(., ls_7_filtered[[4]]) %>% 
-  full_join(., ls_7_filtered[[5]]) %>% 
-  full_join(., ls_7_filtered[[6]]) %>% 
+ls_7_filt <- ls_7_filtered %>% 
+  reduce(full_join) %>% 
   distinct()
 ```
 
@@ -173,11 +170,8 @@ apply_qaqc_bands_ls8 <- function(bn) {
 
 ls_8_filtered <-  map(ls_band_list, apply_qaqc_bands_ls8)
 
-ls_8_filt <- full_join(ls_8_filtered[[1]], ls_8_filtered[[2]]) %>% 
-  full_join(., ls_8_filtered[[3]]) %>% 
-  full_join(., ls_8_filtered[[4]]) %>% 
-  full_join(., ls_8_filtered[[5]]) %>% 
-  full_join(., ls_8_filtered[[6]]) %>% 
+ls_8_filt <- ls_8_filtered %>% 
+  reduce(full_join) %>% 
   distinct()
 
 ```
@@ -203,11 +197,8 @@ apply_qaqc_bands_ls9 <- function(bn) {
 
 ls_9_filtered <-  map(ls_band_list, apply_qaqc_bands_ls9)
 
-ls_9_filt <- full_join(ls_9_filtered[[1]], ls_9_filtered[[2]]) %>% 
-  full_join(., ls_9_filtered[[3]]) %>% 
-  full_join(., ls_9_filtered[[4]]) %>% 
-  full_join(., ls_9_filtered[[5]]) %>% 
-  full_join(., ls_9_filtered[[6]]) %>% 
+ls_9_filt <- ls_9_filtered %>% 
+  reduce(full_join) %>% 
   distinct()
 
 ```
@@ -230,16 +221,10 @@ apply_qaqc_bands_sen <- function(bn) {
            qaqc_filter_sen)
 }
 
-sen_filtered <-  map(sen_band_list, apply_qaqc_bands_sen)
+sen_filtered <- map(sen_band_list, apply_qaqc_bands_sen)
 
-sen_filt <- full_join(sen_filtered[[1]], sen_filtered[[2]]) %>% 
-  full_join(., sen_filtered[[3]]) %>% 
-  full_join(., sen_filtered[[4]]) %>% 
-  full_join(., sen_filtered[[5]]) %>% 
-  full_join(., sen_filtered[[6]]) %>% 
-  full_join(., sen_filtered[[7]]) %>% 
-  full_join(., sen_filtered[[8]]) %>% 
-  full_join(., sen_filtered[[9]]) %>% 
+sen_filt <- sen_filtered %>% 
+  reduce(full_join) %>% 
   distinct()
 
 ```
@@ -337,9 +322,9 @@ ee_ls9_labels_filt = ee_ls9_labels.filter(ee.Filter.inList('class', class_values
 ee_sen_labels_filt = ee_sen_labels.filter(ee.Filter.inList('class', class_values))
 ```
 
-#  Create Gradient Boost Tree Model
+##  Create Gradient Boost Tree Model
 
-## Define the input features and output labels
+Define the input features and output labels
 
 ```{python}
 ls_input_feat = ["Red", "Green", "Blue", "B5", "B6", "B7"]
@@ -347,7 +332,7 @@ sen_input_feat = ["Red", "Green", "Blue", "B5", "B6", "B7", 'B8', 'B11', 'B12']
 output_label = "class"
 ```
 
-## Remap the label values to a 0-based sequential series.
+Remap the label values to a 0-based sequential series.
 
 ```{python}
 remap_values = ee.List.sequence(0, 5)
@@ -796,7 +781,8 @@ def calcArea(image):
     'lightNSSed',
     'OSSed',
     'dNSSed',
-    'other'
+    'other',
+    'area_ha'
     ])
 
   area = areaImage_light.reduceRegions(
@@ -813,6 +799,7 @@ def calcArea(image):
 
   return ee.FeatureCollection(a)
 
+total_area = aoi_area.first().get('area_ha').getInfo()
 
 allAreas_l5 = newStack_l5.map(calcArea)
 allAreas_l7 = newStack_l7.map(calcArea)
@@ -822,8 +809,8 @@ allAreas_l9 = newStack_l9.map(calcArea)
 ## export to drive
 export_summary_5 = (ee.batch.Export.table.toDrive(
   collection = allAreas_l5,
-  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other'],
-  description = 'quick_gradientTreeBoost_landsat_5_stack_v2023-07-20',
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other', 'area_ha'],
+  description = 'quick_gradientTreeBoost_landsat_5_stack_v2023-07-25',
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
@@ -831,8 +818,8 @@ export_summary_5.start()
 
 export_summary_7 = (ee.batch.Export.table.toDrive(
   collection = allAreas_l7,
-  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other'],
-  description = 'quick_gradientTreeBoost_landsat_7_stack_v2023-07-20',
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other', 'area_ha'],
+  description = 'quick_gradientTreeBoost_landsat_7_stack_v2023-07-25',
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
@@ -841,8 +828,8 @@ export_summary_7.start()
 
 export_summary_8 = (ee.batch.Export.table.toDrive(
   collection = allAreas_l8,
-  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other'],
-  description = 'quick_gradientTreeBoost_landsat_8_stack_v2023-07-20',
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other', 'area_ha'],
+  description = 'quick_gradientTreeBoost_landsat_8_stack_v2023-07-25',
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
@@ -851,8 +838,8 @@ export_summary_8.start()
 
 export_summary_9 = (ee.batch.Export.table.toDrive(
   collection = allAreas_l9,
-  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other'],
-  description = 'quick_gradientTreeBoost_landsat_9_stack_v2023-07-20',
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other', 'area_ha'],
+  description = 'quick_gradientTreeBoost_landsat_9_stack_v2023-07-25',
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
