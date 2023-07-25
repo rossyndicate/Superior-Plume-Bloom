@@ -118,11 +118,8 @@ apply_qaqc_bands_ls5 <- function(bn) {
 }
 ls_5_filtered <-  map(ls_band_list, apply_qaqc_bands_ls5)
 
-ls_5_filt <- full_join(ls_5_filtered[[1]], ls_5_filtered[[2]]) %>% 
-  full_join(., ls_5_filtered[[3]]) %>% 
-  full_join(., ls_5_filtered[[4]]) %>% 
-  full_join(., ls_5_filtered[[5]]) %>% 
-  full_join(., ls_5_filtered[[6]]) %>% 
+ls_5_filt <- ls_5_filtered %>% 
+  purrr::reduce(full_join) %>%
   distinct()
 
 ```
