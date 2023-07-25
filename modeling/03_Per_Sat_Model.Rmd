@@ -20,6 +20,10 @@ package_loader <- function(x) {
 lapply(libs, package_loader)
 ```
 
+# Purpose
+
+This script develops and applies Gradient Tree Boost Models to Landsat and Sentinel mosaic-ed images.
+
 ## Activate conda environment
 
 Check for virtual environment and activate, otherwise, set up virtual
@@ -41,6 +45,8 @@ import os
 import time
 import pandas as pd
 import fiona
+
+v_date = '2023-07-25b'
 ```
 
 ## GEE Setup
@@ -90,7 +96,7 @@ We know there are some outliers in here. To create a good model, we'll want to r
 Make some helper lists
 
 ```{r}
-class_list = c("cloud", "other", "openWater", "lightNearShoreSediment",
+class_list = c("cloud", "openWater", "lightNearShoreSediment",
                "darkNearShoreSediment", "offShoreSediment")
 
 ls_band_list = c(expr(Red), expr(Green), expr(Blue), expr(B5), expr(B6), expr(B7))
@@ -112,7 +118,7 @@ qaqc_filter_ls5 <- function(band, cl) {
 }
 
 apply_qaqc_bands_ls5 <- function(bn) {
-  map2_dfr(c(bn, bn, bn, bn, bn, bn),
+  map2_dfr(c(bn, bn, bn, bn, bn),
            class_list,
            qaqc_filter_ls5)
 }
@@ -138,7 +144,7 @@ qaqc_filter_ls7 <- function(band, cl) {
 }
 
 apply_qaqc_bands_ls7 <- function(bn) {
-  map2_dfr(c(bn, bn, bn, bn, bn, bn),
+  map2_dfr(c(bn, bn, bn, bn, bn),
            class_list,
            qaqc_filter_ls7)
 }
@@ -163,7 +169,7 @@ qaqc_filter_ls8 <- function(band, cl) {
 }
 
 apply_qaqc_bands_ls8 <- function(bn) {
-  map2_dfr(c(bn, bn, bn, bn, bn, bn),
+  map2_dfr(c(bn, bn, bn, bn, bn),
            class_list,
            qaqc_filter_ls8)
 }
@@ -190,7 +196,7 @@ qaqc_filter_ls9 <- function(band, cl) {
 }
 
 apply_qaqc_bands_ls9 <- function(bn) {
-  map2_dfr(c(bn, bn, bn, bn, bn, bn),
+  map2_dfr(c(bn, bn, bn, bn, bn),
            class_list,
            qaqc_filter_ls9)
 }
@@ -216,7 +222,7 @@ qaqc_filter_sen <- function(band, cl) {
 }
 
 apply_qaqc_bands_sen <- function(bn) {
-  map2_dfr(c(bn, bn, bn, bn, bn, bn),
+  map2_dfr(c(bn, bn, bn, bn, bn),
            class_list,
            qaqc_filter_sen)
 }
@@ -247,7 +253,7 @@ sen_filt <- sen_filt %>%
   filter_at(vars(all_of(sen_bands_text)), all_vars(!is.na(.)))
 ```
 
-### Make ee feature collections
+#### Make ee feature collections
 
 Transform each of the r dataframes to ee feature collections
 
@@ -311,8 +317,7 @@ class_values = (['cloud',
   'openWater',
   'lightNearShoreSediment',
   'offShoreSediment',
-  'darkNearShoreSediment',
-  'other'])
+  'darkNearShoreSediment'])
 
 ee_ls5_labels_filt = ee_ls5_labels.filter(ee.Filter.inList('class', class_values))
 ee_ls7_labels_filt = ee_ls7_labels.filter(ee.Filter.inList('class', class_values))
@@ -335,7 +340,7 @@ output_label = "class"
 Remap the label values to a 0-based sequential series.
 
 ```{python}
-remap_values = ee.List.sequence(0, 5)
+remap_values = ee.List.sequence(0, 4)
 labels_ls5_map = ee_ls5_labels_filt.remap(ee.List(class_values), remap_values, ee.String(output_label))
 labels_ls7_map = ee_ls7_labels_filt.remap(ee.List(class_values), remap_values, ee.String(output_label))
 labels_ls8_map = ee_ls8_labels_filt.remap(ee.List(class_values), remap_values, ee.String(output_label))
@@ -524,6 +529,8 @@ print("GTB Confusion Overall Accuracy for Sentinel 2: ", acc_values_GTB_sen.getI
 
 ## Apply model to image stack for Landsat
 
+We'll go through and apply the Landsat and Sentinel separately due to the differences in bands.
+
 ### Load the image collection
 
 ```{python}
@@ -654,14 +661,12 @@ def extract_classes(image):
   lightNSSed = cl.eq(2).rename('lightNSSed').selfMask()
   OSSed = cl.eq(3).rename('OSSed').selfMask()
   dNSSed = cl.eq(4).rename('dNSSed').selfMask()
-  other = cl.eq(5).rename('other').selfMask()
   classified = cl.gte(0).rename('classified').selfMask()
   img_addBand = (image.addBands(cloud)
     .addBands(openWater)
     .addBands(lightNSSed)
     .addBands(OSSed)
     .addBands(dNSSed)
-    .addBands(other)
     .addBands(classified))
   return img_addBand
 
@@ -782,8 +787,7 @@ def calcArea(image):
     'openWater',
     'lightNSSed',
     'OSSed',
-    'dNSSed',
-    'other'
+    'dNSSed'
     ])
 
   area = areaImage_light.reduceRegions(
@@ -811,41 +815,41 @@ allAreas_l9 = newStack_l9.map(calcArea)
 ## export to drive
 export_summary_5 = (ee.batch.Export.table.toDrive(
   collection = allAreas_l5,
-  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other', 'area_ha'],
-  description = 'quick_gradientTreeBoost_landsat_5_stack_v2023-07-25',
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha'],
+  description = 'quick_gradientTreeBoost_landsat_5_stack_v' + v_date,
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-#export_summary_5.start()
+export_summary_5.start()
 
 export_summary_7 = (ee.batch.Export.table.toDrive(
   collection = allAreas_l7,
-  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other', 'area_ha'],
-  description = 'quick_gradientTreeBoost_landsat_7_stack_v2023-07-25',
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha'],
+  description = 'quick_gradientTreeBoost_landsat_7_stack_v' + v_date,
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-#export_summary_7.start()
+export_summary_7.start()
 
 
 export_summary_8 = (ee.batch.Export.table.toDrive(
   collection = allAreas_l8,
-  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other', 'area_ha'],
-  description = 'quick_gradientTreeBoost_landsat_8_stack_v2023-07-25',
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha'],
+  description = 'quick_gradientTreeBoost_landsat_8_stack_v' + v_date,
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-#export_summary_8.start()
+export_summary_8.start()
 
 
 export_summary_9 = (ee.batch.Export.table.toDrive(
   collection = allAreas_l9,
-  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other', 'area_ha'],
-  description = 'quick_gradientTreeBoost_landsat_9_stack_v2023-07-25',
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha'],
+  description = 'quick_gradientTreeBoost_landsat_9_stack_v' + v_date,
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-#export_summary_9.start()
+export_summary_9.start()
 
 ```
 
@@ -881,7 +885,7 @@ And then clip each image by the aoi
 sen_aoi = sen.map(clip)
 ```
 
-## Helper functions
+#### Helper functions
 
 ```{python}
 #function to apply the GTB model
@@ -908,7 +912,7 @@ def applyPerMissionDate_sen(missDate):
 
 ```
 
-## consolidate stack by image date
+### Consolidate stack by image date
 
 ```{python}
 def addImageDate(image):
@@ -924,6 +928,7 @@ uniqueMissDate_sen = sen_aoi.aggregate_array('missDate').distinct()
 
 ```
 
+And then mosaic per mission date.
 
 ```{python}
 def mosaicStack_sen(missDate):
@@ -933,12 +938,12 @@ def mosaicStack_sen(missDate):
 newStack_list_sen = uniqueMissDate_sen.map(mosaicStack_sen)
 newStack_sen = ee.ImageCollection(newStack_list_sen)
 
-# get CRS info
-img_crs_sen = newStack_sen.first().select('classification').projection()
-img_crsTrans_sen = img_crs_sen.getInfo().get('transform')
+## get CRS info
+#img_crs_sen = newStack_sen.first().select('classification').projection()
+#img_crsTrans_sen = img_crs_sen.getInfo().get('transform')
 ```
 
-## Calculate area per image and export
+### Calculate area per image and export
 
 ```{python}
 def calcArea_sen(image):
@@ -950,15 +955,14 @@ def calcArea_sen(image):
     'openWater',
     'lightNSSed',
     'OSSed',
-    'dNSSed',
-    'other'
+    'dNSSed'
     ])
   
   area = areaImage_light.reduceRegions(
     collection = aoi_area,
-    reducer = ee.Reducer.sum().forEachBand(areaImage_light),
-    crs = img_crs_sen,
-    crsTransform = img_crsTrans_sen
+    reducer = ee.Reducer.sum().forEachBand(areaImage_light)#,
+    #crs = img_crs_sen,
+    #crsTransform = img_crsTrans_sen
   )
   
   missDate = image.get('missDate')
@@ -974,8 +978,8 @@ allAreas_sen = newStack_sen.map(calcArea_sen)
 ## export to drive
 export_summary_sen = (ee.batch.Export.table.toDrive(
   collection = allAreas_sen,
-  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'other', 'area_ha'],
-  description = 'quick_gradientTreeBoost_sen2_stack_v2023-07-25',
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha'],
+  description = 'quick_gradientTreeBoost_sen2_stack_v' + v_date,
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
