@@ -1,7 +1,7 @@
 ---
 title: "eePlumB per-Satellite Model"
 author: "ROSSyndicate"
-date: "2023-07-25"
+date: "2023-07-26"
 output: html_document
 ---
 
@@ -102,6 +102,15 @@ class_list = c("cloud", "openWater", "lightNearShoreSediment",
 ls_band_list = c(expr(Red), expr(Green), expr(Blue), expr(B5), expr(B6), expr(B7))
 sen_band_list = c(expr(Red), expr(Green), expr(Blue), expr(B5), expr(B6), expr(B7), expr(B8), expr(B11), expr(B12))
 ```
+
+We need to rescale B11 and B12 for the Sentinel data. While this will not change any downstream 'outlier' handling, it will [hopefully] help with the wonky application of Sentinel models since the range is so different for those bands.
+
+```{r}
+sen_labels <- sen_labels %>% 
+  mutate_at(vars(B11, B12),
+            ~ .*0.0001)
+```
+
 
 #### Landsat 5
 
@@ -371,7 +380,7 @@ labels_sen_map = labels_sen_map.map(add_class_by_remap)
 ## Split labels into train/test sets
 
 ```{python}
-split = 0.8 # percentage of data to use for training
+split = 0.7 # percentage of data to use for training
 labels_ls5_map = labels_ls5_map.randomColumn('random') #set up a random column
 labels_ls7_map = labels_ls7_map.randomColumn('random') #set up a random column
 labels_ls8_map = labels_ls8_map.randomColumn('random') #set up a random column
@@ -871,12 +880,31 @@ s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
 # apply scaling factor
 def applySenScale(image):
   optical = image.select('B.').multiply(0.0001)
-  return image.addBands(optical, None, True)
+  optical2 = image.select('B..').multiply(0.0001)
+  return image.addBands(optical, None, True).addBands(optical2, None, True)
 
 sen = (s2
   .filter(ee.Filter.inList('MGRS_TILE', TILES))
   .map(applySenScale)
   .select(bnsen, bn))
+
+resample_crs_transform = sen.first().select('Red').projection().getInfo().get('transform')
+
+targetCRS = 'EPSG:32615'  # UTM Zone 15N
+targetScale = 10  # 10m resolution
+
+# and now resample the 20m pixels to 10m
+def reprojectBands(image):
+  bands = ['B5', 'B6', 'B7', 'B11', 'B12']
+  reprojectedBands = [image.select(band).resample('bilinear').reproject(
+    crs = targetCRS,
+    scale = targetScale
+  ).rename(band) for band in bands]
+  return image.addBands(reprojectedBands, None, True)
+
+# Apply the resample function to the image collection
+sen = sen.map(reprojectBands)
+
 ```
 
 And then clip each image by the aoi
@@ -939,8 +967,8 @@ newStack_list_sen = uniqueMissDate_sen.map(mosaicStack_sen)
 newStack_sen = ee.ImageCollection(newStack_list_sen)
 
 ## get CRS info
-#img_crs_sen = newStack_sen.first().select('classification').projection()
-#img_crsTrans_sen = img_crs_sen.getInfo().get('transform')
+img_crs_sen = newStack_sen.first().select('classification').projection()
+img_crsTrans_sen = img_crs_sen.getInfo().get('transform')
 ```
 
 ### Calculate area per image and export
@@ -960,9 +988,9 @@ def calcArea_sen(image):
   
   area = areaImage_light.reduceRegions(
     collection = aoi_area,
-    reducer = ee.Reducer.sum().forEachBand(areaImage_light)#,
-    #crs = img_crs_sen,
-    #crsTransform = img_crsTrans_sen
+    reducer = ee.Reducer.sum().forEachBand(areaImage_light),
+    crs = img_crs_sen,
+    crsTransform = img_crsTrans_sen
   )
   
   missDate = image.get('missDate')
