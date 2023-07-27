@@ -911,6 +911,12 @@ And then clip each image by the aoi
 
 ```{python}
 sen_aoi = sen.map(clip)
+
+
+# get CRS info
+img_crs_sen = sen_aoi.first().select('Red').projection()
+img_crsTrans_sen = img_crs_sen.getInfo().get('transform')
+
 ```
 
 #### Helper functions
@@ -937,6 +943,7 @@ def applyPerMissionDate_sen(missDate):
   sen_miss_date_GTB = applyGTB_sen(oneMissDate)
   sen_GTB_class = extract_classes(sen_miss_date_GTB)
   return (sen_GTB_class.set('missDate', missDate))
+
 
 ```
 
@@ -965,19 +972,12 @@ def mosaicStack_sen(missDate):
 
 newStack_list_sen = uniqueMissDate_sen.map(mosaicStack_sen)
 newStack_sen = ee.ImageCollection(newStack_list_sen)
-
-## get CRS info
-img_crs_sen = newStack_sen.first().select('classification').projection()
-img_crsTrans_sen = img_crs_sen.getInfo().get('transform')
 ```
 
 ### Calculate area per image and export
 
 ```{python}
-def calcArea_sen(image):
-  areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
-  
-  areaImage_light = areaImage.select([
+sen_stack_light = newStack_sen.select([
     'classified',
     'cloud',
     'openWater',
@@ -985,10 +985,13 @@ def calcArea_sen(image):
     'OSSed',
     'dNSSed'
     ])
+
+def calcArea_sen(image):
+  areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
   
-  area = areaImage_light.reduceRegions(
+  area = areaImage.reduceRegions(
     collection = aoi_area,
-    reducer = ee.Reducer.sum().forEachBand(areaImage_light),
+    reducer = ee.Reducer.sum().forEachBand(areaImage),
     crs = img_crs_sen,
     crsTransform = img_crsTrans_sen
   )
@@ -1001,7 +1004,7 @@ def calcArea_sen(image):
   return ee.FeatureCollection(a)
 
 
-allAreas_sen = newStack_sen.map(calcArea_sen)
+allAreas_sen = sen_stack_light.map(calcArea_sen)
 
 ## export to drive
 export_summary_sen = (ee.batch.Export.table.toDrive(
