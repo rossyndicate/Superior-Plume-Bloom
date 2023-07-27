@@ -108,7 +108,7 @@ rs_area_summ <- rs_subset %>%
   mutate_at(vars(openWater_ha, cloud_ha, lightNSSed_ha, darkNSSed_ha, offShoreSed_ha),
             ~ (./area_ha)*100) %>%
   select(missDate, openWater_ha, cloud_ha, lightNSSed_ha, darkNSSed_ha, offShoreSed_ha) %>%
-  rename_with(~ str_replace(., "_ha$", "_perc_aoi_are"), ends_with("_ha"))
+  rename_with(~ str_replace(., "_ha$", "_perc_aoi_area"), ends_with("_ha"))
 
 # join them together
 rs_subset <- full_join(rs_subset, rs_class_summ) %>%
