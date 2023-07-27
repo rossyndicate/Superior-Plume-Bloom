@@ -1014,7 +1014,7 @@ export_summary_sen = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-export_summary_sen.start()
+#export_summary_sen.start()
 
 ```
 

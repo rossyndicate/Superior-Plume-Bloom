@@ -11,7 +11,7 @@
 
 <meta name="author" content="ROSSyndicate" />
 
-<meta name="date" content="2023-07-25" />
+<meta name="date" content="2023-07-26" />
 
 <title>eePlumB per-Satellite Model</title>
 
@@ -352,7 +352,7 @@ display: none;
 
 <h1 class="title toc-ignore">eePlumB per-Satellite Model</h1>
 <h4 class="author">ROSSyndicate</h4>
-<h4 class="date">2023-07-25</h4>
+<h4 class="date">2023-07-26</h4>
 
 </div>
 
@@ -455,6 +455,13 @@ and 0.98 percentiles.</p>
 
 ls_band_list = c(expr(Red), expr(Green), expr(Blue), expr(B5), expr(B6), expr(B7))
 sen_band_list = c(expr(Red), expr(Green), expr(Blue), expr(B5), expr(B6), expr(B7), expr(B8), expr(B11), expr(B12))</code></pre>
+<p>We need to rescale B11 and B12 for the Sentinel data. While this will
+not change any downstream ‘outlier’ handling, it will [hopefully] help
+with the wonky application of Sentinel models since the range is so
+different for those bands.</p>
+<pre class="r"><code>sen_labels &lt;- sen_labels %&gt;% 
+  mutate_at(vars(B11, B12),
+            ~ .*0.0001)</code></pre>
 <div id="landsat-5" class="section level4">
 <h4>Landsat 5</h4>
 <p>Maybe a tidyfail, maybe a me problem, but we’re creating new, very
@@ -720,7 +727,7 @@ labels_sen_map = labels_sen_map.map(add_class_by_remap)</code></pre>
 </div>
 <div id="split-labels-into-traintest-sets" class="section level2">
 <h2>Split labels into train/test sets</h2>
-<pre class="python"><code>split = 0.8 # percentage of data to use for training
+<pre class="python"><code>split = 0.7 # percentage of data to use for training
 labels_ls5_map = labels_ls5_map.randomColumn(&#39;random&#39;) #set up a random column
 labels_ls7_map = labels_ls7_map.randomColumn(&#39;random&#39;) #set up a random column
 labels_ls8_map = labels_ls8_map.randomColumn(&#39;random&#39;) #set up a random column
@@ -735,15 +742,15 @@ training_sen = labels_sen_map.filter(ee.Filter.lt(&quot;random&quot;, split))
 print(&#39;Training:&#39;)</code></pre>
 <pre><code>## Training:</code></pre>
 <pre class="python"><code>print(training_ls5.aggregate_histogram(&#39;class&#39;).getInfo())</code></pre>
-<pre><code>## {&#39;cloud&#39;: 295, &#39;darkNearShoreSediment&#39;: 101, &#39;lightNearShoreSediment&#39;: 191, &#39;offShoreSediment&#39;: 199, &#39;openWater&#39;: 296}</code></pre>
+<pre><code>## {&#39;cloud&#39;: 251, &#39;darkNearShoreSediment&#39;: 87, &#39;lightNearShoreSediment&#39;: 173, &#39;offShoreSediment&#39;: 169, &#39;openWater&#39;: 252}</code></pre>
 <pre class="python"><code>print(training_ls7.aggregate_histogram(&#39;class&#39;).getInfo())</code></pre>
-<pre><code>## {&#39;cloud&#39;: 320, &#39;darkNearShoreSediment&#39;: 63, &#39;lightNearShoreSediment&#39;: 229, &#39;offShoreSediment&#39;: 233, &#39;openWater&#39;: 261}</code></pre>
+<pre><code>## {&#39;cloud&#39;: 285, &#39;darkNearShoreSediment&#39;: 53, &#39;lightNearShoreSediment&#39;: 202, &#39;offShoreSediment&#39;: 203, &#39;openWater&#39;: 236}</code></pre>
 <pre class="python"><code>print(training_ls8.aggregate_histogram(&#39;class&#39;).getInfo())</code></pre>
-<pre><code>## {&#39;cloud&#39;: 333, &#39;darkNearShoreSediment&#39;: 82, &#39;lightNearShoreSediment&#39;: 149, &#39;offShoreSediment&#39;: 136, &#39;openWater&#39;: 75}</code></pre>
+<pre><code>## {&#39;cloud&#39;: 283, &#39;darkNearShoreSediment&#39;: 71, &#39;lightNearShoreSediment&#39;: 136, &#39;offShoreSediment&#39;: 112, &#39;openWater&#39;: 69}</code></pre>
 <pre class="python"><code>print(training_ls9.aggregate_histogram(&#39;class&#39;).getInfo())</code></pre>
-<pre><code>## {&#39;cloud&#39;: 145, &#39;darkNearShoreSediment&#39;: 29, &#39;lightNearShoreSediment&#39;: 79, &#39;offShoreSediment&#39;: 88, &#39;openWater&#39;: 54}</code></pre>
+<pre><code>## {&#39;cloud&#39;: 124, &#39;darkNearShoreSediment&#39;: 26, &#39;lightNearShoreSediment&#39;: 66, &#39;offShoreSediment&#39;: 77, &#39;openWater&#39;: 49}</code></pre>
 <pre class="python"><code>print(training_sen.aggregate_histogram(&#39;class&#39;).getInfo())</code></pre>
-<pre><code>## {&#39;cloud&#39;: 410, &#39;darkNearShoreSediment&#39;: 41, &#39;lightNearShoreSediment&#39;: 94, &#39;offShoreSediment&#39;: 118, &#39;openWater&#39;: 129}</code></pre>
+<pre><code>## {&#39;cloud&#39;: 352, &#39;darkNearShoreSediment&#39;: 35, &#39;lightNearShoreSediment&#39;: 82, &#39;offShoreSediment&#39;: 101, &#39;openWater&#39;: 99}</code></pre>
 <pre class="python"><code>testing_ls5 = labels_ls5_map.filter(ee.Filter.gte(&quot;random&quot;, split))
 testing_ls7 = labels_ls7_map.filter(ee.Filter.gte(&quot;random&quot;, split))
 testing_ls8 = labels_ls8_map.filter(ee.Filter.gte(&quot;random&quot;, split))
@@ -752,15 +759,15 @@ testing_sen = labels_sen_map.filter(ee.Filter.gte(&quot;random&quot;, split))
 print(&#39;Testing:&#39;)</code></pre>
 <pre><code>## Testing:</code></pre>
 <pre class="python"><code>print(testing_ls5.aggregate_histogram(&#39;class&#39;).getInfo())</code></pre>
-<pre><code>## {&#39;cloud&#39;: 95, &#39;darkNearShoreSediment&#39;: 24, &#39;lightNearShoreSediment&#39;: 55, &#39;offShoreSediment&#39;: 53, &#39;openWater&#39;: 88}</code></pre>
+<pre><code>## {&#39;cloud&#39;: 139, &#39;darkNearShoreSediment&#39;: 38, &#39;lightNearShoreSediment&#39;: 73, &#39;offShoreSediment&#39;: 83, &#39;openWater&#39;: 132}</code></pre>
 <pre class="python"><code>print(testing_ls7.aggregate_histogram(&#39;class&#39;).getInfo())</code></pre>
-<pre><code>## {&#39;cloud&#39;: 87, &#39;darkNearShoreSediment&#39;: 12, &#39;lightNearShoreSediment&#39;: 66, &#39;offShoreSediment&#39;: 78, &#39;openWater&#39;: 60}</code></pre>
+<pre><code>## {&#39;cloud&#39;: 122, &#39;darkNearShoreSediment&#39;: 22, &#39;lightNearShoreSediment&#39;: 93, &#39;offShoreSediment&#39;: 108, &#39;openWater&#39;: 85}</code></pre>
 <pre class="python"><code>print(testing_ls8.aggregate_histogram(&#39;class&#39;).getInfo())</code></pre>
-<pre><code>## {&#39;cloud&#39;: 81, &#39;darkNearShoreSediment&#39;: 24, &#39;lightNearShoreSediment&#39;: 38, &#39;offShoreSediment&#39;: 28, &#39;openWater&#39;: 26}</code></pre>
+<pre><code>## {&#39;cloud&#39;: 131, &#39;darkNearShoreSediment&#39;: 35, &#39;lightNearShoreSediment&#39;: 51, &#39;offShoreSediment&#39;: 52, &#39;openWater&#39;: 32}</code></pre>
 <pre class="python"><code>print(testing_ls9.aggregate_histogram(&#39;class&#39;).getInfo())</code></pre>
-<pre><code>## {&#39;cloud&#39;: 39, &#39;darkNearShoreSediment&#39;: 10, &#39;lightNearShoreSediment&#39;: 18, &#39;offShoreSediment&#39;: 21, &#39;openWater&#39;: 15}</code></pre>
+<pre><code>## {&#39;cloud&#39;: 60, &#39;darkNearShoreSediment&#39;: 13, &#39;lightNearShoreSediment&#39;: 31, &#39;offShoreSediment&#39;: 32, &#39;openWater&#39;: 20}</code></pre>
 <pre class="python"><code>print(testing_sen.aggregate_histogram(&#39;class&#39;).getInfo())</code></pre>
-<pre><code>## {&#39;cloud&#39;: 90, &#39;darkNearShoreSediment&#39;: 9, &#39;lightNearShoreSediment&#39;: 21, &#39;offShoreSediment&#39;: 31, &#39;openWater&#39;: 36}</code></pre>
+<pre><code>## {&#39;cloud&#39;: 148, &#39;darkNearShoreSediment&#39;: 15, &#39;lightNearShoreSediment&#39;: 33, &#39;offShoreSediment&#39;: 48, &#39;openWater&#39;: 66}</code></pre>
 </div>
 <div id="train-the-gtb-model" class="section level2">
 <h2>Train the GTB model</h2>
@@ -815,11 +822,11 @@ print(&#39;Testing:&#39;)</code></pre>
 print(&#39;GTB Confusion Matrix for Landsat 5:&#39;)</code></pre>
 <pre><code>## GTB Confusion Matrix for Landsat 5:</code></pre>
 <pre class="python"><code>print(confusionMatrixGTB_ls5.getInfo())</code></pre>
-<pre><code>## [[94, 0, 0, 0, 1], [0, 83, 0, 5, 0], [0, 0, 39, 6, 10], [0, 2, 8, 41, 2], [0, 0, 4, 4, 16]]</code></pre>
+<pre><code>## [[137, 0, 1, 1, 0], [0, 124, 1, 7, 0], [2, 0, 57, 6, 8], [0, 8, 10, 64, 1], [1, 1, 7, 5, 24]]</code></pre>
 <pre class="python"><code>acc_values_GTB_ls5 = (confusionMatrixGTB_ls5
   .accuracy())
 print(&quot;GTB Confusion Overall Accuracy for Landsat 5: &quot;, acc_values_GTB_ls5.getInfo())</code></pre>
-<pre><code>## GTB Confusion Overall Accuracy for Landsat 5:  0.8666666666666667</code></pre>
+<pre><code>## GTB Confusion Overall Accuracy for Landsat 5:  0.8731182795698925</code></pre>
 </div>
 <div id="landsat-7-2" class="section level3">
 <h3>Landsat 7</h3>
@@ -829,11 +836,11 @@ print(&quot;GTB Confusion Overall Accuracy for Landsat 5: &quot;, acc_values_GTB
 print(&#39;GTB Confusion Matrix for Landsat 7:&#39;)</code></pre>
 <pre><code>## GTB Confusion Matrix for Landsat 7:</code></pre>
 <pre class="python"><code>print(confusionMatrixGTB_ls7.getInfo())</code></pre>
-<pre><code>## [[86, 0, 1, 0, 0], [0, 60, 0, 0, 0], [0, 0, 60, 1, 5], [1, 3, 3, 71, 0], [0, 1, 5, 1, 5]]</code></pre>
+<pre><code>## [[120, 0, 1, 1, 0], [0, 84, 0, 1, 0], [0, 0, 85, 3, 5], [1, 4, 3, 100, 0], [0, 1, 8, 1, 12]]</code></pre>
 <pre class="python"><code>acc_values_GTB_ls7 = (confusionMatrixGTB_ls7
   .accuracy())
 print(&quot;GTB Confusion Overall Accuracy for Landsat 7: &quot;, acc_values_GTB_ls7.getInfo())</code></pre>
-<pre><code>## GTB Confusion Overall Accuracy for Landsat 7:  0.9306930693069307</code></pre>
+<pre><code>## GTB Confusion Overall Accuracy for Landsat 7:  0.9325581395348838</code></pre>
 </div>
 <div id="landsat-8-2" class="section level3">
 <h3>Landsat 8</h3>
@@ -843,11 +850,11 @@ print(&quot;GTB Confusion Overall Accuracy for Landsat 7: &quot;, acc_values_GTB
 print(&#39;GTB Confusion Matrix for Landsat 8:&#39;)</code></pre>
 <pre><code>## GTB Confusion Matrix for Landsat 8:</code></pre>
 <pre class="python"><code>print(confusionMatrixGTB_ls8.getInfo())</code></pre>
-<pre><code>## [[81, 0, 0, 0, 0], [0, 21, 0, 5, 0], [1, 0, 30, 5, 2], [0, 0, 1, 27, 0], [0, 1, 4, 0, 19]]</code></pre>
+<pre><code>## [[130, 0, 1, 0, 0], [0, 27, 0, 5, 0], [1, 0, 42, 7, 1], [0, 0, 2, 50, 0], [0, 1, 5, 0, 29]]</code></pre>
 <pre class="python"><code>acc_values_GTB_ls8 = (confusionMatrixGTB_ls8
   .accuracy())
 print(&quot;GTB Confusion Overall Accuracy for Landsat 8: &quot;, acc_values_GTB_ls8.getInfo())</code></pre>
-<pre><code>## GTB Confusion Overall Accuracy for Landsat 8:  0.9035532994923858</code></pre>
+<pre><code>## GTB Confusion Overall Accuracy for Landsat 8:  0.9235880398671097</code></pre>
 </div>
 <div id="landsat-9-2" class="section level3">
 <h3>Landsat 9</h3>
@@ -857,11 +864,11 @@ print(&quot;GTB Confusion Overall Accuracy for Landsat 8: &quot;, acc_values_GTB
 print(&#39;GTB Confusion Matrix for Landsat 9:&#39;)</code></pre>
 <pre><code>## GTB Confusion Matrix for Landsat 9:</code></pre>
 <pre class="python"><code>print(confusionMatrixGTB_ls9.getInfo())</code></pre>
-<pre><code>## [[39, 0, 0, 0, 0], [0, 11, 0, 4, 0], [0, 0, 14, 3, 1], [0, 0, 1, 20, 0], [0, 0, 1, 4, 5]]</code></pre>
+<pre><code>## [[59, 1, 0, 0, 0], [0, 16, 0, 4, 0], [1, 0, 22, 6, 2], [0, 0, 2, 30, 0], [0, 0, 2, 4, 7]]</code></pre>
 <pre class="python"><code>acc_values_GTB_ls9 = (confusionMatrixGTB_ls9
   .accuracy())
 print(&quot;GTB Confusion Overall Accuracy for Landsat 9: &quot;, acc_values_GTB_ls9.getInfo())</code></pre>
-<pre><code>## GTB Confusion Overall Accuracy for Landsat 9:  0.8640776699029126</code></pre>
+<pre><code>## GTB Confusion Overall Accuracy for Landsat 9:  0.8589743589743589</code></pre>
 </div>
 <div id="sentinel-2-2" class="section level3">
 <h3>Sentinel 2</h3>
@@ -871,11 +878,11 @@ print(&quot;GTB Confusion Overall Accuracy for Landsat 9: &quot;, acc_values_GTB
 print(&#39;GTB Confusion Matrix for Sentinel 2: &#39;)</code></pre>
 <pre><code>## GTB Confusion Matrix for Sentinel 2:</code></pre>
 <pre class="python"><code>print(confusionMatrixGTB_sen.getInfo())</code></pre>
-<pre><code>## [[89, 0, 1, 0, 0], [0, 36, 0, 0, 0], [0, 0, 20, 1, 0], [0, 0, 3, 28, 0], [0, 0, 0, 0, 9]]</code></pre>
+<pre><code>## [[148, 0, 0, 0, 0], [0, 65, 0, 1, 0], [0, 0, 26, 3, 4], [0, 1, 1, 42, 4], [0, 1, 4, 0, 10]]</code></pre>
 <pre class="python"><code>acc_values_GTB_sen = (confusionMatrixGTB_sen
   .accuracy())
 print(&quot;GTB Confusion Overall Accuracy for Sentinel 2: &quot;, acc_values_GTB_sen.getInfo())</code></pre>
-<pre><code>## GTB Confusion Overall Accuracy for Sentinel 2:  0.9732620320855615</code></pre>
+<pre><code>## GTB Confusion Overall Accuracy for Sentinel 2:  0.9387096774193548</code></pre>
 </div>
 </div>
 <div id="apply-model-to-image-stack-for-landsat" class="section level2">
@@ -1202,14 +1209,37 @@ s2 = ee.ImageCollection(&#39;COPERNICUS/S2_SR_HARMONIZED&#39;)
 # apply scaling factor
 def applySenScale(image):
   optical = image.select(&#39;B.&#39;).multiply(0.0001)
-  return image.addBands(optical, None, True)
+  optical2 = image.select(&#39;B..&#39;).multiply(0.0001)
+  return image.addBands(optical, None, True).addBands(optical2, None, True)
 
 sen = (s2
   .filter(ee.Filter.inList(&#39;MGRS_TILE&#39;, TILES))
   .map(applySenScale)
-  .select(bnsen, bn))</code></pre>
+  .select(bnsen, bn))
+
+resample_crs_transform = sen.first().select(&#39;Red&#39;).projection().getInfo().get(&#39;transform&#39;)
+
+targetCRS = &#39;EPSG:32615&#39;  # UTM Zone 15N
+targetScale = 10  # 10m resolution
+
+# and now resample the 20m pixels to 10m
+def reprojectBands(image):
+  bands = [&#39;B5&#39;, &#39;B6&#39;, &#39;B7&#39;, &#39;B11&#39;, &#39;B12&#39;]
+  reprojectedBands = [image.select(band).resample(&#39;bilinear&#39;).reproject(
+    crs = targetCRS,
+    scale = targetScale
+  ).rename(band) for band in bands]
+  return image.addBands(reprojectedBands, None, True)
+
+# Apply the resample function to the image collection
+sen = sen.map(reprojectBands)</code></pre>
 <p>And then clip each image by the aoi</p>
-<pre class="python"><code>sen_aoi = sen.map(clip)</code></pre>
+<pre class="python"><code>sen_aoi = sen.map(clip)
+
+
+# get CRS info
+img_crs_sen = sen_aoi.first().select(&#39;Red&#39;).projection()
+img_crsTrans_sen = img_crs_sen.getInfo().get(&#39;transform&#39;)</code></pre>
 <div id="helper-functions-1" class="section level4">
 <h4>Helper functions</h4>
 <pre class="python"><code>#function to apply the GTB model
@@ -1232,7 +1262,8 @@ def applyPerMissionDate_sen(missDate):
   oneMissDate = short_stack.mean()
   sen_miss_date_GTB = applyGTB_sen(oneMissDate)
   sen_GTB_class = extract_classes(sen_miss_date_GTB)
-  return (sen_GTB_class.set(&#39;missDate&#39;, missDate))</code></pre>
+  return (sen_GTB_class.set(&#39;missDate&#39;, missDate))
+</code></pre>
 </div>
 </div>
 <div id="consolidate-stack-by-image-date-1" class="section level3">
@@ -1253,18 +1284,11 @@ uniqueMissDate_sen = sen_aoi.aggregate_array(&#39;missDate&#39;).distinct()</cod
   return md_GTB
 
 newStack_list_sen = uniqueMissDate_sen.map(mosaicStack_sen)
-newStack_sen = ee.ImageCollection(newStack_list_sen)
-
-## get CRS info
-#img_crs_sen = newStack_sen.first().select(&#39;classification&#39;).projection()
-#img_crsTrans_sen = img_crs_sen.getInfo().get(&#39;transform&#39;)</code></pre>
+newStack_sen = ee.ImageCollection(newStack_list_sen)</code></pre>
 </div>
 <div id="calculate-area-per-image-and-export-1" class="section level3">
 <h3>Calculate area per image and export</h3>
-<pre class="python"><code>def calcArea_sen(image):
-  areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
-  
-  areaImage_light = areaImage.select([
+<pre class="python"><code>sen_stack_light = newStack_sen.select([
     &#39;classified&#39;,
     &#39;cloud&#39;,
     &#39;openWater&#39;,
@@ -1272,12 +1296,15 @@ newStack_sen = ee.ImageCollection(newStack_list_sen)
     &#39;OSSed&#39;,
     &#39;dNSSed&#39;
     ])
+
+def calcArea_sen(image):
+  areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
   
-  area = areaImage_light.reduceRegions(
+  area = areaImage.reduceRegions(
     collection = aoi_area,
-    reducer = ee.Reducer.sum().forEachBand(areaImage_light)#,
-    #crs = img_crs_sen,
-    #crsTransform = img_crsTrans_sen
+    reducer = ee.Reducer.sum().forEachBand(areaImage),
+    crs = img_crs_sen,
+    crsTransform = img_crsTrans_sen
   )
   
   missDate = image.get(&#39;missDate&#39;)
@@ -1288,7 +1315,7 @@ newStack_sen = ee.ImageCollection(newStack_list_sen)
   return ee.FeatureCollection(a)
 
 
-allAreas_sen = newStack_sen.map(calcArea_sen)
+allAreas_sen = sen_stack_light.map(calcArea_sen)
 
 ## export to drive
 export_summary_sen = (ee.batch.Export.table.toDrive(
@@ -1298,7 +1325,7 @@ export_summary_sen = (ee.batch.Export.table.toDrive(
   folder = &#39;eePlumB_classification&#39;,
   fileFormat = &#39;csv&#39;))
 
-export_summary_sen.start()</code></pre>
+#export_summary_sen.start()</code></pre>
 </div>
 </div>
 </div>

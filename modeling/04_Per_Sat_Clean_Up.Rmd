@@ -1,7 +1,7 @@
 ---
-title: "Yugo Model Clean Up"
+title: "Model Output Clean Up"
 author: "ROSSyndicate"
-date: "2023-07-25"
+date: "2023-07-27"
 output: html_document
 ---
 
@@ -19,7 +19,7 @@ package_loader <- function(x) {
 
 lapply(libs, package_loader)
 
-v_date = '2023-07-25'
+v_date = '2023-07-25b'
 ```
 
 # Purpose
@@ -92,7 +92,7 @@ measurement mis-match.
 ```{r}
 # calculate proportion of AOI that is classified
 rs_subset <- rs_subset %>%
-  mutate(proportion_AOI_classified = (classified_ha/area_ha)*100)
+  mutate(perc_AOI_classified = (classified_ha/area_ha)*100)
 
 # print range of proportion of area classified
 range(rs_subset$proportion_AOI_classified)
@@ -102,29 +102,48 @@ rs_class_summ <- rs_subset %>%
   mutate_at(vars(openWater_ha, cloud_ha, lightNSSed_ha, darkNSSed_ha, offShoreSed_ha),
             ~ (./classified_ha)*100) %>%
   select(missDate, openWater_ha, cloud_ha, lightNSSed_ha, darkNSSed_ha, offShoreSed_ha) %>%
-  rename_with(~ str_replace(., "_ha$", "_perc"), ends_with("_ha"))
+  rename_with(~ str_replace(., "_ha$", "_perc_class_area"), ends_with("_ha"))
+
+rs_area_summ <- rs_subset %>%
+  mutate_at(vars(openWater_ha, cloud_ha, lightNSSed_ha, darkNSSed_ha, offShoreSed_ha),
+            ~ (./area_ha)*100) %>%
+  select(missDate, openWater_ha, cloud_ha, lightNSSed_ha, darkNSSed_ha, offShoreSed_ha) %>%
+  rename_with(~ str_replace(., "_ha$", "_perc_aoi_are"), ends_with("_ha"))
 
 # join them together
-rs_subset <- full_join(rs_subset, rs_class_summ)
+rs_subset <- full_join(rs_subset, rs_class_summ) %>%
+  full_join(., rs_area_summ)
 ```
 
 Reformat the mission date column
 
 ```{r}
 rs_subset <- rs_subset %>%
+  # Landsat and Sentinel missDate column are formatted slightly differently
   mutate(mission = if_else(grepl('LAND', missDate),
                            str_sub(missDate, 1, 9),
                            str_sub(missDate, 1, 11)),
-         date = if_else(grepl('LAND', missDate),
+         date = ymd(if_else(grepl('LAND', missDate),
                         str_sub(missDate, 11, nchar(missDate)),
-                        str_sub(missDate, 13, nchar(missDate)))) %>%
+                        str_sub(missDate, 13, nchar(missDate))))) %>%
   relocate(mission, date)
 ```
+
+Flag dates that are outside of label range. We didn't ask labelers to label
+wintertime images, so we should flag those.
+
+```{r}
+rs_subset <- rs_subset %>%
+  mutate(date_flag = if_else(month(date) >=4 & month(date) <= 11,
+                             '',
+                             'winter'))
+```
+
 
 Write to tmp folder
 
 ```{r}
-write_csv(rs_subset, paste0('data/output/GTB_by_mission_pass_v', v_date, '.csv'))
+write_csv(rs_subset, paste0('data/output/GTB_by_mission_v', v_date, '.csv'))
 ```
 
 ## Save to the Superior Drive
@@ -140,7 +159,7 @@ Find the folder
 drive_folder = drive_ls(path = 'Superior Plume-Bloom Project')
 upload_to = drive_folder[grepl('classification', drive_folder$name),]
 
-drive_upload(paste0('data/output/GTB_by_mission_pass_v', v_date, '.csv'), as_id(upload_to$id[1]))
+drive_upload(paste0('data/output/GTB_by_mission_v', v_date, '.csv'), as_id(upload_to$id[1]))
 ```
 
 
