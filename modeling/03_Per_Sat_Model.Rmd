@@ -544,9 +544,9 @@ We'll go through and apply the Landsat and Sentinel separately due to the differ
 
 ```{python}
 # list bandnames; in part for L7 bands to match l8/9
-bn457 = ['SR_B1', 'SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B7']
-bn89 = ['SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7']
-bn = ['Blue', 'Green', 'Red', 'B5', 'B6', 'B7']
+bn457 = ['SR_B1', 'SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B7', 'QA_RADSAT']
+bn89 = ['SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7', 'QA_RADSAT']
+bn = ['Blue', 'Green', 'Red', 'B5', 'B6', 'B7', 'QA_RADSAT']
 
 # filter stack for desired PRs
 ROWS = ee.List([27, 28])
@@ -560,23 +560,41 @@ l9 = (ee.ImageCollection("LANDSAT/LC09/C02/T1_L2")
   .select(bn89, bn)
   .filter(ee.Filter.eq('WRS_PATH', 26))
   .filter(ee.Filter.inList('WRS_ROW', ROWS))
-  .map(applyScaleFactors))
+  .map(applyScaleFactors)
+  .filter(ee.Filter.gte('IMAGE_QUALITY_OLI', 7)))
 l8 = (ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
   .select(bn89, bn)
   .filter(ee.Filter.eq('WRS_PATH', 26))
   .filter(ee.Filter.inList('WRS_ROW', ROWS))
-  .map(applyScaleFactors))
+  .map(applyScaleFactors)
+  .filter(ee.Filter.gte('IMAGE_QUALITY_OLI', 7)))
 l7 = (ee.ImageCollection('LANDSAT/LE07/C02/T1_L2')
   .select(bn457, bn)
   .filter(ee.Filter.eq('WRS_PATH', 26))
   .filter(ee.Filter.inList('WRS_ROW', ROWS))
-  .map(applyScaleFactors))
+  .map(applyScaleFactors)
+  .filter(ee.Filter.gte('IMAGE_QUALITY', 7)))
 l5 = (ee.ImageCollection('LANDSAT/LT05/C02/T1_L2')
   .select(bn457, bn)
   .filter(ee.Filter.eq('WRS_PATH', 26))
   .filter(ee.Filter.inList('WRS_ROW', ROWS))
-  .map(applyScaleFactors))
+  .map(applyScaleFactors)
+  .filter(ee.Filter.gte('IMAGE_QUALITY', 7)))
 ```
+
+Add QA_RADSAT mask to mask where any band was saturated
+
+```{python}
+def apply_radsat_mask(image):
+  radsat = image.select('QA_RADSAT').eq(0)
+  return image.updateMask(radsat)
+
+l9 = l9.map(apply_radsat_mask)
+l8 = l8.map(apply_radsat_mask)
+l7 = l7.map(apply_radsat_mask)
+l5 = l5.map(apply_radsat_mask)
+```
+
 
 ### Load modeling AOIs and clip stack
 
@@ -589,6 +607,17 @@ with fiona.open('data/aoi/Superior_AOI_modeling.shp') as src:
 features = [ee.Feature(shape, {}) for shape in shapes]
 # Create an ee.FeatureCollection from the ee.Features
 whole_aoi = ee.FeatureCollection(features)
+
+#Calculate total area of AOI
+def calc_area(feat):
+  feat_area = feat.geometry().area()
+  feat_area_ha = ee.Number(feat_area).divide(1e5)
+  return feat.set('area_ha', feat_area_ha)
+
+aoi_area = whole_aoi.map(calc_area)
+print('total AOI area: ', aoi_area.first().get('area_ha').getInfo())
+
+
 ```
 
 And then clip each image by that aoi
@@ -607,15 +636,6 @@ l9_aoi = l9.map(clip)
 #### Helper functions
 
 ```{python}
-#Calculate total area of AOI
-def calc_area(feat):
-  feat_area = feat.geometry().area()
-  feat_area_ha = ee.Number(feat_area).divide(1e5)
-  return feat.set('area_ha', feat_area_ha)
-
-aoi_area = whole_aoi.map(calc_area)
-print('total AOI area: ', aoi_area.first().get('area_ha').getInfo())
-
 # get CRS info
 img_crs = l5.first().projection()
 img_crsTrans = img_crs.getInfo().get('transform')
