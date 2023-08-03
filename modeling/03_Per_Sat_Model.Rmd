@@ -766,7 +766,6 @@ def applyPerMissionDate_ls9(missDate):
   ls_GTB_class = extract_classes(ls_miss_date_GTB)
   return (ls_GTB_class.set('missDate', missDate))
 
-
 ```
 
 ### consolidate stack by image date
@@ -824,14 +823,10 @@ newStack_l9 = ee.ImageCollection(newStack_list_l9)
 
 ```
 
-### Calculate area per image and export
+### Lighten up each of the stacks to only the bands we care about
 
 ```{python}
-#because these geometries are rather large, we have to create a function for each AOI
-def calcArea_aoi(image):
-  areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
-
-  areaImage_light = areaImage.select([
+lightStack_l5 = newStack_l5.select([
     'classified',
     'cloud',
     'openWater',
@@ -840,9 +835,45 @@ def calcArea_aoi(image):
     'dNSSed'
     ])
 
-  area = areaImage_light.reduceRegions(
+lightStack_l7 = newStack_l7.select([
+    'classified',
+    'cloud',
+    'openWater',
+    'lightNSSed',
+    'OSSed',
+    'dNSSed'
+    ])
+
+lightStack_l8 = newStack_l8.select([
+    'classified',
+    'cloud',
+    'openWater',
+    'lightNSSed',
+    'OSSed',
+    'dNSSed'
+    ])
+
+lightStack_l9 = newStack_l9.select([
+    'classified',
+    'cloud',
+    'openWater',
+    'lightNSSed',
+    'OSSed',
+    'dNSSed'
+    ])
+```
+
+
+### Calculate area per image and export
+
+```{python}
+#because these geometries are rather large, we have to create a function for each AOI
+def calcArea_aoi(image):
+  areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
+
+  area = areaImage.reduceRegions(
     collection = aoi_ee,
-    reducer = ee.Reducer.sum().forEachBand(areaImage_light),
+    reducer = ee.Reducer.sum().forEachBand(areaImage),
     crs = img_crs,
     crsTransform = img_crsTrans
   )
@@ -856,27 +887,19 @@ def calcArea_aoi(image):
   
   return ee.FeatureCollection(a)
 
+
 def calcArea_nosc(image):
   areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
-
-  areaImage_light = areaImage.select([
-    'classified',
-    'cloud',
-    'openWater',
-    'lightNSSed',
-    'OSSed',
-    'dNSSed'
-    ])
-
-  area = areaImage_light.reduceRegions(
+  
+  area = areaImage.reduceRegions(
     collection = aoi_no_sc_ee,
-    reducer = ee.Reducer.sum().forEachBand(areaImage_light),
+    reducer = ee.Reducer.sum().forEachBand(areaImage),
     crs = img_crs,
     crsTransform = img_crsTrans
   )
-
+  
   missDate = image.get('missDate')
-
+  
   # Create a feature with the calculated area and properties
   a = area.first().set({'missDate': missDate, 
                         'area_ha': aoi_no_sc_area_ha, 
@@ -888,18 +911,9 @@ def calcArea_nosc(image):
 def calcArea_sc(image):
   areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
 
-  areaImage_light = areaImage.select([
-    'classified',
-    'cloud',
-    'openWater',
-    'lightNSSed',
-    'OSSed',
-    'dNSSed'
-    ])
-
-  area = areaImage_light.reduceRegions(
+  area = areaImage.reduceRegions(
     collection = aoi_sc_ee,
-    reducer = ee.Reducer.sum().forEachBand(areaImage_light),
+    reducer = ee.Reducer.sum().forEachBand(areaImage),
     crs = img_crs,
     crsTransform = img_crsTrans
   )
@@ -919,20 +933,20 @@ And then map them over all the stacks
 
 ```{python}
 
-allAreas_l5_aoi = newStack_l5.map(calcArea_aoi)
-allAreas_l7_aoi = newStack_l7.map(calcArea_aoi)
-allAreas_l8_aoi = newStack_l8.map(calcArea_aoi)
-allAreas_l9_aoi = newStack_l9.map(calcArea_aoi)
+allAreas_l5_aoi = lightStack_l5.map(calcArea_aoi)
+allAreas_l7_aoi = lightStack_l7.map(calcArea_aoi)
+allAreas_l8_aoi = lightStack_l8.map(calcArea_aoi)
+allAreas_l9_aoi = lightStack_l9.map(calcArea_aoi)
 
-allAreas_l5_nosc = newStack_l5.map(calcArea_nosc)
-allAreas_l7_nosc = newStack_l7.map(calcArea_nosc)
-allAreas_l8_nosc = newStack_l8.map(calcArea_nosc)
-allAreas_l9_nosc = newStack_l9.map(calcArea_nosc)
+allAreas_l5_nosc = lightStack_l5.map(calcArea_nosc)
+allAreas_l7_nosc = lightStack_l7.map(calcArea_nosc)
+allAreas_l8_nosc = lightStack_l8.map(calcArea_nosc)
+allAreas_l9_nosc = lightStack_l9.map(calcArea_nosc)
 
-allAreas_l5_sc = newStack_l5.map(calcArea_sc)
-allAreas_l7_sc = newStack_l7.map(calcArea_sc)
-allAreas_l8_sc = newStack_l8.map(calcArea_sc)
-allAreas_l9_sc = newStack_l9.map(calcArea_sc)
+allAreas_l5_sc = lightStack_l5.map(calcArea_sc)
+allAreas_l7_sc = lightStack_l7.map(calcArea_sc)
+allAreas_l8_sc = lightStack_l8.map(calcArea_sc)
+allAreas_l9_sc = lightStack_l9.map(calcArea_sc)
 
 ```
 
@@ -949,7 +963,7 @@ export_summary_5_aoi = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-#export_summary_5_aoi.start()
+export_summary_5_aoi.start()
 
 export_summary_5_nosc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l5_nosc,
@@ -1142,7 +1156,6 @@ def applyPerMissionDate_sen(missDate):
   sen_miss_date_GTB = applyGTB_sen(oneMissDate)
   sen_GTB_class = extract_classes(sen_miss_date_GTB)
   return (sen_GTB_class.set('missDate', missDate))
-
 
 ```
 
