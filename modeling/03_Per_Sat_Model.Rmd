@@ -1,8 +1,11 @@
 ---
 title: "eePlumB per-Satellite Model"
 author: "ROSSyndicate"
-date: "2023-07-26"
+date: "2023-08-03"
 output: html_document
+editor_options:
+  markdown:
+    wrap: 80
 ---
 
 ```{r setup, echo = F}
@@ -44,9 +47,10 @@ import ee
 import os
 import time
 import pandas as pd
-import fiona
+import geopandas as gpd
+import geemap as gm
 
-v_date = '2023-07-25b'
+v_date = '2023-08-03'
 ```
 
 ## GEE Setup
@@ -599,14 +603,8 @@ l5 = l5.map(apply_radsat_mask)
 ### Load modeling AOIs and clip stack
 
 ```{python}
-with fiona.open('data/aoi/Superior_AOI_modeling.shp') as src:
-  shapes = ([ee.Geometry.Polygon(
-    [[x[0], x[1]] for x in feature['geometry']['coordinates'][0]]
-    ) for feature in src])
-# Create an ee.Feature for each shape
-features = [ee.Feature(shape, {}) for shape in shapes]
-# Create an ee.FeatureCollection from the ee.Features
-whole_aoi = ee.FeatureCollection(features)
+aoi_gpd = gpd.read_file('data/aoi/Superior_AOI_modeling.shp')
+aoi_ee = gm.geopandas_to_ee(aoi_gpd)
 
 #Calculate total area of AOI
 def calc_area(feat):
@@ -614,10 +612,9 @@ def calc_area(feat):
   feat_area_ha = ee.Number(feat_area).divide(1e5)
   return feat.set('area_ha', feat_area_ha)
 
-aoi_area = whole_aoi.map(calc_area)
-print('total AOI area: ', aoi_area.first().get('area_ha').getInfo())
-
-
+aoi_area = aoi_ee.map(calc_area).aggregate_sum('area_ha')
+aoi_area_ha = aoi_area.getInfo()
+print('total AOI area: ', aoi_area_ha)
 ```
 
 And then clip each image by that aoi
@@ -625,13 +622,32 @@ And then clip each image by that aoi
 ```{python}
 # clip images to aoi
 def clip(image):
-  return image.clip(whole_aoi.geometry())
+  return image.clip(aoi_ee.geometry())
 
 l5_aoi = l5.map(clip)
 l7_aoi = l7.map(clip)
 l8_aoi = l8.map(clip)
 l9_aoi = l9.map(clip)
 ```
+
+Load AOIs to summarize over
+
+```{python}
+aoi_no_sc_gpd = gpd.read_file('data/aoi/Superior_AOI_minus_shoreline_contamination.shp')
+aoi_no_sc_ee = gm.geopandas_to_ee(aoi_no_sc_gpd)
+
+aoi_no_sc_area = aoi_no_sc_ee.map(calc_area).aggregate_sum('area_ha')
+aoi_no_sc_area_ha = aoi_no_sc_area.getInfo()
+print('total AOI area without shoreline contamination: ', aoi_no_sc_area_ha)
+
+aoi_sc_gpd = gpd.read_file('data/aoi/Superior_shoreline_contamination.shp')
+aoi_sc_ee = gm.geopandas_to_ee(aoi_sc_gpd)
+
+aoi_sc_area = aoi_sc_ee.map(calc_area).aggregate_sum('area_ha')
+aoi_sc_area = aoi_sc_area.getInfo()
+print('total AOI area identified as shoreline contamination: ', aoi_sc_area_ha)
+```
+
 
 #### Helper functions
 
@@ -805,9 +821,8 @@ newStack_l9 = ee.ImageCollection(newStack_list_l9)
 ### Calculate area per image and export
 
 ```{python}
-area_ha = aoi_area.first().get('area_ha').getInfo()
-
-def calcArea(image):
+#because these geometries are rather large, we have to create a function for each AOI
+def calcArea_aoi(image):
   areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
 
   areaImage_light = areaImage.select([
@@ -820,7 +835,7 @@ def calcArea(image):
     ])
 
   area = areaImage_light.reduceRegions(
-    collection = aoi_area,
+    collection = aoi_ee,
     reducer = ee.Reducer.sum().forEachBand(areaImage_light),
     crs = img_crs,
     crsTransform = img_crsTrans
@@ -829,59 +844,218 @@ def calcArea(image):
   missDate = image.get('missDate')
 
   # Create a feature with the calculated area and properties
-  a = area.first().set({'missDate': missDate, 'area_ha': area_ha})
+  a = area.first().set({'missDate': missDate, 
+                        'area_ha': aoi_area_ha, 
+                        'extent': 'aoi'})
+  
+  return ee.FeatureCollection(a)
+
+def calcArea_nosc(image):
+  areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
+
+  areaImage_light = areaImage.select([
+    'classified',
+    'cloud',
+    'openWater',
+    'lightNSSed',
+    'OSSed',
+    'dNSSed'
+    ])
+
+  area = areaImage_light.reduceRegions(
+    collection = aoi_no_sc_ee,
+    reducer = ee.Reducer.sum().forEachBand(areaImage_light),
+    crs = img_crs,
+    crsTransform = img_crsTrans
+  )
+
+  missDate = image.get('missDate')
+
+  # Create a feature with the calculated area and properties
+  a = area.first().set({'missDate': missDate, 
+                        'area_ha': aoi_no_sc_area_ha, 
+                        'extent': 'aoi no sc'})
   
   return ee.FeatureCollection(a)
 
 
-total_area = aoi_area.first().get('area_ha').getInfo()
+def calcArea_sc(image):
+  areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
 
-allAreas_l5 = newStack_l5.map(calcArea)
-allAreas_l7 = newStack_l7.map(calcArea)
-allAreas_l8 = newStack_l8.map(calcArea)
-allAreas_l9 = newStack_l9.map(calcArea)
+  areaImage_light = areaImage.select([
+    'classified',
+    'cloud',
+    'openWater',
+    'lightNSSed',
+    'OSSed',
+    'dNSSed'
+    ])
 
-## export to drive
-export_summary_5 = (ee.batch.Export.table.toDrive(
-  collection = allAreas_l5,
-  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha'],
-  description = 'quick_gradientTreeBoost_landsat_5_stack_v' + v_date,
-  folder = 'eePlumB_classification',
-  fileFormat = 'csv'))
+  area = areaImage_light.reduceRegions(
+    collection = aoi_sc_ee,
+    reducer = ee.Reducer.sum().forEachBand(areaImage_light),
+    crs = img_crs,
+    crsTransform = img_crsTrans
+  )
 
-export_summary_5.start()
+  missDate = image.get('missDate')
 
-export_summary_7 = (ee.batch.Export.table.toDrive(
-  collection = allAreas_l7,
-  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha'],
-  description = 'quick_gradientTreeBoost_landsat_7_stack_v' + v_date,
-  folder = 'eePlumB_classification',
-  fileFormat = 'csv'))
-
-export_summary_7.start()
-
-
-export_summary_8 = (ee.batch.Export.table.toDrive(
-  collection = allAreas_l8,
-  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha'],
-  description = 'quick_gradientTreeBoost_landsat_8_stack_v' + v_date,
-  folder = 'eePlumB_classification',
-  fileFormat = 'csv'))
-
-export_summary_8.start()
-
-
-export_summary_9 = (ee.batch.Export.table.toDrive(
-  collection = allAreas_l9,
-  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha'],
-  description = 'quick_gradientTreeBoost_landsat_9_stack_v' + v_date,
-  folder = 'eePlumB_classification',
-  fileFormat = 'csv'))
-
-export_summary_9.start()
+  # Create a feature with the calculated area and properties
+  a = area.first().set({'missDate': missDate, 
+                        'area_ha': aoi_sc_area_ha, 
+                        'extent': 'shoreline contamination'})
+  
+  return ee.FeatureCollection(a)
 
 ```
 
+And then map them over all the stacks
+
+```{python}
+
+allAreas_l5_aoi = newStack_l5.map(calcArea_aoi)
+allAreas_l7_aoi = newStack_l7.map(calcArea_aoi)
+allAreas_l8_aoi = newStack_l8.map(calcArea_aoi)
+allAreas_l9_aoi = newStack_l9.map(calcArea_aoi)
+
+allAreas_l5_nosc = newStack_l5.map(calcArea_nosc)
+allAreas_l7_nosc = newStack_l7.map(calcArea_nosc)
+allAreas_l8_nosc = newStack_l8.map(calcArea_nosc)
+allAreas_l9_nosc = newStack_l9.map(calcArea_nosc)
+
+allAreas_l5_sc = newStack_l5.map(calcArea_sc)
+allAreas_l7_sc = newStack_l7.map(calcArea_sc)
+allAreas_l8_sc = newStack_l8.map(calcArea_sc)
+allAreas_l9_sc = newStack_l9.map(calcArea_sc)
+
+```
+
+And then, sadly, these individual aoi geometries are too big to merge, so you have to export them each individually
+
+#### Landsat 5
+
+```{python}
+## export to drive
+export_summary_5_aoi = (ee.batch.Export.table.toDrive(
+  collection = allAreas_l5_aoi,
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
+  description = 'gradientTreeBoost_landsat_5_stack_v' + v_date,
+  folder = 'eePlumB_classification',
+  fileFormat = 'csv'))
+
+export_summary_5_aoi.start()
+
+export_summary_5_nosc = (ee.batch.Export.table.toDrive(
+  collection = allAreas_l5_nosc,
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
+  description = 'gradientTreeBoost_landsat_5_stack_nosc_v' + v_date,
+  folder = 'eePlumB_classification',
+  fileFormat = 'csv'))
+
+export_summary_5_nosc.start()
+
+export_summary_5_sc = (ee.batch.Export.table.toDrive(
+  collection = allAreas_l5_sc,
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
+  description = 'gradientTreeBoost_landsat_5_stack_sc_v' + v_date,
+  folder = 'eePlumB_classification',
+  fileFormat = 'csv'))
+
+export_summary_5_sc.start()
+```
+
+#### Landsat 7
+
+```{python}
+export_summary_7_aoi = (ee.batch.Export.table.toDrive(
+  collection = allAreas_l7_aoi,
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
+  description = 'gradientTreeBoost_landsat_7_stack_v' + v_date,
+  folder = 'eePlumB_classification',
+  fileFormat = 'csv'))
+
+export_summary_7_aoi.start()
+
+export_summary_7_nosc = (ee.batch.Export.table.toDrive(
+  collection = allAreas_l7_nosc,
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
+  description = 'gradientTreeBoost_landsat_7_stack_nosc_v' + v_date,
+  folder = 'eePlumB_classification',
+  fileFormat = 'csv'))
+
+export_summary_7_nosc.start()
+
+export_summary_7_sc = (ee.batch.Export.table.toDrive(
+  collection = allAreas_l7_sc,
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
+  description = 'gradientTreeBoost_landsat_7_stack_sc_v' + v_date,
+  folder = 'eePlumB_classification',
+  fileFormat = 'csv'))
+
+export_summary_7_sc.start()
+```
+
+#### Landsat 8
+
+```{python}
+export_summary_8_aoi = (ee.batch.Export.table.toDrive(
+  collection = allAreas_l8_aoi,
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
+  description = 'gradientTreeBoost_landsat_8_stack_v' + v_date,
+  folder = 'eePlumB_classification',
+  fileFormat = 'csv'))
+
+export_summary_8_aoi.start()
+
+export_summary_8_nosc = (ee.batch.Export.table.toDrive(
+  collection = allAreas_l8_nosc,
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
+  description = 'gradientTreeBoost_landsat_8_stack_nosc_v' + v_date,
+  folder = 'eePlumB_classification',
+  fileFormat = 'csv'))
+
+export_summary_8_nosc.start()
+
+export_summary_8_sc = (ee.batch.Export.table.toDrive(
+  collection = allAreas_l8_sc,
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
+  description = 'gradientTreeBoost_landsat_8_stack_sc_v' + v_date,
+  folder = 'eePlumB_classification',
+  fileFormat = 'csv'))
+
+export_summary_8_sc.start()
+```
+
+#### Landsat 9
+
+```{python}
+export_summary_9_aoi = (ee.batch.Export.table.toDrive(
+  collection = allAreas_l9_aoi,
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
+  description = 'gradientTreeBoost_landsat_9_stack_v' + v_date,
+  folder = 'eePlumB_classification',
+  fileFormat = 'csv'))
+
+export_summary_9_aoi.start()
+
+export_summary_9_nosc = (ee.batch.Export.table.toDrive(
+  collection = allAreas_l9_nosc,
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
+  description = 'gradientTreeBoost_landsat_9_stack_nosc_v' + v_date,
+  folder = 'eePlumB_classification',
+  fileFormat = 'csv'))
+
+export_summary_9_nosc.start()
+
+export_summary_9_sc = (ee.batch.Export.table.toDrive(
+  collection = allAreas_l9_sc,
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
+  description = 'gradientTreeBoost_landsat_9_stack_sc_v' + v_date,
+  folder = 'eePlumB_classification',
+  fileFormat = 'csv'))
+
+export_summary_9_sc.start()
+```
 
 ## Apply model to image stack for Sentinel
 
@@ -1006,7 +1180,7 @@ sen_stack_light = newStack_sen.select([
     'dNSSed'
     ])
 
-def calcArea_sen(image):
+def calcArea_sen_aoi(image):
   areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
   
   area = areaImage.reduceRegions(
@@ -1019,22 +1193,90 @@ def calcArea_sen(image):
   missDate = image.get('missDate')
   
   # Create a feature with the calculated area and properties
-  a = area.first().set({'missDate': missDate, 'area_ha': area_ha})
+  a = area.first().set({'missDate': missDate, 
+                        'area_ha': area_ha,
+                        'extent': 'aoi'})
   
   return ee.FeatureCollection(a)
 
 
-allAreas_sen = sen_stack_light.map(calcArea_sen)
+allAreas_sen_aoi = sen_stack_light.map(calcArea_sen_aoi)
 
 ## export to drive
-export_summary_sen = (ee.batch.Export.table.toDrive(
-  collection = allAreas_sen,
-  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha'],
+export_summary_sen_aoi = (ee.batch.Export.table.toDrive(
+  collection = allAreas_sen_aoi,
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'aoi'],
   description = 'quick_gradientTreeBoost_sen2_stack_v' + v_date,
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-#export_summary_sen.start()
+export_summary_sen_aoi.start()
+
+def calcArea_sen_nosc(image):
+  areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
+  
+  area = areaImage.reduceRegions(
+    collection = aoi_no_sc_ee,
+    reducer = ee.Reducer.sum().forEachBand(areaImage),
+    crs = img_crs_sen,
+    crsTransform = img_crsTrans_sen
+  )
+  
+  missDate = image.get('missDate')
+  
+  # Create a feature with the calculated area and properties
+  a = area.first().set({'missDate': missDate, 
+                        'area_ha': area_ha,
+                        'extent': 'aoi no sc'})
+  
+  return ee.FeatureCollection(a)
+
+
+allAreas_sen_nosc = sen_stack_light.map(calcArea_sen_nosc)
+
+## export to drive
+export_summary_sen_nosc = (ee.batch.Export.table.toDrive(
+  collection = allAreas_sen_nosc,
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
+  description = 'quick_gradientTreeBoost_sen2_nosc_stack_v' + v_date,
+  folder = 'eePlumB_classification',
+  fileFormat = 'csv'))
+
+export_summary_sen_nosc.start()
+
+
+
+def calcArea_sen_sc(image):
+  areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
+  
+  area = areaImage.reduceRegions(
+    collection = aoi_sc_ee,
+    reducer = ee.Reducer.sum().forEachBand(areaImage),
+    crs = img_crs_sen,
+    crsTransform = img_crsTrans_sen
+  )
+  
+  missDate = image.get('missDate')
+  
+  # Create a feature with the calculated area and properties
+  a = area.first().set({'missDate': missDate, 
+                        'area_ha': area_ha,
+                        'extent': 'shoreline contamination'})
+  
+  return ee.FeatureCollection(a)
+
+
+allAreas_sen_sc = sen_stack_light.map(calcArea_sen_sc)
+
+## export to drive
+export_summary_sen_Sc = (ee.batch.Export.table.toDrive(
+  collection = allAreas_sen_sc,
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
+  description = 'quick_gradientTreeBoost_sen2_sc_stack_v' + v_date,
+  folder = 'eePlumB_classification',
+  fileFormat = 'csv'))
+
+export_summary_sen_sc.start()
 
 ```
 
