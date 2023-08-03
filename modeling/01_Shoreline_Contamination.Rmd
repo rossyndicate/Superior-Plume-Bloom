@@ -3,6 +3,9 @@ title: "Shoreline Contamination Workflow"
 author: "ROSSyndicate"
 date: "2023-07-18"
 output: html_document
+editor_options:
+  markdown:
+    wrap: 80
 ---
 
 # Purpose
