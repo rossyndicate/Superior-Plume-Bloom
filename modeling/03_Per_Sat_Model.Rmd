@@ -33,7 +33,7 @@ Sentinel mosaic-ed images.
 Check for virtual environment and activate, otherwise, set up virtual
 environment.
 
-```{r conda env}
+```{r, conda env}
 if (!dir.exists("env")) {
   source("pySetup.R")
 } else {
@@ -481,12 +481,27 @@ trainedGTB_sen = (ee.Classifier.smileGradientTreeBoost(10).train(
 confusionMatrixGTB_ls5 = (testing_ls5
   .classify(trainedGTB_ls5)
   .errorMatrix('byte_property', "classification"))
+#convert to pandas dataframe with class info
+confusion_l5 = (pd.DataFrame(
+  confusionMatrixGTB_ls5.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
 print('GTB Confusion Matrix for Landsat 5:')
-print(confusionMatrixGTB_ls5.getInfo())
+print(confusion_l5)
 
-acc_values_GTB_ls5 = (confusionMatrixGTB_ls5
-  .accuracy())
-print("GTB Confusion Overall Accuracy for Landsat 5: ", acc_values_GTB_ls5.getInfo())
+#reformat and save
+confusion_l5['mission'] = 'Landsat 5'
+confusion_l5.reset_index(inplace = True)
+confusion_l5 = confusion_sen.rename(columns = {'level_0': 'class'})  
+confusion_l5.to_csv('data/output/GTB_'+v_date+'_L5_confusion.csv', index = False)
+
+acc_values_GTB_ls5 = (confusionMatrixGTB_ls5.accuracy().getInfo())
+print("GTB Confusion Overall Accuracy for Landsat 5: ", acc_values_GTB_ls5)
+k_GTB_ls5 = (confusionMatrixGTB_ls5.kappa().getInfo())
+print("GTB kappa for LS5: ", k_GTB_ls5)
+fs_GTB_ls5 = (confusionMatrixGTB_ls5.fscore().getInfo())
+print('GTB fScore for each class: ', fs_GTB_ls5)
 ```
 
 ### Landsat 7
@@ -495,12 +510,27 @@ print("GTB Confusion Overall Accuracy for Landsat 5: ", acc_values_GTB_ls5.getIn
 confusionMatrixGTB_ls7 = (testing_ls7
   .classify(trainedGTB_ls7)
   .errorMatrix('byte_property', "classification"))
+#convert to pandas dataframe with class info
+confusion_l7 = (pd.DataFrame(
+  confusionMatrixGTB_ls7.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
 print('GTB Confusion Matrix for Landsat 7:')
-print(confusionMatrixGTB_ls7.getInfo())
+print(confusion_l7)
 
-acc_values_GTB_ls7 = (confusionMatrixGTB_ls7
-  .accuracy())
-print("GTB Confusion Overall Accuracy for Landsat 7: ", acc_values_GTB_ls7.getInfo())
+#reformat and save
+confusion_l7['mission'] = 'Landsat 7'
+confusion_l7.reset_index(inplace = True)
+confusion_l7 = confusion_sen.rename(columns = {'level_0': 'class'})  
+confusion_l7.to_csv('data/output/GTB_'+v_date+'_L7_confusion.csv', index = False)
+
+acc_values_GTB_ls7 = (confusionMatrixGTB_ls7.accuracy().getInfo())
+print("GTB Confusion Overall Accuracy for Landsat 7: ", acc_values_GTB_ls7)
+k_GTB_ls7 = (confusionMatrixGTB_ls7.kappa().getInfo())
+print("GTB kappa for LS7: ", k_GTB_ls7)
+fs_GTB_ls7 = (confusionMatrixGTB_ls7.fscore().getInfo())
+print('GTB fScore for each class: ', fs_GTB_ls7)
 ```
 
 ### Landsat 8
@@ -509,12 +539,27 @@ print("GTB Confusion Overall Accuracy for Landsat 7: ", acc_values_GTB_ls7.getIn
 confusionMatrixGTB_ls8 = (testing_ls8
   .classify(trainedGTB_ls8)
   .errorMatrix('byte_property', "classification"))
+#convert to pandas dataframe with class info
+confusion_l8 = (pd.DataFrame(
+  confusionMatrixGTB_ls8.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
 print('GTB Confusion Matrix for Landsat 8:')
-print(confusionMatrixGTB_ls8.getInfo())
+print(confusion_l8)
 
-acc_values_GTB_ls8 = (confusionMatrixGTB_ls8
-  .accuracy())
-print("GTB Confusion Overall Accuracy for Landsat 8: ", acc_values_GTB_ls8.getInfo())
+#reformat and save
+confusion_l8['mission'] = 'Landsat 8'
+confusion_l8.reset_index(inplace = True)
+confusion_l8 = confusion_sen.rename(columns = {'level_0': 'class'})  
+confusion_l8.to_csv('data/output/GTB_'+v_date+'_L8_confusion.csv', index = False)
+  
+acc_values_GTB_ls8 = (confusionMatrixGTB_ls8.accuracy().getInfo())
+print("GTB Confusion Overall Accuracy for Landsat 8: ", acc_values_GTB_ls8)
+k_GTB_ls8 = (confusionMatrixGTB_ls8.kappa().getInfo())
+print("GTB kappa for LS8: ", k_GTB_ls8)
+fs_GTB_ls8 = (confusionMatrixGTB_ls8.fscore().getInfo())
+print('GTB fScore for each class: ', fs_GTB_ls8)
 ```
 
 ### Landsat 9
@@ -523,12 +568,27 @@ print("GTB Confusion Overall Accuracy for Landsat 8: ", acc_values_GTB_ls8.getIn
 confusionMatrixGTB_ls9 = (testing_ls9
   .classify(trainedGTB_ls9)
   .errorMatrix('byte_property', "classification"))
+#convert to pandas dataframe with class info
+confusion_l9 = (pd.DataFrame(
+  confusionMatrixGTB_ls9.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
 print('GTB Confusion Matrix for Landsat 9:')
-print(confusionMatrixGTB_ls9.getInfo())
+print(confusion_l9)
 
-acc_values_GTB_ls9 = (confusionMatrixGTB_ls9
-  .accuracy())
-print("GTB Confusion Overall Accuracy for Landsat 9: ", acc_values_GTB_ls9.getInfo())
+#reformat and save
+confusion_l9['mission'] = 'Landsat 9'
+confusion_l9.reset_index(inplace = True)
+confusion_l9 = confusion_sen.rename(columns = {'level_0': 'class'})  
+confusion_l9.to_csv('data/output/GTB_'+v_date+'_L9_confusion.csv', index = False)
+
+acc_values_GTB_ls9 = (confusionMatrixGTB_ls9.accuracy().getInfo())
+print("GTB Confusion Overall Accuracy for Landsat 9: ", acc_values_GTB_ls9)
+k_GTB_ls9 = (confusionMatrixGTB_ls9.kappa().getInfo())
+print("GTB kappa for LS9: ", k_GTB_ls9)
+fs_GTB_ls9 = (confusionMatrixGTB_ls9.fscore().getInfo())
+print('GTB fScore for each class: ', fs_GTB_ls9)
 ```
 
 ### Sentinel 2
@@ -537,12 +597,67 @@ print("GTB Confusion Overall Accuracy for Landsat 9: ", acc_values_GTB_ls9.getIn
 confusionMatrixGTB_sen = (testing_sen
   .classify(trainedGTB_sen)
   .errorMatrix('byte_property', "classification"))
-print('GTB Confusion Matrix for Sentinel 2: ')
-print(confusionMatrixGTB_sen.getInfo())
+#convert to pandas dataframe with class info
+confusion_sen = (pd.DataFrame(
+  confusionMatrixGTB_sen.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
+print('GTB Confusion Matrix for Sentinel 2:')
+print(confusion_sen)
 
-acc_values_GTB_sen = (confusionMatrixGTB_sen
-  .accuracy())
-print("GTB Confusion Overall Accuracy for Sentinel 2: ", acc_values_GTB_sen.getInfo())
+#reformat and save
+confusion_sen['mission'] = 'Sentinel 2'
+confusion_sen.reset_index(inplace = True)
+confusion_sen = confusion_sen.rename(columns = {'level_0': 'class'})  
+confusion_sen.to_csv('data/output/GTB_'+v_date+'_Sen2_confusion.csv', index = False)
+
+acc_values_GTB_sen = (confusionMatrixGTB_sen.accuracy().getInfo())
+print("GTB Confusion Overall Accuracy for Sentinel 2: ", acc_values_GTB_sen)
+k_GTB_sen = (confusionMatrixGTB_sen.kappa().getInfo())
+print("GTB kappa for S2: ", k_GTB_ls5)
+fs_GTB_sen = (confusionMatrixGTB_sen.fscore().getInfo())
+print('GTB fScore for each class: ', fs_GTB_sen)
+
+```
+
+### Collate model stats, save to data folder
+
+First, we'll copy over some values and make a big pandas dataframe. Note that the df.copy() function unlinks the original list from the new one. Silly python.
+
+```{python}
+accuracy_heads = class_values.copy()
+accuracy_heads.extend(['GTB_accuracy', 'GTB_kappa'])
+landsat5_perf = fs_GTB_ls5.copy()
+landsat5_perf.extend([acc_values_GTB_ls5, k_GTB_ls5])
+landsat7_perf = fs_GTB_ls7.copy()
+landsat7_perf.extend([acc_values_GTB_ls7, k_GTB_ls7])
+landsat8_perf = fs_GTB_ls8.copy()
+landsat8_perf.extend([acc_values_GTB_ls8, k_GTB_ls8])
+landsat9_perf = fs_GTB_ls9.copy()
+landsat9_perf.extend([acc_values_GTB_ls9, k_GTB_ls9])
+sentinel2_perf = fs_GTB_sen.copy()
+sentinel2_perf.extend([acc_values_GTB_sen, k_GTB_sen])
+
+performance_collation = pd.DataFrame(
+  [landsat5_perf,
+  landsat7_perf,
+  landsat8_perf,
+  landsat9_perf,
+  sentinel2_perf],
+  index = [
+    'Landsat 5',
+    'Landsat 7',
+    'Landsat 8', 
+    'Landsat 9',
+    'Sentinel 2'
+    ],
+  columns = [accuracy_heads]
+  )
+
+# reset the index
+performance_collation.reset_index(inplace = True)
+performance_collation.rename(columns = {'index':'satellite'}).to_csv('data/output/GTB_'+v_date+'_performance_stats.csv', index = False)
 ```
 
 ## Apply model to image stack for Landsat
@@ -973,7 +1088,8 @@ export_summary_5_aoi = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-export_summary_5_aoi.start()
+
+#export_summary_5_aoi.start()
 
 export_summary_5_nosc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l5_nosc,
@@ -982,7 +1098,7 @@ export_summary_5_nosc = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-export_summary_5_nosc.start()
+#export_summary_5_nosc.start()
 
 export_summary_5_sc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l5_sc,
@@ -991,7 +1107,7 @@ export_summary_5_sc = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-export_summary_5_sc.start()
+#export_summary_5_sc.start()
 ```
 
 #### Landsat 7
@@ -1004,7 +1120,7 @@ export_summary_7_aoi = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-export_summary_7_aoi.start()
+#export_summary_7_aoi.start()
 
 export_summary_7_nosc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l7_nosc,
@@ -1013,7 +1129,7 @@ export_summary_7_nosc = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-export_summary_7_nosc.start()
+#export_summary_7_nosc.start()
 
 export_summary_7_sc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l7_sc,
@@ -1022,7 +1138,7 @@ export_summary_7_sc = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-export_summary_7_sc.start()
+#export_summary_7_sc.start()
 ```
 
 #### Landsat 8
@@ -1035,7 +1151,7 @@ export_summary_8_aoi = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-export_summary_8_aoi.start()
+#export_summary_8_aoi.start()
 
 export_summary_8_nosc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l8_nosc,
@@ -1044,7 +1160,7 @@ export_summary_8_nosc = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-export_summary_8_nosc.start()
+#export_summary_8_nosc.start()
 
 export_summary_8_sc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l8_sc,
@@ -1053,7 +1169,7 @@ export_summary_8_sc = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-export_summary_8_sc.start()
+#export_summary_8_sc.start()
 ```
 
 #### Landsat 9
@@ -1066,7 +1182,7 @@ export_summary_9_aoi = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-export_summary_9_aoi.start()
+#export_summary_9_aoi.start()
 
 export_summary_9_nosc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l9_nosc,
@@ -1075,7 +1191,7 @@ export_summary_9_nosc = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-export_summary_9_nosc.start()
+#export_summary_9_nosc.start()
 
 export_summary_9_sc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l9_sc,
@@ -1084,7 +1200,7 @@ export_summary_9_sc = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-export_summary_9_sc.start()
+#export_summary_9_sc.start()
 ```
 
 ## Apply model to image stack for Sentinel
