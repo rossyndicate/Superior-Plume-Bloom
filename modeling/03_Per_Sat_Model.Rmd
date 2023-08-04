@@ -25,7 +25,8 @@ lapply(libs, package_loader)
 
 # Purpose
 
-This script develops and applies Gradient Tree Boost Models to Landsat and Sentinel mosaic-ed images.
+This script develops and applies Gradient Tree Boost Models to Landsat and
+Sentinel mosaic-ed images.
 
 ## Activate conda environment
 
@@ -56,8 +57,8 @@ v_date = '2023-08-03'
 ## GEE Setup
 
 In order to access the GEE API, we need to authenticate our identity. To do
-this, you must type `earthengine authenticate` in the terminal window. When
-your browser states 'You are now authenticated with the gcloud CLI', the
+this, you must type `earthengine authenticate` in the terminal window. When your
+browser states 'You are now authenticated with the gcloud CLI', the
 authentication is complete. This authentication is valid for 7 days.
 
 Now, we need to initialize our GEE session.
@@ -70,7 +71,9 @@ ee.Initialize(project = 'ee-ross-superior')
 
 ## Load the labels file into the environment
 
-Because of how the later function is written, it works best to read these into R. I couldn't tell you why other than my function doesn't work with pandas dataframes.
+Because of how the later function is written, it works best to read these into
+R. I couldn't tell you why other than my function doesn't work with pandas
+dataframes.
 
 ```{r}
 labels_file <- list.files('data/labels/', full.names = T)
@@ -95,7 +98,10 @@ ls9_labels = labels %>%
 
 ### Quick QAQC of the labels
 
-We know there are some outliers in here. To create a good model, we'll want to remove any 'outliers' from each of the label sets. Because we're creating models for each mission, we'll perform these outlier clean ups for each mission. We'll define 'outliers' as the outer 0.02 and 0.98 percentiles. 
+We know there are some outliers in here. To create a good model, we'll want to
+remove any 'outliers' from each of the label sets. Because we're creating models
+for each mission, we'll perform these outlier clean ups for each mission. We'll
+define 'outliers' as the outer 0.02 and 0.98 percentiles.
 
 Make some helper lists
 
@@ -107,7 +113,9 @@ ls_band_list = c(expr(Red), expr(Green), expr(Blue), expr(B5), expr(B6), expr(B7
 sen_band_list = c(expr(Red), expr(Green), expr(Blue), expr(B5), expr(B6), expr(B7), expr(B8), expr(B11), expr(B12))
 ```
 
-We need to rescale B11 and B12 for the Sentinel data. While this will not change any downstream 'outlier' handling, it will [hopefully] help with the wonky application of Sentinel models since the range is so different for those bands.
+We need to rescale B11 and B12 for the Sentinel data. While this will not change
+any downstream 'outlier' handling, it will [hopefully] help with the wonky
+application of Sentinel models since the range is so different for those bands.
 
 ```{r}
 sen_labels <- sen_labels %>% 
@@ -115,10 +123,10 @@ sen_labels <- sen_labels %>%
             ~ .*0.0001)
 ```
 
-
 #### Landsat 5
 
-Maybe a tidyfail, maybe a me problem, but we're creating new, very similar functions for each dataset. 
+Maybe a tidyfail, maybe a me problem, but we're creating new, very similar
+functions for each dataset.
 
 ```{r}
 qaqc_filter_ls5 <- function(band, cl) {
@@ -143,7 +151,6 @@ ls_5_filt <- ls_5_filtered %>%
 
 ```
 
-
 #### Landsat 7
 
 ```{r}
@@ -167,7 +174,6 @@ ls_7_filt <- ls_7_filtered %>%
   reduce(full_join) %>% 
   distinct()
 ```
-
 
 #### Landsat 8
 
@@ -194,7 +200,6 @@ ls_8_filt <- ls_8_filtered %>%
   distinct()
 
 ```
-
 
 #### Landsat 9
 
@@ -340,7 +345,7 @@ ee_ls9_labels_filt = ee_ls9_labels.filter(ee.Filter.inList('class', class_values
 ee_sen_labels_filt = ee_sen_labels.filter(ee.Filter.inList('class', class_values))
 ```
 
-##  Create Gradient Boost Tree Model
+## Create Gradient Boost Tree Model
 
 Define the input features and output labels
 
@@ -542,7 +547,8 @@ print("GTB Confusion Overall Accuracy for Sentinel 2: ", acc_values_GTB_sen.getI
 
 ## Apply model to image stack for Landsat
 
-We'll go through and apply the Landsat and Sentinel separately due to the differences in bands.
+We'll go through and apply the Landsat and Sentinel separately due to the
+differences in bands.
 
 ### Load the image collection
 
@@ -561,29 +567,29 @@ def applyScaleFactors(image):
 
 # load Landsat 5, 7, 8, 9 Surface Reflectance and rename bands
 l9 = (ee.ImageCollection("LANDSAT/LC09/C02/T1_L2")
-  .select(bn89, bn)
   .filter(ee.Filter.eq('WRS_PATH', 26))
   .filter(ee.Filter.inList('WRS_ROW', ROWS))
-  .map(applyScaleFactors)
-  .filter(ee.Filter.gte('IMAGE_QUALITY_OLI', 7)))
+  .filter(ee.Filter.gte('IMAGE_QUALITY_OLI', 7))
+  .select(bn89, bn)
+  .map(applyScaleFactors))
 l8 = (ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
+  .filter(ee.Filter.eq('WRS_PATH', 26))
+  .filter(ee.Filter.inList('WRS_ROW', ROWS))
+  .filter(ee.Filter.gte('IMAGE_QUALITY_OLI', 7))
   .select(bn89, bn)
-  .filter(ee.Filter.eq('WRS_PATH', 26))
-  .filter(ee.Filter.inList('WRS_ROW', ROWS))
-  .map(applyScaleFactors)
-  .filter(ee.Filter.gte('IMAGE_QUALITY_OLI', 7)))
+  .map(applyScaleFactors))
 l7 = (ee.ImageCollection('LANDSAT/LE07/C02/T1_L2')
-  .select(bn457, bn)
   .filter(ee.Filter.eq('WRS_PATH', 26))
   .filter(ee.Filter.inList('WRS_ROW', ROWS))
-  .map(applyScaleFactors)
-  .filter(ee.Filter.gte('IMAGE_QUALITY', 7)))
+  .filter(ee.Filter.gte('IMAGE_QUALITY', 7))
+  .select(bn457, bn)
+  .map(applyScaleFactors))
 l5 = (ee.ImageCollection('LANDSAT/LT05/C02/T1_L2')
-  .select(bn457, bn)
   .filter(ee.Filter.eq('WRS_PATH', 26))
   .filter(ee.Filter.inList('WRS_ROW', ROWS))
-  .map(applyScaleFactors)
-  .filter(ee.Filter.gte('IMAGE_QUALITY', 7)))
+  .filter(ee.Filter.gte('IMAGE_QUALITY', 7))
+  .select(bn457, bn)
+  .map(applyScaleFactors))
 ```
 
 Add QA_RADSAT mask to mask where any band was saturated
@@ -599,10 +605,10 @@ l7 = l7.map(apply_radsat_mask)
 l5 = l5.map(apply_radsat_mask)
 ```
 
-
 ### Load modeling AOIs and clip stack
 
-Note, some AOIs are too big to load in here and uses as 'virtual' ee Feature Colections
+Note, some AOIs are too big to load in here and uses as 'virtual' ee Feature
+Colections
 
 ```{python}
 # aoi_gpd = gpd.read_file('data/aoi/Superior_AOI_modeling.shp')
@@ -653,7 +659,6 @@ aoi_sc_area = aoi_sc_ee.map(calc_area).aggregate_sum('area_ha')
 aoi_sc_area_ha = aoi_sc_area.getInfo()
 print('total AOI area identified as shoreline contamination: ', aoi_sc_area_ha)
 ```
-
 
 #### Helper functions
 
@@ -863,13 +868,13 @@ lightStack_l9 = newStack_l9.select([
     ])
 ```
 
-
 ### Calculate area per image and export
 
 ```{python}
 #because these geometries are rather large, we have to create a function for each AOI
 def calcArea_aoi(image):
-  areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
+  areaImage =  (image
+    .multiply(ee.Image.pixelArea()).divide(1e5))
 
   area = areaImage.reduceRegions(
     collection = aoi_ee,
@@ -889,7 +894,9 @@ def calcArea_aoi(image):
 
 
 def calcArea_nosc(image):
-  areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
+  areaImage =  (image
+    .multiply(ee.Image.pixelArea()).divide(1e5)
+    .clip(aoi_no_sc_ee.geometry()))
   
   area = areaImage.reduceRegions(
     collection = aoi_no_sc_ee,
@@ -909,7 +916,9 @@ def calcArea_nosc(image):
 
 
 def calcArea_sc(image):
-  areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
+  areaImage =  (image
+    .multiply(ee.Image.pixelArea()).divide(1e5)
+    .clip(aoi_sc_ee.geometry()))
 
   area = areaImage.reduceRegions(
     collection = aoi_sc_ee,
@@ -950,7 +959,8 @@ allAreas_l9_sc = lightStack_l9.map(calcArea_sc)
 
 ```
 
-And then, sadly, these individual aoi geometries are too big to merge, so you have to export them each individually
+And then, sadly, these individual aoi geometries are too big to merge, so you
+have to export them each individually
 
 #### Landsat 5
 
@@ -1228,7 +1238,7 @@ export_summary_sen_aoi = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-export_summary_sen_aoi.start()
+#export_summary_sen_aoi.start()
 
 def calcArea_sen_nosc(image):
   areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
@@ -1260,7 +1270,7 @@ export_summary_sen_nosc = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-export_summary_sen_nosc.start()
+#export_summary_sen_nosc.start()
 
 
 
@@ -1294,7 +1304,6 @@ export_summary_sen_sc = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-export_summary_sen_sc.start()
+#export_summary_sen_sc.start()
 
 ```
-
