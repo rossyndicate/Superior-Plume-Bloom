@@ -493,7 +493,7 @@ print(confusion_l5)
 #reformat and save
 confusion_l5['mission'] = 'Landsat 5'
 confusion_l5.reset_index(inplace = True)
-confusion_l5 = confusion_sen.rename(columns = {'level_0': 'class'})  
+confusion_l5 = confusion_l5.rename(columns = {'level_0': 'class'})  
 confusion_l5.to_csv('data/output/GTB_'+v_date+'_L5_confusion.csv', index = False)
 
 acc_values_GTB_ls5 = (confusionMatrixGTB_ls5.accuracy().getInfo())
@@ -522,7 +522,7 @@ print(confusion_l7)
 #reformat and save
 confusion_l7['mission'] = 'Landsat 7'
 confusion_l7.reset_index(inplace = True)
-confusion_l7 = confusion_sen.rename(columns = {'level_0': 'class'})  
+confusion_l7 = confusion_l7.rename(columns = {'level_0': 'class'})  
 confusion_l7.to_csv('data/output/GTB_'+v_date+'_L7_confusion.csv', index = False)
 
 acc_values_GTB_ls7 = (confusionMatrixGTB_ls7.accuracy().getInfo())
@@ -551,7 +551,7 @@ print(confusion_l8)
 #reformat and save
 confusion_l8['mission'] = 'Landsat 8'
 confusion_l8.reset_index(inplace = True)
-confusion_l8 = confusion_sen.rename(columns = {'level_0': 'class'})  
+confusion_l8 = confusion_l8.rename(columns = {'level_0': 'class'})  
 confusion_l8.to_csv('data/output/GTB_'+v_date+'_L8_confusion.csv', index = False)
   
 acc_values_GTB_ls8 = (confusionMatrixGTB_ls8.accuracy().getInfo())
@@ -580,7 +580,7 @@ print(confusion_l9)
 #reformat and save
 confusion_l9['mission'] = 'Landsat 9'
 confusion_l9.reset_index(inplace = True)
-confusion_l9 = confusion_sen.rename(columns = {'level_0': 'class'})  
+confusion_l9 = confusion_l9.rename(columns = {'level_0': 'class'})  
 confusion_l9.to_csv('data/output/GTB_'+v_date+'_L9_confusion.csv', index = False)
 
 acc_values_GTB_ls9 = (confusionMatrixGTB_ls9.accuracy().getInfo())
@@ -1421,5 +1421,172 @@ export_summary_sen_sc = (ee.batch.Export.table.toDrive(
   fileFormat = 'csv'))
 
 #export_summary_sen_sc.start()
+
+```
+
+
+## Export GeoTiffs to drive
+
+Load task checker!
+
+```{python}
+##Function for limiting the max number of tasks sent to
+#earth engine at one time to avoid time out errors
+def maximum_no_of_tasks(MaxNActive, waitingPeriod):
+  ##maintain a maximum number of active tasks
+  ## initialize submitting jobs
+  ts = list(ee.batch.Task.list())
+  NActive = 0
+  for task in ts:
+     if ('RUNNING' in str(task) or 'READY' in str(task)):
+         NActive += 1
+  ## wait if the number of current active tasks reach the maximum number
+  ## defined in MaxNActive
+  while (NActive >= MaxNActive):
+    time.sleep(waitingPeriod) # if reach or over maximum no. of active tasks, wait for 2min and check again
+    ts = list(ee.batch.Task.list())
+    NActive = 0
+    for task in ts:
+      if ('RUNNING' in str(task) or 'READY' in str(task)):
+        NActive += 1
+  return()
+
+```
+
+### Raster Export
+
+Note, each image export takes 2-3 hours, resulting in a processing time of 
+approximately 3 weeks. Do not run these chunks until you're ready to export 
+final files.
+
+### GTB images for Landsat 5
+
+```{python}
+date_length_5 = len(uniqueMissDate_l5.getInfo())
+
+for d in range(10,date_length_5):
+  md = uniqueMissDate_l5.get(d)
+  image = (newStack_l5
+    .filter(ee.Filter.eq('missDate', md))
+    .first()
+    .select('classification'))
+  export_image = ee.batch.Export.image.toDrive(
+    image = image,
+    region = aoi_ee.geometry(),
+    description = 'GTB_v' + v_date + '_' + str(md.getInfo()),
+    folder = 'GTB_v'+v_date,
+    scale = 30,
+    crs = img_crs,
+    maxPixels = 1e13)
+  #Check how many existing tasks are running and take a break of 30 mins if it's >25
+  maximum_no_of_tasks(10, 5*60)
+  #Send next task.
+  export_image.start()
+
+```
+
+### GTB images for Landsat 7
+
+```{python}
+date_length_7 = len(uniqueMissDate_l7.getInfo())
+
+for d in range(date_length_7):
+  md = uniqueMissDate_l7.get(d)
+  image = (newStack_l7
+    .filter(ee.Filter.eq('missDate', md))
+    .first()
+    .select('classification'))
+  export_image = ee.batch.Export.image.toDrive(
+    image = image,
+    region = aoi_ee.geometry(),
+    description = 'GTB_v' + v_date + '_' + str(md.getInfo()),
+    folder = 'GTB_v'+v_date,
+    scale = 30,
+    crs = img_crs,
+    maxPixels = 1e13)
+  #Check how many existing tasks are running and take a break of 30 mins if it's >25
+  maximum_no_of_tasks(10, 5*60)
+  #Send next task.
+  export_image.start()
+
+```
+
+
+### GTB images for Landsat 8
+
+```{python}
+date_length_8 = len(uniqueMissDate_l8.getInfo())
+
+for d in range(date_length_8):
+  md = uniqueMissDate_l8.get(d)
+  image = (newStack_l8
+    .filter(ee.Filter.eq('missDate', md))
+    .first()
+    .select('classification'))
+  export_image = ee.batch.Export.image.toDrive(
+    image = image,
+    region = aoi_ee.geometry(),
+    description = 'GTB_v' + v_date + '_' + str(md.getInfo()),
+    folder = 'GTB_v'+v_date,
+    scale = 30,
+    crs = img_crs,
+    maxPixels = 1e13)
+  #Check how many existing tasks are running and take a break of 30 mins if it's >25
+  maximum_no_of_tasks(10, 5*60)
+  #Send next task.
+  export_image.start()
+
+```
+
+
+### GTB images for Landsat 9
+
+```{python}
+date_length_9 = len(uniqueMissDate_l9.getInfo())
+
+for d in range(date_length_9):
+  md = uniqueMissDate_l9.get(d)
+  image = (newStack_l9
+    .filter(ee.Filter.eq('missDate', md))
+    .first()
+    .select('classification'))
+  export_image = ee.batch.Export.image.toDrive(
+    image = image,
+    region = aoi_ee.geometry(),
+    description = 'GTB_v' + v_date + '_' + str(md.getInfo()),
+    folder = 'GTB_v'+v_date,
+    scale = 30,
+    crs = img_crs,
+    maxPixels = 1e13)
+  #Check how many existing tasks are running and take a break of 30 mins if it's >25
+  maximum_no_of_tasks(10, 5*60)
+  #Send next task.
+  export_image.start()
+
+```
+
+### GTB images for Sentinel 2
+
+```{python}
+date_length_sen = len(uniqueMissDate_sen.getInfo())
+
+for d in range(date_length_sen):
+  md = uniqueMissDate_sen.get(d)
+  image = (newStack_sen
+    .filter(ee.Filter.eq('missDate', md))
+    .first()
+    .select('classification'))
+  export_image = ee.batch.Export.image.toDrive(
+    image = image,
+    region = aoi_ee.geometry(),
+    description = 'GTB_v' + v_date + '_' + str(md.getInfo()),
+    folder = 'GTB_v'+v_date,
+    scale = 10,
+    crs = img_crs_sen,
+    maxPixels = 1e13)
+  #Check how many existing tasks are running and take a break of 30 mins if it's >25
+  maximum_no_of_tasks(10, 5*60)
+  #Send next task.
+  export_image.start()
 
 ```
