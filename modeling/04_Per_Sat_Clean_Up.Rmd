@@ -1,8 +1,11 @@
 ---
 title: "Model Output Clean Up"
 author: "ROSSyndicate"
-date: "2023-07-27"
+date: "2023-08-04"
 output: html_document
+editor_options:
+  markdown:
+    wrap: 80
 ---
 
 ```{r setup, echo = F}
@@ -19,7 +22,7 @@ package_loader <- function(x) {
 
 lapply(libs, package_loader)
 
-v_date = '2023-07-25b'
+v_date = '2023-08-03'
 ```
 
 # Purpose
@@ -73,6 +76,7 @@ rs <- map_dfr(landsat_GTB$name, read_in_files)
 
 rs_subset <- rs %>%
   select(missDate,
+         extent, 
          area_ha,
          classified_ha = classified,
          openWater_ha = openWater,
@@ -90,25 +94,25 @@ Note that the proportion of total area may be greater than 100% due to that
 measurement mis-match.
 
 ```{r}
-# calculate proportion of AOI that is classified
+# calculate proportion of extent that is classified
 rs_subset <- rs_subset %>%
-  mutate(perc_AOI_classified = (classified_ha/area_ha)*100)
+  mutate(perc_extent_classified = (classified_ha/area_ha)*100)
 
 # print range of proportion of area classified
-range(rs_subset$proportion_AOI_classified)
+range(rs_subset$perc_extent_classified)
 
 # calculate the proportion of classified area that are each class
 rs_class_summ <- rs_subset %>%
   mutate_at(vars(openWater_ha, cloud_ha, lightNSSed_ha, darkNSSed_ha, offShoreSed_ha),
             ~ (./classified_ha)*100) %>%
-  select(missDate, openWater_ha, cloud_ha, lightNSSed_ha, darkNSSed_ha, offShoreSed_ha) %>%
+  select(missDate, extent, openWater_ha, cloud_ha, lightNSSed_ha, darkNSSed_ha, offShoreSed_ha) %>%
   rename_with(~ str_replace(., "_ha$", "_perc_class_area"), ends_with("_ha"))
 
 rs_area_summ <- rs_subset %>%
   mutate_at(vars(openWater_ha, cloud_ha, lightNSSed_ha, darkNSSed_ha, offShoreSed_ha),
             ~ (./area_ha)*100) %>%
-  select(missDate, openWater_ha, cloud_ha, lightNSSed_ha, darkNSSed_ha, offShoreSed_ha) %>%
-  rename_with(~ str_replace(., "_ha$", "_perc_aoi_area"), ends_with("_ha"))
+  select(missDate, extent, openWater_ha, cloud_ha, lightNSSed_ha, darkNSSed_ha, offShoreSed_ha) %>%
+  rename_with(~ str_replace(., "_ha$", "_perc_extent_area"), ends_with("_ha"))
 
 # join them together
 rs_subset <- full_join(rs_subset, rs_class_summ) %>%
@@ -126,7 +130,8 @@ rs_subset <- rs_subset %>%
          date = ymd(if_else(grepl('LAND', missDate),
                         str_sub(missDate, 11, nchar(missDate)),
                         str_sub(missDate, 13, nchar(missDate))))) %>%
-  relocate(mission, date)
+  relocate(mission, date) %>% 
+  select(-missDate)
 ```
 
 Flag dates that are outside of label range. We didn't ask labelers to label
@@ -140,7 +145,7 @@ rs_subset <- rs_subset %>%
 ```
 
 
-Write to tmp folder
+Write to data folder
 
 ```{r}
 write_csv(rs_subset, paste0('data/output/GTB_by_mission_v', v_date, '.csv'))
