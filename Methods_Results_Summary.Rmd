@@ -1,0 +1,159 @@
+---
+title: "Methods and Results Summary"
+author: "ROSSyndicate"
+date: "2023-08-07"
+output: html_document
+editor_options:
+  markdown:
+    wrap: 80
+bibliography: references.bib
+---
+
+# Introduction
+
+Remote sensing image classification is common in terrestrial applications (in
+particular, land use and land cover), but has not been applied extensively to
+aquatic environments beyond general presence and absence of water and wetlands.
+The primary exception to the use of image classification in aquatic environments
+is assessing the presence of submerged aquatic vegetation ("SAV") (e.g.,
+[@visser2018], [@e.l.hestir2012]); however, these classification methods require
+high resolution imagery with high spectral resolution often from land-based
+high-resolution photography or unpersoned aerial vehicles ("UAVs").
+
+In the Great Lakes (GL) region, much of the use of image classification is
+completed using moderate resolution (e.g., Landsat, Sentinel, MODIS) satellite
+images, focusing on mapping the distribution and types of wetlands throughout
+the region ([@mohseni2023], [@v.l.valenti2020]), as well as SAV distribution
+throughout the system ([@wolter2005]). Most of these analyses focus on a
+relatively short temporal period (months to years), while a some span the entire
+Landsat archive from the mid '80s through the rec[@yang2022]ent past (e.g.,
+[@amani2022]).
+
+In the recent past, much attention has been paid to the apparent proliferation
+of algal blooms in some of the clearest lakes, including Lake Superior (cite).
+While detecting algal blooms from moderate-resolution satellite imagery is
+difficult due to low temporal frequency, time of day of acquisition, pixel size,
+and spectral band metrics (cite), as well as the lack of observed,
+spatially-explicit bloom observations, detecting sediment plumes (which often
+precede algal blooms) is relatively easy with just the red, green, and blue
+bands common on nearly all moderate-resolution satellites.
+
+In this analysis, we use the Landsat archive (missions 5 through 9) and the
+Sentinel 2 archive, a novel crowd-sourced label data set (eePlumB), and Google
+Earth Engine to create image classification models to create a time series of
+rasters that enumerate sediment plumes across the western arm of Lake Superior.
+
+[[image of AOI]]
+
+# Methods
+
+## eePlumB
+
+Using the overarching architecture presented in the Global Rivers Obstruction
+Database (GROD) ([@yang2022]) to engage volunteer observers, we croudsourced
+class labels for Landsat and Sentinel-2 images for the following classes:
+'cloud', 'open water', 'light near shore sediment', 'dark near shore sediment',
+'offshore sediment', 'shoreline contamination', 'other' using our Earth Engine
+Plume and Bloom labeling interface ("eePlumB").
+
+[[more here at a later date, borrow from the eePlumB documentation already
+created]]
+
+In order to eliminate outlier band information and reduce noise in the input for
+our models, the second and ninety-eighth percentiles were calculated for each
+mission-band combination and label data associated with values outside of those
+cutoffs were dropped from the analysis. [[Could add the
+`02_label_class_summaries.Rmd` as supplemental.]]
+
+## Model development
+
+We used the built-in gradient tree boost ("GTB") ee.Classifier() method within
+Google Earth Engine to create classification models from the crowd-sourced label
+data. Label data were randomly split into training (70%) and test (30%) data
+sets, with no special handling procedures for classes or satellite missions.
+Data were examined to assure that all classes and missions were present in both
+the training and testing data sets.
+
+GTB models for each mission were trained independantly on the rescaled band data
+from red, green, blue, near infrared, and both shortwave infrared bands for
+Landsat missions. For Sentinel-2, the bands used to develop the classifier were
+red, green, blue, red edge 1-3, near infrared, and both short-wave infrared
+bands. We did not tune the hyperparameters for the GTB model using 10 trees, as
+performance was already acceptable for discerning open water from sediment
+plume. We selected five classes from the label data for image classification:
+cloud, open water, light near shore sediment, dark near shore sediment, and
+offshore sediment.
+
+[[if we develop this into a MS, we may wish to add more here, including
+hyperparameter tuning and/or use of other ee.Classifiers).]]
+
+## Image classification
+
+### Image Pre-processing
+
+Mosaic-ed images were made for each mission-date as mean band values where any
+two path row or tiles overlapped. All Landsat mission-date images were
+pre-processed to remove saturated pixels, and only images with an image quality
+greater than or equal to 7 were included. Sentinel-2 bands that had a pixel
+resoluiton greater than 10m x 10m were reprojected (downsampled) to 10m x 10m
+pixel sizes so that the GTB model could be applied to the composite images more
+efficiently.
+
+Three areas of interest (AOIs) were used in this analysis: the complete AOI, the
+AOI without shoreline contamination, and the AOI with shoreline contamination.
+The area of shoreline contamination was defined as any area within 60 meters of
+a volunteer-identified pixel with shoreline contamination. We assumed that
+shoreline contamination was consistent throughout the analysis and was not
+specific to any particular satellite.
+
+### Model application and summaries
+
+Each GTB model was applied to the corresponding satellite image stack and two
+data types were output: a tabular data summary of the area classified and the
+total area of each class for all three AOIs, as well as a .tif raster for each
+classified mission-date image.
+
+## Model evaluation metrics:
+
+-   confusion matrix - training: an indication per label class where the
+    model-assigned class and label class are compared.
+-   error matrix - testing: given the test data, does the model assign the
+    correct class? These are tibble-style summaries where the model-assigned
+    class and label class are compared.
+-   overall accuracy: percentage of model-assigned labels that match the test
+    dataset, an indicator of model precision. No weights are given to any class
+    based on the number of labels.
+-   training accuracy: how well does the classification model assign the correct
+    class to the training data, an indicator of model precision.
+-   kappa statistic: an indicator of how much better or worse a model performs
+    than by random chance. score is -1 to 1, where 0 is the same as random
+    chance, positive values are better than random chance and negative are
+    poorer than random chance
+-   F1 score: the harmonic mean of precision and recall per class (beta = 1,
+    hence F1 where precision and recall are evenly weighted)
+-   weighted F1: class-weighted (by number of labels) F1 score across all
+    classes (sum of the proportional F1 score per class)
+
+We have unequal distribution of classes, so should not use overall accuracy
+metrics as they can be misleading when the distribution of classes are not
+equal.
+
+# Results
+
+## Label dataset
+
+eePlumB xx image dates (table to break down per sat)
+
+xx labels (table to break down per sat per class) DOI
+
+## Model evaluation
+
+## Model application
+
+look at n images over time (histo-ts distribution)
+
+look at proportion of aoi classified over time?
+
+```{r, echo = F}
+knitr::wrap_rmd('Methods_Results_Summary.Rmd', width = 80, backup = NULL)
+```
