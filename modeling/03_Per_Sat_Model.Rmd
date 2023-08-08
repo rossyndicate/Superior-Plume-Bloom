@@ -28,6 +28,17 @@ lapply(libs, package_loader)
 This script develops and applies Gradient Tree Boost Models to Landsat and
 Sentinel mosaic-ed images.
 
+## Indicate whether or not to send tasks to GEE
+
+Just a quick toggle to be able to knit this script without necessarily sending the tasks to GEE
+
+```{python}
+# These should either be True or False
+export_summary = False
+export_raster = False
+```
+
+
 ## Activate conda environment
 
 Check for virtual environment and activate, otherwise, set up virtual
@@ -478,6 +489,9 @@ trainedGTB_sen = (ee.Classifier.smileGradientTreeBoost(10).train(
 ### Landsat 5
 
 ```{python}
+trainingAcuracyGTB_ls5 = trainedGTB_ls5
+  .confusionMatrix()
+
 confusionMatrixGTB_ls5 = (testing_ls5
   .classify(trainedGTB_ls5)
   .errorMatrix('byte_property', "classification"))
@@ -677,7 +691,7 @@ bn = ['Blue', 'Green', 'Red', 'B5', 'B6', 'B7', 'QA_RADSAT']
 ROWS = ee.List([27, 28])
 
 def applyScaleFactors(image):
-  opticalBands = image.select(bn).multiply(0.0000275).add(-0.2)
+  opticalBands = image.select(bn).multiply(0.0000275).add(-0.2) #flagging this - this applies the offset to QA RADSAT. :(
   return image.addBands(opticalBands, None, True)
 
 # load Landsat 5, 7, 8, 9 Surface Reflectance and rename bands
@@ -707,7 +721,7 @@ l5 = (ee.ImageCollection('LANDSAT/LT05/C02/T1_L2')
   .map(applyScaleFactors))
 ```
 
-Add QA_RADSAT mask to mask where any band was saturated
+Add QA_RADSAT mask to mask where any band was saturated [[adding flag here!!]]
 
 ```{python}
 def apply_radsat_mask(image):
@@ -722,8 +736,8 @@ l5 = l5.map(apply_radsat_mask)
 
 ### Load modeling AOIs and clip stack
 
-Note, some AOIs are too big to load in here and uses as 'virtual' ee Feature
-Colections
+Note, some AOIs are too big to load in here and use as 'virtual' ee Feature
+Collections. Given that, we have manually uploaded the shapefiles as an Earth Engine Feature Collection.
 
 ```{python}
 # aoi_gpd = gpd.read_file('data/aoi/Superior_AOI_modeling.shp')
@@ -1088,8 +1102,11 @@ export_summary_5_aoi = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
+if export_summary == True :
+  export_summary_5_aoi.start()
+else:
+  print('Export for LS5 whole AOI toggled off.')
 
-#export_summary_5_aoi.start()
 
 export_summary_5_nosc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l5_nosc,
@@ -1098,7 +1115,11 @@ export_summary_5_nosc = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-#export_summary_5_nosc.start()
+if export_summary == True :
+  export_summary_5_nosc.start()
+else:
+  print('Export for LS5 no shoreline contamination AOI toggled off.')
+
 
 export_summary_5_sc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l5_sc,
@@ -1107,7 +1128,11 @@ export_summary_5_sc = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-#export_summary_5_sc.start()
+if export_summary == True :
+  export_summary_5_sc.start()
+else:
+  print('Export for LS5 shoreline contamination AOI toggled off.')
+
 ```
 
 #### Landsat 7
@@ -1120,7 +1145,10 @@ export_summary_7_aoi = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-#export_summary_7_aoi.start()
+if export_summary == True :
+  export_summary_7_aoi.start()
+else:
+  print('Export for LS7 whole AOI toggled off.')
 
 export_summary_7_nosc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l7_nosc,
@@ -1129,7 +1157,11 @@ export_summary_7_nosc = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-#export_summary_7_nosc.start()
+if export_summary == True :
+  export_summary_7_nosc.start()
+else:
+  print('Export for LS7 no shoreline contamination AOI toggled off.')
+
 
 export_summary_7_sc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l7_sc,
@@ -1138,7 +1170,10 @@ export_summary_7_sc = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-#export_summary_7_sc.start()
+if export_summary == True :
+  export_summary_7_sc.start()
+else:
+  print('Export for LS7 shoreline contamination AOI toggled off.')
 ```
 
 #### Landsat 8
@@ -1151,7 +1186,10 @@ export_summary_8_aoi = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-#export_summary_8_aoi.start()
+if export_summary == True :
+  export_summary_8_aoi.start()
+else:
+  print('Export for LS8 whole AOI toggled off.')
 
 export_summary_8_nosc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l8_nosc,
@@ -1160,7 +1198,10 @@ export_summary_8_nosc = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-#export_summary_8_nosc.start()
+if export_summary == True :
+  export_summary_8_nosc.start()
+else:
+  print('Export for LS8 no shoreline contamination AOI toggled off.')
 
 export_summary_8_sc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l8_sc,
@@ -1169,7 +1210,10 @@ export_summary_8_sc = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-#export_summary_8_sc.start()
+if export_summary == True :
+  export_summary_8_sc.start()
+else:
+  print('Export for LS8 shoreline contamination AOI toggled off.')
 ```
 
 #### Landsat 9
@@ -1182,7 +1226,10 @@ export_summary_9_aoi = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-#export_summary_9_aoi.start()
+if export_summary == True :
+  export_summary_9_aoi.start()
+else:
+  print('Export for LS9 whole AOI toggled off.')
 
 export_summary_9_nosc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l9_nosc,
@@ -1191,7 +1238,10 @@ export_summary_9_nosc = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-#export_summary_9_nosc.start()
+if export_summary == True :
+  export_summary_9_nosc.start()
+else:
+  print('Export for LS9 no shoreline contamination AOI toggled off.')
 
 export_summary_9_sc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l9_sc,
@@ -1200,7 +1250,10 @@ export_summary_9_sc = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-#export_summary_9_sc.start()
+if export_summary == True :
+  export_summary_9_sc.start()
+else:
+  print('Export for LS9 shoreline contamination AOI toggled off.')
 ```
 
 ## Apply model to image stack for Sentinel
@@ -1354,7 +1407,10 @@ export_summary_sen_aoi = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-#export_summary_sen_aoi.start()
+if export_summary == True :
+  export_summary_sen_aoi.start()
+else:
+  print('Export for Sentinel-2 whole AOI toggled off.')
 
 def calcArea_sen_nosc(image):
   areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
@@ -1387,6 +1443,10 @@ export_summary_sen_nosc = (ee.batch.Export.table.toDrive(
   fileFormat = 'csv'))
 
 #export_summary_sen_nosc.start()
+if export_summary == True :
+  export_summary_sen_nosc.start()
+else:
+  print('Export for Sentinel-2 no shoreline contamination AOI toggled off.')
 
 
 
@@ -1420,7 +1480,10 @@ export_summary_sen_sc = (ee.batch.Export.table.toDrive(
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
 
-#export_summary_sen_sc.start()
+if export_summary == True :
+  export_summary_sen_sc.start()
+else:
+  print('Export for Sentinel-2 shoreline contamination AOI toggled off.')
 
 ```
 
@@ -1455,59 +1518,63 @@ def maximum_no_of_tasks(MaxNActive, waitingPeriod):
 
 ### Raster Export
 
-Note, each image export takes 2-3 hours, resulting in a processing time of 
-approximately 3 weeks. Do not run these chunks until you're ready to export 
-final files.
-
 ### GTB images for Landsat 5
 
 ```{python}
-date_length_5 = len(uniqueMissDate_l5.getInfo())
-
-for d in range(10,date_length_5):
-  md = uniqueMissDate_l5.get(d)
-  image = (newStack_l5
-    .filter(ee.Filter.eq('missDate', md))
-    .first()
-    .select('classification'))
-  export_image = ee.batch.Export.image.toDrive(
-    image = image,
-    region = aoi_ee.geometry(),
-    description = 'GTB_v' + v_date + '_' + str(md.getInfo()),
-    folder = 'GTB_v'+v_date,
-    scale = 30,
-    crs = img_crs,
-    maxPixels = 1e13)
-  #Check how many existing tasks are running and take a break of 30 mins if it's >25
-  maximum_no_of_tasks(10, 5*60)
-  #Send next task.
-  export_image.start()
+if export_raster == True:
+  
+  date_length_5 = len(uniqueMissDate_l5.getInfo())
+  
+  for d in range(date_length_5):
+    md = uniqueMissDate_l5.get(d)
+    image = (newStack_l5
+      .filter(ee.Filter.eq('missDate', md))
+      .first()
+      .select('classification'))
+    export_image = ee.batch.Export.image.toDrive(
+      image = image,
+      region = aoi_ee.geometry(),
+      description = 'GTB_v' + v_date + '_' + str(md.getInfo()),
+      folder = 'GTB_v'+v_date,
+      scale = 30,
+      crs = img_crs,
+      maxPixels = 1e13)
+    
+    #Check how many existing tasks are running and take a break of 30 mins if it's >25
+    maximum_no_of_tasks(10, 5*60)
+    #Send next task.
+    export_image.start()
+else:
+  print('Raster export for LS5 turned off.')
 
 ```
 
 ### GTB images for Landsat 7
 
 ```{python}
-date_length_7 = len(uniqueMissDate_l7.getInfo())
-
-for d in range(date_length_7):
-  md = uniqueMissDate_l7.get(d)
-  image = (newStack_l7
-    .filter(ee.Filter.eq('missDate', md))
-    .first()
-    .select('classification'))
-  export_image = ee.batch.Export.image.toDrive(
-    image = image,
-    region = aoi_ee.geometry(),
-    description = 'GTB_v' + v_date + '_' + str(md.getInfo()),
-    folder = 'GTB_v'+v_date,
-    scale = 30,
-    crs = img_crs,
-    maxPixels = 1e13)
-  #Check how many existing tasks are running and take a break of 30 mins if it's >25
-  maximum_no_of_tasks(10, 5*60)
-  #Send next task.
-  export_image.start()
+if raster_export == True:
+  date_length_7 = len(uniqueMissDate_l7.getInfo())
+  
+  for d in range(date_length_7):
+    md = uniqueMissDate_l7.get(d)
+    image = (newStack_l7
+      .filter(ee.Filter.eq('missDate', md))
+      .first()
+      .select('classification'))
+    export_image = ee.batch.Export.image.toDrive(
+      image = image,
+      region = aoi_ee.geometry(),
+      description = 'GTB_v' + v_date + '_' + str(md.getInfo()),
+      folder = 'GTB_v'+v_date,
+      scale = 30,
+      crs = img_crs,
+      maxPixels = 1e13)
+    #Check how many existing tasks are running and take a break of 30 mins if it's >25
+    maximum_no_of_tasks(10, 5*60)
+    #Send next task.
+    export_image.start()
+else:
+  print('Raster export turned off for Landsat 7')
 
 ```
 
@@ -1515,26 +1582,29 @@ for d in range(date_length_7):
 ### GTB images for Landsat 8
 
 ```{python}
-date_length_8 = len(uniqueMissDate_l8.getInfo())
-
-for d in range(date_length_8):
-  md = uniqueMissDate_l8.get(d)
-  image = (newStack_l8
-    .filter(ee.Filter.eq('missDate', md))
-    .first()
-    .select('classification'))
-  export_image = ee.batch.Export.image.toDrive(
-    image = image,
-    region = aoi_ee.geometry(),
-    description = 'GTB_v' + v_date + '_' + str(md.getInfo()),
-    folder = 'GTB_v'+v_date,
-    scale = 30,
-    crs = img_crs,
-    maxPixels = 1e13)
-  #Check how many existing tasks are running and take a break of 30 mins if it's >25
-  maximum_no_of_tasks(10, 5*60)
-  #Send next task.
-  export_image.start()
+if raster_export == True:
+  date_length_8 = len(uniqueMissDate_l8.getInfo())
+  
+  for d in range(date_length_8):
+    md = uniqueMissDate_l8.get(d)
+    image = (newStack_l8
+      .filter(ee.Filter.eq('missDate', md))
+      .first()
+      .select('classification'))
+    export_image = ee.batch.Export.image.toDrive(
+      image = image,
+      region = aoi_ee.geometry(),
+      description = 'GTB_v' + v_date + '_' + str(md.getInfo()),
+      folder = 'GTB_v'+v_date,
+      scale = 30,
+      crs = img_crs,
+      maxPixels = 1e13)
+    #Check how many existing tasks are running and take a break of 30 mins if it's >25
+    maximum_no_of_tasks(10, 5*60)
+    #Send next task.
+    export_image.start()
+else:
+  print('Raster export turned off for Landsat 8')
 
 ```
 
@@ -1542,51 +1612,57 @@ for d in range(date_length_8):
 ### GTB images for Landsat 9
 
 ```{python}
-date_length_9 = len(uniqueMissDate_l9.getInfo())
-
-for d in range(date_length_9):
-  md = uniqueMissDate_l9.get(d)
-  image = (newStack_l9
-    .filter(ee.Filter.eq('missDate', md))
-    .first()
-    .select('classification'))
-  export_image = ee.batch.Export.image.toDrive(
-    image = image,
-    region = aoi_ee.geometry(),
-    description = 'GTB_v' + v_date + '_' + str(md.getInfo()),
-    folder = 'GTB_v'+v_date,
-    scale = 30,
-    crs = img_crs,
-    maxPixels = 1e13)
-  #Check how many existing tasks are running and take a break of 30 mins if it's >25
-  maximum_no_of_tasks(10, 5*60)
-  #Send next task.
-  export_image.start()
+if raster_export == True:
+  date_length_9 = len(uniqueMissDate_l9.getInfo())
+  
+  for d in range(date_length_9):
+    md = uniqueMissDate_l9.get(d)
+    image = (newStack_l9
+      .filter(ee.Filter.eq('missDate', md))
+      .first()
+      .select('classification'))
+    export_image = ee.batch.Export.image.toDrive(
+      image = image,
+      region = aoi_ee.geometry(),
+      description = 'GTB_v' + v_date + '_' + str(md.getInfo()),
+      folder = 'GTB_v'+v_date,
+      scale = 30,
+      crs = img_crs,
+      maxPixels = 1e13)
+    #Check how many existing tasks are running and take a break of 30 mins if it's >25
+    maximum_no_of_tasks(10, 5*60)
+    #Send next task.
+    export_image.start()
+else:
+  print('Raster export turned off for Landsat 9')
 
 ```
 
 ### GTB images for Sentinel 2
 
 ```{python}
-date_length_sen = len(uniqueMissDate_sen.getInfo())
-
-for d in range(date_length_sen):
-  md = uniqueMissDate_sen.get(d)
-  image = (newStack_sen
-    .filter(ee.Filter.eq('missDate', md))
-    .first()
-    .select('classification'))
-  export_image = ee.batch.Export.image.toDrive(
-    image = image,
-    region = aoi_ee.geometry(),
-    description = 'GTB_v' + v_date + '_' + str(md.getInfo()),
-    folder = 'GTB_v'+v_date,
-    scale = 10,
-    crs = img_crs_sen,
-    maxPixels = 1e13)
-  #Check how many existing tasks are running and take a break of 30 mins if it's >25
-  maximum_no_of_tasks(10, 5*60)
-  #Send next task.
-  export_image.start()
+if raster_export == True:
+  date_length_sen = len(uniqueMissDate_sen.getInfo())
+  
+  for d in range(date_length_sen):
+    md = uniqueMissDate_sen.get(d)
+    image = (newStack_sen
+      .filter(ee.Filter.eq('missDate', md))
+      .first()
+      .select('classification'))
+    export_image = ee.batch.Export.image.toDrive(
+      image = image,
+      region = aoi_ee.geometry(),
+      description = 'GTB_v' + v_date + '_' + str(md.getInfo()),
+      folder = 'GTB_v'+v_date,
+      scale = 10,
+      crs = img_crs_sen,
+      maxPixels = 1e13)
+    #Check how many existing tasks are running and take a break of 30 mins if it's >25
+    maximum_no_of_tasks(10, 5*60)
+    #Send next task.
+    export_image.start()
+else:
+  print('Raster export turned off for Sentinel-2')
 
 ```
