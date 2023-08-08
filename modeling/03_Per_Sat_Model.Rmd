@@ -1349,7 +1349,7 @@ allAreas_sen_aoi = sen_stack_light.map(calcArea_sen_aoi)
 ## export to drive
 export_summary_sen_aoi = (ee.batch.Export.table.toDrive(
   collection = allAreas_sen_aoi,
-  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'aoi'],
+  selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
   description = 'gradientTreeBoost_sen2_stack_v' + v_date,
   folder = 'eePlumB_classification',
   fileFormat = 'csv'))
