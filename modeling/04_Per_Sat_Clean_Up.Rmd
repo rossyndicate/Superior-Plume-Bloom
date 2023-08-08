@@ -38,7 +38,7 @@ drive_auth() # authenticate for ROSSyndicate account
 ## Grab and clean up files
 
 ```{r}
-drive = drive_ls(recursive = T)
+drive = drive_ls(path = 'eePlumB_classification', recursive = F)
 landsat_GTB = (drive[grepl(v_date, drive$name),])
 print(landsat_GTB)
 ```
@@ -84,6 +84,10 @@ rs_subset <- rs %>%
          lightNSSed_ha = lightNSSed,
          darkNSSed_ha = dNSSed,
          offShoreSed_ha = OSSed)
+
+# fix sentinel oopsie where the 'extent' column was originally saved as 'aoi'
+rs_subset <- rs_subset %>% 
+  mutate(extent = if_else(is.na(extent), 'aoi', extent))
 ```
 
 Calculate proportions - looks like there is a slight mismatch in the area
