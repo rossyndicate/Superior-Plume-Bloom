@@ -680,7 +680,7 @@ bn = ['Blue', 'Green', 'Red', 'B5', 'B6', 'B7', 'QA_RADSAT']
 ROWS = ee.List([27, 28])
 
 def applyScaleFactors(image):
-  opticalBands = image.select(bn).multiply(0.0000275).add(-0.2)
+  opticalBands = image.select(bn).multiply(0.0000275).add(-0.2) #flagging this - this applies the offset to QA RADSAT. :(
   return image.addBands(opticalBands, None, True)
 
 # load Landsat 5, 7, 8, 9 Surface Reflectance and rename bands
@@ -710,7 +710,7 @@ l5 = (ee.ImageCollection('LANDSAT/LT05/C02/T1_L2')
   .map(applyScaleFactors))
 ```
 
-Add QA_RADSAT mask to mask where any band was saturated
+Add QA_RADSAT mask to mask where any band was saturated [[adding flag here!!]]
 
 ```{python}
 def apply_radsat_mask(image):
@@ -725,8 +725,8 @@ l5 = l5.map(apply_radsat_mask)
 
 ### Load modeling AOIs and clip stack
 
-Note, some AOIs are too big to load in here and uses as 'virtual' ee Feature
-Colections
+Note, some AOIs are too big to load in here and use as 'virtual' ee Feature
+Collections. Given that, we have manually uploaded the shapefiles as an Earth Engine Feature Collection.
 
 ```{python}
 # aoi_gpd = gpd.read_file('data/aoi/Superior_AOI_modeling.shp')
@@ -1463,7 +1463,7 @@ def maximum_no_of_tasks(MaxNActive, waitingPeriod):
 ```{python}
 date_length_5 = len(uniqueMissDate_l5.getInfo())
 
-for d in range(10,date_length_5):
+for d in range(date_length_5):
   md = uniqueMissDate_l5.get(d)
   image = (newStack_l5
     .filter(ee.Filter.eq('missDate', md))
