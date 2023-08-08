@@ -2,7 +2,7 @@
 try(install_miniconda())
 
 # list python modules
-py_modules = c('earthengine-api', 'pandas', 'xarray', 'rasterio', 'rioxarray', 'fiona')
+py_modules = c('earthengine-api', 'pandas', 'xarray', 'rasterio', 'rioxarray', 'fiona', 'geopandas', 'geemap')
 
 py_install(envname = 'env/', 
            packages = py_modules, 

@@ -3,6 +3,9 @@ title: "Shoreline Contamination Workflow"
 author: "ROSSyndicate"
 date: "2023-07-18"
 output: html_document
+editor_options:
+  markdown:
+    wrap: 80
 ---
 
 # Purpose
@@ -11,7 +14,6 @@ This script creates a quick visualization of user-labeled shoreline
 contamination (SC) and creates a new shapefile that has been edited to remove
 areas where SC has been detected so that we can add some uncertainty measures
 later in the model.
-
 
 ```{r setup, echo = FALSE}
 packages <- c('tidyverse',
@@ -40,13 +42,10 @@ labels <- read_csv(labels_file)
 ## Load the aoi into the environment
 
 ```{r}
-aoi <-  st_read('data/aoi/Superior_AOI_modeling.shp')
+aoi <- st_read('data/aoi/Superior_AOI_modeling.shp')
 ```
 
-
-## Grab the shoreline contamination labels and plot on map
-
-Filter for 'shorelineContamination'
+## Grab the shoreline contamination labels and plot on ma Filter for 'shorelineContamination'
 
 ```{r}
 sc_labels <- labels %>%
@@ -101,20 +100,39 @@ aoi_no_sc <- st_difference(aoi, sc_buff_1)
 mapview(aoi_no_sc)
 ```
 
-And finally, write the shapefile
+And let's remove the tiny areas that are created that are not part of the large
+polygon.
 
 ```{r}
-st_write(sc_buff_1, 'data/aoi/Superior_shoreline_contamination.shp', append = F)
+# get indiv polygons
+aoi_no_sc_all <- st_cast(aoi_no_sc, 'POLYGON')
+# calculate the area for each
+aoi_no_sc_all$area <- st_area(aoi_no_sc_all)
+# sort them by size and only grab the largest one
+aoi_no_sc_one <- aoi_no_sc_all %>%
+  arrange(-area) %>%
+  slice(1) %>%
+  st_make_valid(.)
+
+mapview(aoi_no_sc_one)
+```
+
+And now trim the SC layer to the modeling AOI.
+
+```{r}
+sc_buff_export <- sc_buff_1 %>%
+  st_intersection(., aoi) %>%
+  st_make_valid(.)
+
+mapview(sc_buff_export)
+```
+
+And finally, write the shapefiles
+
+```{r}
+st_write(sc_buff_export, 'data/aoi/Superior_shoreline_contamination.shp', append = F)
 st_write(aoi_no_sc, 'data/aoi/Superior_AOI_minus_shoreline_contamination.shp', append = F)
 ```
-
-
-And clean up temp folder
-
-```{r}
-unlink('tmp', recursive = T)
-```
-
 
 ```{r, echo = F}
 knitr::wrap_rmd('modeling/01_Shoreline_Contamination.Rmd', width = 80, backup = NULL)
