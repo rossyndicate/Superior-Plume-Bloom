@@ -30,14 +30,14 @@ Sentinel mosaic-ed images.
 
 ## Indicate whether or not to send tasks to GEE
 
-Just a quick toggle to be able to knit this script without necessarily sending the tasks to GEE
+Just a quick toggle to be able to knit this script without necessarily sending
+the tasks to GEE
 
 ```{python}
 # These should either be True or False
 export_summary = False
 export_raster = False
 ```
-
 
 ## Activate conda environment
 
@@ -50,6 +50,12 @@ if (!dir.exists("env")) {
 } else {
   use_condaenv(file.path(getwd(), "env"))
 }
+```
+
+Indicate the label version
+
+```{r}
+label_version = '2023-07-20'
 ```
 
 And then import the needed modules
@@ -88,7 +94,8 @@ dataframes.
 
 ```{r}
 labels_file <- list.files('data/labels/', full.names = T)
-labels <- read_csv(labels_file)
+label_file <- labels_file[grepl(label_version, labels_file)]
+labels <- read_csv(label_file)
 
 # subset for sen/ls
 sen_labels = labels %>% 
@@ -280,6 +287,17 @@ ls_9_filt <- ls_9_filt %>%
   filter_at(vars(all_of(ls_bands_text)), all_vars(!is.na(.)))
 sen_filt <- sen_filt %>% 
   filter_at(vars(all_of(sen_bands_text)), all_vars(!is.na(.)))
+```
+
+##### Export filtered labels for other uses
+
+```{r}
+labels_filtered <- full_join(ls_5_filt, ls_7_filt) %>% 
+  full_join(., ls_8_filt) %>% 
+  full_join(., ls_9_filt) %>% 
+  full_join(., sen_filt)
+
+write_csv(labels_filtered, paste0('data/labels/collated_label_data_filtered_v', label_version, '.csv'))
 ```
 
 #### Make ee feature collections
@@ -640,7 +658,8 @@ print('GTB fScore for each class: ', fs_GTB_sen)
 
 ### Collate model stats, save to data folder
 
-First, we'll copy over some values and make a big pandas dataframe. Note that the df.copy() function unlinks the original list from the new one. Silly python.
+First, we'll copy over some values and make a big pandas dataframe. Note that
+the df.copy() function unlinks the original list from the new one. Silly python.
 
 ```{python}
 accuracy_heads = class_values.copy()
@@ -740,7 +759,8 @@ l5 = l5.map(apply_radsat_mask)
 ### Load modeling AOIs and clip stack
 
 Note, some AOIs are too big to load in here and use as 'virtual' ee Feature
-Collections. Given that, we have manually uploaded the shapefiles as an Earth Engine Feature Collection.
+Collections. Given that, we have manually uploaded the shapefiles as an Earth
+Engine Feature Collection.
 
 ```{python}
 # aoi_gpd = gpd.read_file('data/aoi/Superior_AOI_modeling.shp')
@@ -1490,7 +1510,6 @@ else:
 
 ```
 
-
 ## Export GeoTiffs to drive
 
 Load task checker!
@@ -1581,7 +1600,6 @@ else:
 
 ```
 
-
 ### GTB images for Landsat 8
 
 ```{python}
@@ -1610,7 +1628,6 @@ else:
   print('Raster export turned off for Landsat 8')
 
 ```
-
 
 ### GTB images for Landsat 9
 
