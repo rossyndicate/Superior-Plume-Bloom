@@ -28,17 +28,6 @@ lapply(libs, package_loader)
 This script develops and applies Gradient Tree Boost Models to Landsat and
 Sentinel mosaic-ed images.
 
-## Indicate whether or not to send tasks to GEE
-
-Just a quick toggle to be able to knit this script without necessarily sending
-the tasks to GEE
-
-```{python}
-# These should either be True or False
-export_summary = False
-export_raster = False
-```
-
 ## Activate conda environment
 
 Check for virtual environment and activate, otherwise, set up virtual
@@ -50,6 +39,17 @@ if (!dir.exists("env")) {
 } else {
   use_condaenv(file.path(getwd(), "env"))
 }
+```
+
+### Indicate whether or not to send tasks to GEE
+
+Just a quick toggle to be able to knit this script without necessarily sending
+the tasks to GEE
+
+```{python}
+# These should either be True or False
+export_summary = False
+export_raster = False
 ```
 
 Indicate the label version
@@ -66,7 +66,7 @@ import os
 import time
 import pandas as pd
 import geopandas as gpd
-import geemap as gm
+#import geemap as gm
 
 v_date = '2023-08-03'
 ```
@@ -95,6 +95,7 @@ dataframes.
 ```{r}
 labels_file <- list.files('data/labels/', full.names = T)
 label_file <- labels_file[grepl(label_version, labels_file)]
+label_file <- label_file[!grepl('filter', label_file)]
 labels <- read_csv(label_file)
 
 # subset for sen/ls
@@ -507,15 +508,28 @@ trainedGTB_sen = (ee.Classifier.smileGradientTreeBoost(10).train(
 ### Landsat 5
 
 ```{python}
-trainingAcuracyGTB_ls5 = trainedGTB_ls5
-  .confusionMatrix()
+trainingMatrixGTB_ls5 = (trainedGTB_ls5
+  .confusionMatrix())
 
-trainingAcuracyGTB_ls5 = trainedGTB_ls5
-  .confusionMatrix()
+#convert to pandas dataframe with class info
+training_conf_l5 = (pd.DataFrame(
+  trainingMatrixGTB_ls5.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
+print('GTB Training Confusion Matrix for Landsat 5:')
+print(training_conf_l5)
+
+#reformat and save
+training_conf_l5['mission'] = 'Landsat 5'
+training_conf_l5.reset_index(inplace = True)
+training_conf_l5 = training_conf_l5.rename(columns = {'level_0': 'class'})  
+training_conf_l5.to_csv('data/output/GTB_'+v_date+'_L5_training_confusion.csv', index = False)
 
 confusionMatrixGTB_ls5 = (testing_ls5
   .classify(trainedGTB_ls5)
   .errorMatrix('byte_property', "classification"))
+
 #convert to pandas dataframe with class info
 confusion_l5 = (pd.DataFrame(
   confusionMatrixGTB_ls5.getInfo(),
@@ -542,9 +556,28 @@ print('GTB fScore for each class: ', fs_GTB_ls5)
 ### Landsat 7
 
 ```{python}
+trainingMatrixGTB_ls7 = (trainedGTB_ls7
+  .confusionMatrix())
+
+#convert to pandas dataframe with class info
+training_conf_l7 = (pd.DataFrame(
+  trainingMatrixGTB_ls7.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
+print('GTB Training Confusion Matrix for Landsat 7:')
+print(training_conf_l7)
+
+#reformat and save
+training_conf_l7['mission'] = 'Landsat 7'
+training_conf_l7.reset_index(inplace = True)
+training_conf_l7 = training_conf_l7.rename(columns = {'level_0': 'class'})  
+training_conf_l7.to_csv('data/output/GTB_'+v_date+'_l7_training_confusion.csv', index = False)
+
 confusionMatrixGTB_ls7 = (testing_ls7
   .classify(trainedGTB_ls7)
   .errorMatrix('byte_property', "classification"))
+
 #convert to pandas dataframe with class info
 confusion_l7 = (pd.DataFrame(
   confusionMatrixGTB_ls7.getInfo(),
@@ -558,7 +591,7 @@ print(confusion_l7)
 confusion_l7['mission'] = 'Landsat 7'
 confusion_l7.reset_index(inplace = True)
 confusion_l7 = confusion_l7.rename(columns = {'level_0': 'class'})  
-confusion_l7.to_csv('data/output/GTB_'+v_date+'_L7_confusion.csv', index = False)
+confusion_l7.to_csv('data/output/GTB_'+v_date+'_l7_confusion.csv', index = False)
 
 acc_values_GTB_ls7 = (confusionMatrixGTB_ls7.accuracy().getInfo())
 print("GTB Confusion Overall Accuracy for Landsat 7: ", acc_values_GTB_ls7)
@@ -571,9 +604,28 @@ print('GTB fScore for each class: ', fs_GTB_ls7)
 ### Landsat 8
 
 ```{python}
+trainingMatrixGTB_ls8 = (trainedGTB_ls8
+  .confusionMatrix())
+
+#convert to pandas dataframe with class info
+training_conf_l8 = (pd.DataFrame(
+  trainingMatrixGTB_ls8.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
+print('GTB Training Confusion Matrix for Landsat 8:')
+print(training_conf_l8)
+
+#reformat and save
+training_conf_l8['mission'] = 'Landsat 8'
+training_conf_l8.reset_index(inplace = True)
+training_conf_l8 = training_conf_l8.rename(columns = {'level_0': 'class'})  
+training_conf_l8.to_csv('data/output/GTB_'+v_date+'_l8_training_confusion.csv', index = False)
+
 confusionMatrixGTB_ls8 = (testing_ls8
   .classify(trainedGTB_ls8)
   .errorMatrix('byte_property', "classification"))
+
 #convert to pandas dataframe with class info
 confusion_l8 = (pd.DataFrame(
   confusionMatrixGTB_ls8.getInfo(),
@@ -587,7 +639,7 @@ print(confusion_l8)
 confusion_l8['mission'] = 'Landsat 8'
 confusion_l8.reset_index(inplace = True)
 confusion_l8 = confusion_l8.rename(columns = {'level_0': 'class'})  
-confusion_l8.to_csv('data/output/GTB_'+v_date+'_L8_confusion.csv', index = False)
+confusion_l8.to_csv('data/output/GTB_'+v_date+'_l8_confusion.csv', index = False)
   
 acc_values_GTB_ls8 = (confusionMatrixGTB_ls8.accuracy().getInfo())
 print("GTB Confusion Overall Accuracy for Landsat 8: ", acc_values_GTB_ls8)
@@ -600,9 +652,28 @@ print('GTB fScore for each class: ', fs_GTB_ls8)
 ### Landsat 9
 
 ```{python}
+trainingMatrixGTB_ls9 = (trainedGTB_ls9
+  .confusionMatrix())
+
+#convert to pandas dataframe with class info
+training_conf_l9 = (pd.DataFrame(
+  trainingMatrixGTB_ls9.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
+print('GTB Training Confusion Matrix for Landsat 9:')
+print(training_conf_l9)
+
+#reformat and save
+training_conf_l9['mission'] = 'Landsat 9'
+training_conf_l9.reset_index(inplace = True)
+training_conf_l9 = training_conf_l9.rename(columns = {'level_0': 'class'})  
+training_conf_l9.to_csv('data/output/GTB_'+v_date+'_l9_training_confusion.csv', index = False)
+
 confusionMatrixGTB_ls9 = (testing_ls9
   .classify(trainedGTB_ls9)
   .errorMatrix('byte_property', "classification"))
+
 #convert to pandas dataframe with class info
 confusion_l9 = (pd.DataFrame(
   confusionMatrixGTB_ls9.getInfo(),
@@ -616,7 +687,7 @@ print(confusion_l9)
 confusion_l9['mission'] = 'Landsat 9'
 confusion_l9.reset_index(inplace = True)
 confusion_l9 = confusion_l9.rename(columns = {'level_0': 'class'})  
-confusion_l9.to_csv('data/output/GTB_'+v_date+'_L9_confusion.csv', index = False)
+confusion_l9.to_csv('data/output/GTB_'+v_date+'_l9_confusion.csv', index = False)
 
 acc_values_GTB_ls9 = (confusionMatrixGTB_ls9.accuracy().getInfo())
 print("GTB Confusion Overall Accuracy for Landsat 9: ", acc_values_GTB_ls9)
@@ -629,23 +700,42 @@ print('GTB fScore for each class: ', fs_GTB_ls9)
 ### Sentinel 2
 
 ```{python}
+trainingMatrixGTB_sen = (trainedGTB_sen
+  .confusionMatrix())
+
+#convert to pandas dataframe with class info
+training_conf_sen = (pd.DataFrame(
+  trainingMatrixGTB_sen.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
+print('GTB Training Confusion Matrix for Sentinel-2:')
+print(training_conf_sen)
+
+#reformat and save
+training_conf_sen['mission'] = 'Sentinel-2'
+training_conf_sen.reset_index(inplace = True)
+training_conf_sen = training_conf_sen.rename(columns = {'level_0': 'class'})  
+training_conf_sen.to_csv('data/output/GTB_'+v_date+'_sen_training_confusion.csv', index = False)
+
 confusionMatrixGTB_sen = (testing_sen
   .classify(trainedGTB_sen)
   .errorMatrix('byte_property', "classification"))
+
 #convert to pandas dataframe with class info
 confusion_sen = (pd.DataFrame(
   confusionMatrixGTB_sen.getInfo(),
   index=[class_values],
   columns =[class_values]
   ))
-print('GTB Confusion Matrix for Sentinel 2:')
+print('GTB Confusion Matrix for Sentinel-2:')
 print(confusion_sen)
 
 #reformat and save
-confusion_sen['mission'] = 'Sentinel 2'
+confusion_sen['mission'] = 'Sentinel-2'
 confusion_sen.reset_index(inplace = True)
 confusion_sen = confusion_sen.rename(columns = {'level_0': 'class'})  
-confusion_sen.to_csv('data/output/GTB_'+v_date+'_Sen2_confusion.csv', index = False)
+confusion_sen.to_csv('data/output/GTB_'+v_date+'_sen_confusion.csv', index = False)
 
 acc_values_GTB_sen = (confusionMatrixGTB_sen.accuracy().getInfo())
 print("GTB Confusion Overall Accuracy for Sentinel 2: ", acc_values_GTB_sen)
@@ -1472,7 +1562,6 @@ else:
   print('Export for Sentinel-2 no shoreline contamination AOI toggled off.')
 
 
-
 def calcArea_sen_sc(image):
   areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
   
@@ -1574,7 +1663,7 @@ else:
 ### GTB images for Landsat 7
 
 ```{python}
-if raster_export == True:
+if export_raster == True:
   date_length_7 = len(uniqueMissDate_l7.getInfo())
   
   for d in range(date_length_7):
@@ -1603,7 +1692,7 @@ else:
 ### GTB images for Landsat 8
 
 ```{python}
-if raster_export == True:
+if export_raster == True:
   date_length_8 = len(uniqueMissDate_l8.getInfo())
   
   for d in range(date_length_8):
@@ -1632,7 +1721,7 @@ else:
 ### GTB images for Landsat 9
 
 ```{python}
-if raster_export == True:
+if export_raster == True:
   date_length_9 = len(uniqueMissDate_l9.getInfo())
   
   for d in range(date_length_9):
@@ -1661,7 +1750,7 @@ else:
 ### GTB images for Sentinel 2
 
 ```{python}
-if raster_export == True:
+if export_raster == True:
   date_length_sen = len(uniqueMissDate_sen.getInfo())
   
   for d in range(date_length_sen):

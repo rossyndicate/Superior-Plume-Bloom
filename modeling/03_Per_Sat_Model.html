@@ -389,15 +389,25 @@ environment.</p>
 } else {
   use_condaenv(file.path(getwd(), &quot;env&quot;))
 }</code></pre>
+<div id="indicate-whether-or-not-to-send-tasks-to-gee" class="section level3">
+<h3>Indicate whether or not to send tasks to GEE</h3>
+<p>Just a quick toggle to be able to knit this script without
+necessarily sending the tasks to GEE</p>
+<pre class="python"><code># These should either be True or False
+export_summary = False
+export_raster = False</code></pre>
+<p>Indicate the label version</p>
+<pre class="r"><code>label_version = &#39;2023-07-20&#39;</code></pre>
 <p>And then import the needed modules</p>
 <pre class="python"><code>import ee
 import os
 import time
 import pandas as pd
 import geopandas as gpd
-import geemap as gm
+#import geemap as gm
 
 v_date = &#39;2023-08-03&#39;</code></pre>
+</div>
 </div>
 <div id="gee-setup" class="section level2">
 <h2>GEE Setup</h2>
@@ -418,7 +428,9 @@ authentication is valid for 7 days.</p>
 these into R. I couldn’t tell you why other than my function doesn’t
 work with pandas dataframes.</p>
 <pre class="r"><code>labels_file &lt;- list.files(&#39;data/labels/&#39;, full.names = T)
-labels &lt;- read_csv(labels_file)</code></pre>
+label_file &lt;- labels_file[grepl(label_version, labels_file)]
+label_file &lt;- label_file[!grepl(&#39;filter&#39;, label_file)]
+labels &lt;- read_csv(label_file)</code></pre>
 <pre><code>## Rows: 7862 Columns: 15
 ## ── Column specification ────────────────────────────────────────────────────────
 ## Delimiter: &quot;,&quot;
@@ -621,6 +633,22 @@ ls_9_filt &lt;- ls_9_filt %&gt;%
   filter_at(vars(all_of(ls_bands_text)), all_vars(!is.na(.)))
 sen_filt &lt;- sen_filt %&gt;% 
   filter_at(vars(all_of(sen_bands_text)), all_vars(!is.na(.)))</code></pre>
+<div id="export-filtered-labels-for-other-uses" class="section level5">
+<h5>Export filtered labels for other uses</h5>
+<pre class="r"><code>labels_filtered &lt;- full_join(ls_5_filt, ls_7_filt) %&gt;% 
+  full_join(., ls_8_filt) %&gt;% 
+  full_join(., ls_9_filt) %&gt;% 
+  full_join(., sen_filt)</code></pre>
+<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init, Red,
+## Green, Blue, B5, B6, B7)`
+## Joining with `by = join_by(date, mission, lat, lon, class, vol_init, Red,
+## Green, Blue, B5, B6, B7)`
+## Joining with `by = join_by(date, mission, lat, lon, class, vol_init, Red,
+## Green, Blue, B5, B6, B7)`
+## Joining with `by = join_by(date, mission, lat, lon, class, vol_init, Red,
+## Green, Blue, B5, B6, B7)`</code></pre>
+<pre class="r"><code>write_csv(labels_filtered, paste0(&#39;data/labels/collated_label_data_filtered_v&#39;, label_version, &#39;.csv&#39;))</code></pre>
+</div>
 </div>
 <div id="make-ee-feature-collections" class="section level4">
 <h4>Make ee feature collections</h4>
@@ -817,73 +845,366 @@ print(&#39;Testing:&#39;)</code></pre>
 <h2>Evaluate the models</h2>
 <div id="landsat-5-2" class="section level3">
 <h3>Landsat 5</h3>
-<pre class="python"><code>confusionMatrixGTB_ls5 = (testing_ls5
+<pre class="python"><code>trainingMatrixGTB_ls5 = (trainedGTB_ls5
+  .confusionMatrix())
+
+#convert to pandas dataframe with class info
+training_conf_l5 = (pd.DataFrame(
+  trainingMatrixGTB_ls5.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
+print(&#39;GTB Training Confusion Matrix for Landsat 5:&#39;)</code></pre>
+<pre><code>## GTB Training Confusion Matrix for Landsat 5:</code></pre>
+<pre class="python"><code>print(training_conf_l5)</code></pre>
+<pre><code>##                        cloud openWater  ... offShoreSediment darkNearShoreSediment
+## cloud                    251         0  ...                0                     0
+## openWater                  0       247  ...                5                     0
+## lightNearShoreSediment     0         0  ...               14                     4
+## offShoreSediment           0         5  ...              159                     3
+## darkNearShoreSediment      0         0  ...                1                    81
+## 
+## [5 rows x 5 columns]</code></pre>
+<pre class="python"><code>#reformat and save
+training_conf_l5[&#39;mission&#39;] = &#39;Landsat 5&#39;
+training_conf_l5.reset_index(inplace = True)
+training_conf_l5 = training_conf_l5.rename(columns = {&#39;level_0&#39;: &#39;class&#39;})  
+training_conf_l5.to_csv(&#39;data/output/GTB_&#39;+v_date+&#39;_L5_training_confusion.csv&#39;, index = False)
+
+confusionMatrixGTB_ls5 = (testing_ls5
   .classify(trainedGTB_ls5)
   .errorMatrix(&#39;byte_property&#39;, &quot;classification&quot;))
+
+#convert to pandas dataframe with class info
+confusion_l5 = (pd.DataFrame(
+  confusionMatrixGTB_ls5.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
 print(&#39;GTB Confusion Matrix for Landsat 5:&#39;)</code></pre>
 <pre><code>## GTB Confusion Matrix for Landsat 5:</code></pre>
-<pre class="python"><code>print(confusionMatrixGTB_ls5.getInfo())</code></pre>
-<pre><code>## [[137, 0, 1, 1, 0], [0, 124, 1, 7, 0], [2, 0, 57, 6, 8], [0, 8, 10, 64, 1], [1, 1, 7, 5, 24]]</code></pre>
-<pre class="python"><code>acc_values_GTB_ls5 = (confusionMatrixGTB_ls5
-  .accuracy())
-print(&quot;GTB Confusion Overall Accuracy for Landsat 5: &quot;, acc_values_GTB_ls5.getInfo())</code></pre>
+<pre class="python"><code>print(confusion_l5)</code></pre>
+<pre><code>##                        cloud openWater  ... offShoreSediment darkNearShoreSediment
+## cloud                    137         0  ...                1                     0
+## openWater                  0       124  ...                7                     0
+## lightNearShoreSediment     2         0  ...                6                     8
+## offShoreSediment           0         8  ...               64                     1
+## darkNearShoreSediment      1         1  ...                5                    24
+## 
+## [5 rows x 5 columns]</code></pre>
+<pre class="python"><code>#reformat and save
+confusion_l5[&#39;mission&#39;] = &#39;Landsat 5&#39;
+confusion_l5.reset_index(inplace = True)
+confusion_l5 = confusion_l5.rename(columns = {&#39;level_0&#39;: &#39;class&#39;})  
+confusion_l5.to_csv(&#39;data/output/GTB_&#39;+v_date+&#39;_L5_confusion.csv&#39;, index = False)
+
+acc_values_GTB_ls5 = (confusionMatrixGTB_ls5.accuracy().getInfo())
+print(&quot;GTB Confusion Overall Accuracy for Landsat 5: &quot;, acc_values_GTB_ls5)</code></pre>
 <pre><code>## GTB Confusion Overall Accuracy for Landsat 5:  0.8731182795698925</code></pre>
+<pre class="python"><code>k_GTB_ls5 = (confusionMatrixGTB_ls5.kappa().getInfo())
+print(&quot;GTB kappa for LS5: &quot;, k_GTB_ls5)</code></pre>
+<pre><code>## GTB kappa for LS5:  0.8342476346983411</code></pre>
+<pre class="python"><code>fs_GTB_ls5 = (confusionMatrixGTB_ls5.fscore().getInfo())
+print(&#39;GTB fScore for each class: &#39;, fs_GTB_ls5)</code></pre>
+<pre><code>## GTB fScore for each class:  [0.9820788530465949, 0.9358490566037736, 0.7651006711409396, 0.7710843373493976, 0.676056338028169]</code></pre>
 </div>
 <div id="landsat-7-2" class="section level3">
 <h3>Landsat 7</h3>
-<pre class="python"><code>confusionMatrixGTB_ls7 = (testing_ls7
+<pre class="python"><code>trainingMatrixGTB_ls7 = (trainedGTB_ls7
+  .confusionMatrix())
+
+#convert to pandas dataframe with class info
+training_conf_l7 = (pd.DataFrame(
+  trainingMatrixGTB_ls7.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
+print(&#39;GTB Training Confusion Matrix for Landsat 7:&#39;)</code></pre>
+<pre><code>## GTB Training Confusion Matrix for Landsat 7:</code></pre>
+<pre class="python"><code>print(training_conf_l7)</code></pre>
+<pre><code>##                        cloud openWater  ... offShoreSediment darkNearShoreSediment
+## cloud                    284         0  ...                0                     0
+## openWater                  0       233  ...                3                     0
+## lightNearShoreSediment     1         0  ...                4                     0
+## offShoreSediment           0         1  ...              200                     0
+## darkNearShoreSediment      0         0  ...                2                    45
+## 
+## [5 rows x 5 columns]</code></pre>
+<pre class="python"><code>#reformat and save
+training_conf_l7[&#39;mission&#39;] = &#39;Landsat 7&#39;
+training_conf_l7.reset_index(inplace = True)
+training_conf_l7 = training_conf_l7.rename(columns = {&#39;level_0&#39;: &#39;class&#39;})  
+training_conf_l7.to_csv(&#39;data/output/GTB_&#39;+v_date+&#39;_l7_training_confusion.csv&#39;, index = False)
+
+confusionMatrixGTB_ls7 = (testing_ls7
   .classify(trainedGTB_ls7)
   .errorMatrix(&#39;byte_property&#39;, &quot;classification&quot;))
+
+#convert to pandas dataframe with class info
+confusion_l7 = (pd.DataFrame(
+  confusionMatrixGTB_ls7.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
 print(&#39;GTB Confusion Matrix for Landsat 7:&#39;)</code></pre>
 <pre><code>## GTB Confusion Matrix for Landsat 7:</code></pre>
-<pre class="python"><code>print(confusionMatrixGTB_ls7.getInfo())</code></pre>
-<pre><code>## [[120, 0, 1, 1, 0], [0, 84, 0, 1, 0], [0, 0, 85, 3, 5], [1, 4, 3, 100, 0], [0, 1, 8, 1, 12]]</code></pre>
-<pre class="python"><code>acc_values_GTB_ls7 = (confusionMatrixGTB_ls7
-  .accuracy())
-print(&quot;GTB Confusion Overall Accuracy for Landsat 7: &quot;, acc_values_GTB_ls7.getInfo())</code></pre>
+<pre class="python"><code>print(confusion_l7)</code></pre>
+<pre><code>##                        cloud openWater  ... offShoreSediment darkNearShoreSediment
+## cloud                    120         0  ...                1                     0
+## openWater                  0        84  ...                1                     0
+## lightNearShoreSediment     0         0  ...                3                     5
+## offShoreSediment           1         4  ...              100                     0
+## darkNearShoreSediment      0         1  ...                1                    12
+## 
+## [5 rows x 5 columns]</code></pre>
+<pre class="python"><code>#reformat and save
+confusion_l7[&#39;mission&#39;] = &#39;Landsat 7&#39;
+confusion_l7.reset_index(inplace = True)
+confusion_l7 = confusion_l7.rename(columns = {&#39;level_0&#39;: &#39;class&#39;})  
+confusion_l7.to_csv(&#39;data/output/GTB_&#39;+v_date+&#39;_l7_confusion.csv&#39;, index = False)
+
+acc_values_GTB_ls7 = (confusionMatrixGTB_ls7.accuracy().getInfo())
+print(&quot;GTB Confusion Overall Accuracy for Landsat 7: &quot;, acc_values_GTB_ls7)</code></pre>
 <pre><code>## GTB Confusion Overall Accuracy for Landsat 7:  0.9325581395348838</code></pre>
+<pre class="python"><code>k_GTB_ls7 = (confusionMatrixGTB_ls7.kappa().getInfo())
+print(&quot;GTB kappa for LS7: &quot;, k_GTB_ls7)</code></pre>
+<pre><code>## GTB kappa for LS7:  0.9120158046990758</code></pre>
+<pre class="python"><code>fs_GTB_ls7 = (confusionMatrixGTB_ls7.fscore().getInfo())
+print(&#39;GTB fScore for each class: &#39;, fs_GTB_ls7)</code></pre>
+<pre><code>## GTB fScore for each class:  [0.9876543209876544, 0.9655172413793103, 0.894736842105263, 0.9345794392523364, 0.6153846153846153]</code></pre>
 </div>
 <div id="landsat-8-2" class="section level3">
 <h3>Landsat 8</h3>
-<pre class="python"><code>confusionMatrixGTB_ls8 = (testing_ls8
+<pre class="python"><code>trainingMatrixGTB_ls8 = (trainedGTB_ls8
+  .confusionMatrix())
+
+#convert to pandas dataframe with class info
+training_conf_l8 = (pd.DataFrame(
+  trainingMatrixGTB_ls8.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
+print(&#39;GTB Training Confusion Matrix for Landsat 8:&#39;)</code></pre>
+<pre><code>## GTB Training Confusion Matrix for Landsat 8:</code></pre>
+<pre class="python"><code>print(training_conf_l8)</code></pre>
+<pre><code>##                        cloud openWater  ... offShoreSediment darkNearShoreSediment
+## cloud                    282         0  ...                0                     0
+## openWater                  0        68  ...                1                     0
+## lightNearShoreSediment     1         0  ...                7                     4
+## offShoreSediment           0         0  ...              106                     1
+## darkNearShoreSediment      0         1  ...                0                    66
+## 
+## [5 rows x 5 columns]</code></pre>
+<pre class="python"><code>#reformat and save
+training_conf_l8[&#39;mission&#39;] = &#39;Landsat 8&#39;
+training_conf_l8.reset_index(inplace = True)
+training_conf_l8 = training_conf_l8.rename(columns = {&#39;level_0&#39;: &#39;class&#39;})  
+training_conf_l8.to_csv(&#39;data/output/GTB_&#39;+v_date+&#39;_l8_training_confusion.csv&#39;, index = False)
+
+confusionMatrixGTB_ls8 = (testing_ls8
   .classify(trainedGTB_ls8)
   .errorMatrix(&#39;byte_property&#39;, &quot;classification&quot;))
+
+#convert to pandas dataframe with class info
+confusion_l8 = (pd.DataFrame(
+  confusionMatrixGTB_ls8.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
 print(&#39;GTB Confusion Matrix for Landsat 8:&#39;)</code></pre>
 <pre><code>## GTB Confusion Matrix for Landsat 8:</code></pre>
-<pre class="python"><code>print(confusionMatrixGTB_ls8.getInfo())</code></pre>
-<pre><code>## [[130, 0, 1, 0, 0], [0, 27, 0, 5, 0], [1, 0, 42, 7, 1], [0, 0, 2, 50, 0], [0, 1, 5, 0, 29]]</code></pre>
-<pre class="python"><code>acc_values_GTB_ls8 = (confusionMatrixGTB_ls8
-  .accuracy())
-print(&quot;GTB Confusion Overall Accuracy for Landsat 8: &quot;, acc_values_GTB_ls8.getInfo())</code></pre>
+<pre class="python"><code>print(confusion_l8)</code></pre>
+<pre><code>##                        cloud openWater  ... offShoreSediment darkNearShoreSediment
+## cloud                    130         0  ...                0                     0
+## openWater                  0        27  ...                5                     0
+## lightNearShoreSediment     1         0  ...                7                     1
+## offShoreSediment           0         0  ...               50                     0
+## darkNearShoreSediment      0         1  ...                0                    29
+## 
+## [5 rows x 5 columns]</code></pre>
+<pre class="python"><code>#reformat and save
+confusion_l8[&#39;mission&#39;] = &#39;Landsat 8&#39;
+confusion_l8.reset_index(inplace = True)
+confusion_l8 = confusion_l8.rename(columns = {&#39;level_0&#39;: &#39;class&#39;})  
+confusion_l8.to_csv(&#39;data/output/GTB_&#39;+v_date+&#39;_l8_confusion.csv&#39;, index = False)
+  
+acc_values_GTB_ls8 = (confusionMatrixGTB_ls8.accuracy().getInfo())
+print(&quot;GTB Confusion Overall Accuracy for Landsat 8: &quot;, acc_values_GTB_ls8)</code></pre>
 <pre><code>## GTB Confusion Overall Accuracy for Landsat 8:  0.9235880398671097</code></pre>
+<pre class="python"><code>k_GTB_ls8 = (confusionMatrixGTB_ls8.kappa().getInfo())
+print(&quot;GTB kappa for LS8: &quot;, k_GTB_ls8)</code></pre>
+<pre><code>## GTB kappa for LS8:  0.8946591600730373</code></pre>
+<pre class="python"><code>fs_GTB_ls8 = (confusionMatrixGTB_ls8.fscore().getInfo())
+print(&#39;GTB fScore for each class: &#39;, fs_GTB_ls8)</code></pre>
+<pre><code>## GTB fScore for each class:  [0.9923664122137404, 0.8999999999999999, 0.8316831683168315, 0.8771929824561403, 0.8923076923076922]</code></pre>
 </div>
 <div id="landsat-9-2" class="section level3">
 <h3>Landsat 9</h3>
-<pre class="python"><code>confusionMatrixGTB_ls9 = (testing_ls9
+<pre class="python"><code>trainingMatrixGTB_ls9 = (trainedGTB_ls9
+  .confusionMatrix())
+
+#convert to pandas dataframe with class info
+training_conf_l9 = (pd.DataFrame(
+  trainingMatrixGTB_ls9.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
+print(&#39;GTB Training Confusion Matrix for Landsat 9:&#39;)</code></pre>
+<pre><code>## GTB Training Confusion Matrix for Landsat 9:</code></pre>
+<pre class="python"><code>print(training_conf_l9)</code></pre>
+<pre><code>##                        cloud openWater  ... offShoreSediment darkNearShoreSediment
+## cloud                    124         0  ...                0                     0
+## openWater                  0        47  ...                2                     0
+## lightNearShoreSediment     0         0  ...                5                     1
+## offShoreSediment           0         1  ...               75                     1
+## darkNearShoreSediment      0         0  ...                1                    22
+## 
+## [5 rows x 5 columns]</code></pre>
+<pre class="python"><code>#reformat and save
+training_conf_l9[&#39;mission&#39;] = &#39;Landsat 9&#39;
+training_conf_l9.reset_index(inplace = True)
+training_conf_l9 = training_conf_l9.rename(columns = {&#39;level_0&#39;: &#39;class&#39;})  
+training_conf_l9.to_csv(&#39;data/output/GTB_&#39;+v_date+&#39;_l9_training_confusion.csv&#39;, index = False)
+
+confusionMatrixGTB_ls9 = (testing_ls9
   .classify(trainedGTB_ls9)
   .errorMatrix(&#39;byte_property&#39;, &quot;classification&quot;))
+
+#convert to pandas dataframe with class info
+confusion_l9 = (pd.DataFrame(
+  confusionMatrixGTB_ls9.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
 print(&#39;GTB Confusion Matrix for Landsat 9:&#39;)</code></pre>
 <pre><code>## GTB Confusion Matrix for Landsat 9:</code></pre>
-<pre class="python"><code>print(confusionMatrixGTB_ls9.getInfo())</code></pre>
-<pre><code>## [[59, 1, 0, 0, 0], [0, 16, 0, 4, 0], [1, 0, 22, 6, 2], [0, 0, 2, 30, 0], [0, 0, 2, 4, 7]]</code></pre>
-<pre class="python"><code>acc_values_GTB_ls9 = (confusionMatrixGTB_ls9
-  .accuracy())
-print(&quot;GTB Confusion Overall Accuracy for Landsat 9: &quot;, acc_values_GTB_ls9.getInfo())</code></pre>
+<pre class="python"><code>print(confusion_l9)</code></pre>
+<pre><code>##                        cloud openWater  ... offShoreSediment darkNearShoreSediment
+## cloud                     59         1  ...                0                     0
+## openWater                  0        16  ...                4                     0
+## lightNearShoreSediment     1         0  ...                6                     2
+## offShoreSediment           0         0  ...               30                     0
+## darkNearShoreSediment      0         0  ...                4                     7
+## 
+## [5 rows x 5 columns]</code></pre>
+<pre class="python"><code>#reformat and save
+confusion_l9[&#39;mission&#39;] = &#39;Landsat 9&#39;
+confusion_l9.reset_index(inplace = True)
+confusion_l9 = confusion_l9.rename(columns = {&#39;level_0&#39;: &#39;class&#39;})  
+confusion_l9.to_csv(&#39;data/output/GTB_&#39;+v_date+&#39;_l9_confusion.csv&#39;, index = False)
+
+acc_values_GTB_ls9 = (confusionMatrixGTB_ls9.accuracy().getInfo())
+print(&quot;GTB Confusion Overall Accuracy for Landsat 9: &quot;, acc_values_GTB_ls9)</code></pre>
 <pre><code>## GTB Confusion Overall Accuracy for Landsat 9:  0.8589743589743589</code></pre>
+<pre class="python"><code>k_GTB_ls9 = (confusionMatrixGTB_ls9.kappa().getInfo())
+print(&quot;GTB kappa for LS9: &quot;, k_GTB_ls9)</code></pre>
+<pre><code>## GTB kappa for LS9:  0.8100193744810407</code></pre>
+<pre class="python"><code>fs_GTB_ls9 = (confusionMatrixGTB_ls9.fscore().getInfo())
+print(&#39;GTB fScore for each class: &#39;, fs_GTB_ls9)</code></pre>
+<pre><code>## GTB fScore for each class:  [0.9833333333333333, 0.8648648648648648, 0.7719298245614036, 0.7894736842105263, 0.6363636363636364]</code></pre>
 </div>
 <div id="sentinel-2-2" class="section level3">
 <h3>Sentinel 2</h3>
-<pre class="python"><code>confusionMatrixGTB_sen = (testing_sen
+<pre class="python"><code>trainingMatrixGTB_sen = (trainedGTB_sen
+  .confusionMatrix())
+
+#convert to pandas dataframe with class info
+training_conf_sen = (pd.DataFrame(
+  trainingMatrixGTB_sen.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
+print(&#39;GTB Training Confusion Matrix for Sentinel-2:&#39;)</code></pre>
+<pre><code>## GTB Training Confusion Matrix for Sentinel-2:</code></pre>
+<pre class="python"><code>print(training_conf_sen)</code></pre>
+<pre><code>##                        cloud openWater  ... offShoreSediment darkNearShoreSediment
+## cloud                    351         0  ...                0                     0
+## openWater                  0        99  ...                0                     0
+## lightNearShoreSediment     0         0  ...                2                     1
+## offShoreSediment           0         3  ...               96                     0
+## darkNearShoreSediment      0         0  ...                0                    33
+## 
+## [5 rows x 5 columns]</code></pre>
+<pre class="python"><code>#reformat and save
+training_conf_sen[&#39;mission&#39;] = &#39;Sentinel-2&#39;
+training_conf_sen.reset_index(inplace = True)
+training_conf_sen = training_conf_sen.rename(columns = {&#39;level_0&#39;: &#39;class&#39;})  
+training_conf_sen.to_csv(&#39;data/output/GTB_&#39;+v_date+&#39;_sen_training_confusion.csv&#39;, index = False)
+
+confusionMatrixGTB_sen = (testing_sen
   .classify(trainedGTB_sen)
   .errorMatrix(&#39;byte_property&#39;, &quot;classification&quot;))
-print(&#39;GTB Confusion Matrix for Sentinel 2: &#39;)</code></pre>
-<pre><code>## GTB Confusion Matrix for Sentinel 2:</code></pre>
-<pre class="python"><code>print(confusionMatrixGTB_sen.getInfo())</code></pre>
-<pre><code>## [[148, 0, 0, 0, 0], [0, 65, 0, 1, 0], [0, 0, 26, 3, 4], [0, 1, 1, 42, 4], [0, 1, 4, 0, 10]]</code></pre>
-<pre class="python"><code>acc_values_GTB_sen = (confusionMatrixGTB_sen
-  .accuracy())
-print(&quot;GTB Confusion Overall Accuracy for Sentinel 2: &quot;, acc_values_GTB_sen.getInfo())</code></pre>
+
+#convert to pandas dataframe with class info
+confusion_sen = (pd.DataFrame(
+  confusionMatrixGTB_sen.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
+print(&#39;GTB Confusion Matrix for Sentinel-2:&#39;)</code></pre>
+<pre><code>## GTB Confusion Matrix for Sentinel-2:</code></pre>
+<pre class="python"><code>print(confusion_sen)</code></pre>
+<pre><code>##                        cloud openWater  ... offShoreSediment darkNearShoreSediment
+## cloud                    148         0  ...                0                     0
+## openWater                  0        65  ...                1                     0
+## lightNearShoreSediment     0         0  ...                3                     4
+## offShoreSediment           0         1  ...               42                     4
+## darkNearShoreSediment      0         1  ...                0                    10
+## 
+## [5 rows x 5 columns]</code></pre>
+<pre class="python"><code>#reformat and save
+confusion_sen[&#39;mission&#39;] = &#39;Sentinel-2&#39;
+confusion_sen.reset_index(inplace = True)
+confusion_sen = confusion_sen.rename(columns = {&#39;level_0&#39;: &#39;class&#39;})  
+confusion_sen.to_csv(&#39;data/output/GTB_&#39;+v_date+&#39;_sen_confusion.csv&#39;, index = False)
+
+acc_values_GTB_sen = (confusionMatrixGTB_sen.accuracy().getInfo())
+print(&quot;GTB Confusion Overall Accuracy for Sentinel 2: &quot;, acc_values_GTB_sen)</code></pre>
 <pre><code>## GTB Confusion Overall Accuracy for Sentinel 2:  0.9387096774193548</code></pre>
+<pre class="python"><code>k_GTB_sen = (confusionMatrixGTB_sen.kappa().getInfo())
+print(&quot;GTB kappa for S2: &quot;, k_GTB_ls5)</code></pre>
+<pre><code>## GTB kappa for S2:  0.8342476346983411</code></pre>
+<pre class="python"><code>fs_GTB_sen = (confusionMatrixGTB_sen.fscore().getInfo())
+print(&#39;GTB fScore for each class: &#39;, fs_GTB_sen)</code></pre>
+<pre><code>## GTB fScore for each class:  [1, 0.9774436090225564, 0.8125, 0.8936170212765957, 0.606060606060606]</code></pre>
+</div>
+<div id="collate-model-stats-save-to-data-folder" class="section level3">
+<h3>Collate model stats, save to data folder</h3>
+<p>First, we’ll copy over some values and make a big pandas dataframe.
+Note that the df.copy() function unlinks the original list from the new
+one. Silly python.</p>
+<pre class="python"><code>accuracy_heads = class_values.copy()
+accuracy_heads.extend([&#39;GTB_accuracy&#39;, &#39;GTB_kappa&#39;])
+landsat5_perf = fs_GTB_ls5.copy()
+landsat5_perf.extend([acc_values_GTB_ls5, k_GTB_ls5])
+landsat7_perf = fs_GTB_ls7.copy()
+landsat7_perf.extend([acc_values_GTB_ls7, k_GTB_ls7])
+landsat8_perf = fs_GTB_ls8.copy()
+landsat8_perf.extend([acc_values_GTB_ls8, k_GTB_ls8])
+landsat9_perf = fs_GTB_ls9.copy()
+landsat9_perf.extend([acc_values_GTB_ls9, k_GTB_ls9])
+sentinel2_perf = fs_GTB_sen.copy()
+sentinel2_perf.extend([acc_values_GTB_sen, k_GTB_sen])
+
+performance_collation = pd.DataFrame(
+  [landsat5_perf,
+  landsat7_perf,
+  landsat8_perf,
+  landsat9_perf,
+  sentinel2_perf],
+  index = [
+    &#39;Landsat 5&#39;,
+    &#39;Landsat 7&#39;,
+    &#39;Landsat 8&#39;, 
+    &#39;Landsat 9&#39;,
+    &#39;Sentinel 2&#39;
+    ],
+  columns = [accuracy_heads]
+  )
+
+# reset the index
+performance_collation.reset_index(inplace = True)
+performance_collation.rename(columns = {&#39;index&#39;:&#39;satellite&#39;}).to_csv(&#39;data/output/GTB_&#39;+v_date+&#39;_performance_stats.csv&#39;, index = False)</code></pre>
 </div>
 </div>
 <div id="apply-model-to-image-stack-for-landsat" class="section level2">
@@ -901,7 +1222,7 @@ bn = [&#39;Blue&#39;, &#39;Green&#39;, &#39;Red&#39;, &#39;B5&#39;, &#39;B6&#39;
 ROWS = ee.List([27, 28])
 
 def applyScaleFactors(image):
-  opticalBands = image.select(bn).multiply(0.0000275).add(-0.2)
+  opticalBands = image.select(bn).multiply(0.0000275).add(-0.2) #flagging this - this applies the offset to QA RADSAT. :(
   return image.addBands(opticalBands, None, True)
 
 # load Landsat 5, 7, 8, 9 Surface Reflectance and rename bands
@@ -929,7 +1250,8 @@ l5 = (ee.ImageCollection(&#39;LANDSAT/LT05/C02/T1_L2&#39;)
   .filter(ee.Filter.gte(&#39;IMAGE_QUALITY&#39;, 7))
   .select(bn457, bn)
   .map(applyScaleFactors))</code></pre>
-<p>Add QA_RADSAT mask to mask where any band was saturated</p>
+<p>Add QA_RADSAT mask to mask where any band was saturated [[adding flag
+here!!]]</p>
 <pre class="python"><code>def apply_radsat_mask(image):
   radsat = image.select(&#39;QA_RADSAT&#39;).eq(0)
   return image.updateMask(radsat)
@@ -941,8 +1263,9 @@ l5 = l5.map(apply_radsat_mask)</code></pre>
 </div>
 <div id="load-modeling-aois-and-clip-stack" class="section level3">
 <h3>Load modeling AOIs and clip stack</h3>
-<p>Note, some AOIs are too big to load in here and uses as ‘virtual’ ee
-Feature Colections</p>
+<p>Note, some AOIs are too big to load in here and use as ‘virtual’ ee
+Feature Collections. Given that, we have manually uploaded the
+shapefiles as an Earth Engine Feature Collection.</p>
 <pre class="python"><code># aoi_gpd = gpd.read_file(&#39;data/aoi/Superior_AOI_modeling.shp&#39;)
 # aoi_ee = gm.geopandas_to_ee(aoi_gpd)
 
@@ -1276,25 +1599,35 @@ export_summary_5_aoi = (ee.batch.Export.table.toDrive(
   folder = &#39;eePlumB_classification&#39;,
   fileFormat = &#39;csv&#39;))
 
-export_summary_5_aoi.start()
-
-export_summary_5_nosc = (ee.batch.Export.table.toDrive(
+if export_summary == True :
+  export_summary_5_aoi.start()
+else:
+  print(&#39;Export for LS5 whole AOI toggled off.&#39;)</code></pre>
+<pre><code>## Export for LS5 whole AOI toggled off.</code></pre>
+<pre class="python"><code>export_summary_5_nosc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l5_nosc,
   selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
   description = &#39;gradientTreeBoost_landsat_5_stack_nosc_v&#39; + v_date,
   folder = &#39;eePlumB_classification&#39;,
   fileFormat = &#39;csv&#39;))
 
-export_summary_5_nosc.start()
-
-export_summary_5_sc = (ee.batch.Export.table.toDrive(
+if export_summary == True :
+  export_summary_5_nosc.start()
+else:
+  print(&#39;Export for LS5 no shoreline contamination AOI toggled off.&#39;)</code></pre>
+<pre><code>## Export for LS5 no shoreline contamination AOI toggled off.</code></pre>
+<pre class="python"><code>export_summary_5_sc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l5_sc,
   selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
   description = &#39;gradientTreeBoost_landsat_5_stack_sc_v&#39; + v_date,
   folder = &#39;eePlumB_classification&#39;,
   fileFormat = &#39;csv&#39;))
 
-export_summary_5_sc.start()</code></pre>
+if export_summary == True :
+  export_summary_5_sc.start()
+else:
+  print(&#39;Export for LS5 shoreline contamination AOI toggled off.&#39;)</code></pre>
+<pre><code>## Export for LS5 shoreline contamination AOI toggled off.</code></pre>
 </div>
 <div id="landsat-7-3" class="section level4">
 <h4>Landsat 7</h4>
@@ -1305,25 +1638,35 @@ export_summary_5_sc.start()</code></pre>
   folder = &#39;eePlumB_classification&#39;,
   fileFormat = &#39;csv&#39;))
 
-export_summary_7_aoi.start()
-
-export_summary_7_nosc = (ee.batch.Export.table.toDrive(
+if export_summary == True :
+  export_summary_7_aoi.start()
+else:
+  print(&#39;Export for LS7 whole AOI toggled off.&#39;)</code></pre>
+<pre><code>## Export for LS7 whole AOI toggled off.</code></pre>
+<pre class="python"><code>export_summary_7_nosc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l7_nosc,
   selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
   description = &#39;gradientTreeBoost_landsat_7_stack_nosc_v&#39; + v_date,
   folder = &#39;eePlumB_classification&#39;,
   fileFormat = &#39;csv&#39;))
 
-export_summary_7_nosc.start()
-
-export_summary_7_sc = (ee.batch.Export.table.toDrive(
+if export_summary == True :
+  export_summary_7_nosc.start()
+else:
+  print(&#39;Export for LS7 no shoreline contamination AOI toggled off.&#39;)</code></pre>
+<pre><code>## Export for LS7 no shoreline contamination AOI toggled off.</code></pre>
+<pre class="python"><code>export_summary_7_sc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l7_sc,
   selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
   description = &#39;gradientTreeBoost_landsat_7_stack_sc_v&#39; + v_date,
   folder = &#39;eePlumB_classification&#39;,
   fileFormat = &#39;csv&#39;))
 
-export_summary_7_sc.start()</code></pre>
+if export_summary == True :
+  export_summary_7_sc.start()
+else:
+  print(&#39;Export for LS7 shoreline contamination AOI toggled off.&#39;)</code></pre>
+<pre><code>## Export for LS7 shoreline contamination AOI toggled off.</code></pre>
 </div>
 <div id="landsat-8-3" class="section level4">
 <h4>Landsat 8</h4>
@@ -1334,25 +1677,35 @@ export_summary_7_sc.start()</code></pre>
   folder = &#39;eePlumB_classification&#39;,
   fileFormat = &#39;csv&#39;))
 
-export_summary_8_aoi.start()
-
-export_summary_8_nosc = (ee.batch.Export.table.toDrive(
+if export_summary == True :
+  export_summary_8_aoi.start()
+else:
+  print(&#39;Export for LS8 whole AOI toggled off.&#39;)</code></pre>
+<pre><code>## Export for LS8 whole AOI toggled off.</code></pre>
+<pre class="python"><code>export_summary_8_nosc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l8_nosc,
   selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
   description = &#39;gradientTreeBoost_landsat_8_stack_nosc_v&#39; + v_date,
   folder = &#39;eePlumB_classification&#39;,
   fileFormat = &#39;csv&#39;))
 
-export_summary_8_nosc.start()
-
-export_summary_8_sc = (ee.batch.Export.table.toDrive(
+if export_summary == True :
+  export_summary_8_nosc.start()
+else:
+  print(&#39;Export for LS8 no shoreline contamination AOI toggled off.&#39;)</code></pre>
+<pre><code>## Export for LS8 no shoreline contamination AOI toggled off.</code></pre>
+<pre class="python"><code>export_summary_8_sc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l8_sc,
   selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
   description = &#39;gradientTreeBoost_landsat_8_stack_sc_v&#39; + v_date,
   folder = &#39;eePlumB_classification&#39;,
   fileFormat = &#39;csv&#39;))
 
-export_summary_8_sc.start()</code></pre>
+if export_summary == True :
+  export_summary_8_sc.start()
+else:
+  print(&#39;Export for LS8 shoreline contamination AOI toggled off.&#39;)</code></pre>
+<pre><code>## Export for LS8 shoreline contamination AOI toggled off.</code></pre>
 </div>
 <div id="landsat-9-3" class="section level4">
 <h4>Landsat 9</h4>
@@ -1363,25 +1716,35 @@ export_summary_8_sc.start()</code></pre>
   folder = &#39;eePlumB_classification&#39;,
   fileFormat = &#39;csv&#39;))
 
-export_summary_9_aoi.start()
-
-export_summary_9_nosc = (ee.batch.Export.table.toDrive(
+if export_summary == True :
+  export_summary_9_aoi.start()
+else:
+  print(&#39;Export for LS9 whole AOI toggled off.&#39;)</code></pre>
+<pre><code>## Export for LS9 whole AOI toggled off.</code></pre>
+<pre class="python"><code>export_summary_9_nosc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l9_nosc,
   selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
   description = &#39;gradientTreeBoost_landsat_9_stack_nosc_v&#39; + v_date,
   folder = &#39;eePlumB_classification&#39;,
   fileFormat = &#39;csv&#39;))
 
-export_summary_9_nosc.start()
-
-export_summary_9_sc = (ee.batch.Export.table.toDrive(
+if export_summary == True :
+  export_summary_9_nosc.start()
+else:
+  print(&#39;Export for LS9 no shoreline contamination AOI toggled off.&#39;)</code></pre>
+<pre><code>## Export for LS9 no shoreline contamination AOI toggled off.</code></pre>
+<pre class="python"><code>export_summary_9_sc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l9_sc,
   selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
   description = &#39;gradientTreeBoost_landsat_9_stack_sc_v&#39; + v_date,
   folder = &#39;eePlumB_classification&#39;,
   fileFormat = &#39;csv&#39;))
 
-export_summary_9_sc.start()</code></pre>
+if export_summary == True :
+  export_summary_9_sc.start()
+else:
+  print(&#39;Export for LS9 shoreline contamination AOI toggled off.&#39;)</code></pre>
+<pre><code>## Export for LS9 shoreline contamination AOI toggled off.</code></pre>
 </div>
 </div>
 </div>
@@ -1512,14 +1875,17 @@ allAreas_sen_aoi = sen_stack_light.map(calcArea_sen_aoi)
 ## export to drive
 export_summary_sen_aoi = (ee.batch.Export.table.toDrive(
   collection = allAreas_sen_aoi,
-  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;aoi&#39;],
+  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
   description = &#39;gradientTreeBoost_sen2_stack_v&#39; + v_date,
   folder = &#39;eePlumB_classification&#39;,
   fileFormat = &#39;csv&#39;))
 
-#export_summary_sen_aoi.start()
-
-def calcArea_sen_nosc(image):
+if export_summary == True :
+  export_summary_sen_aoi.start()
+else:
+  print(&#39;Export for Sentinel-2 whole AOI toggled off.&#39;)</code></pre>
+<pre><code>## Export for Sentinel-2 whole AOI toggled off.</code></pre>
+<pre class="python"><code>def calcArea_sen_nosc(image):
   areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
   
   area = areaImage.reduceRegions(
@@ -1550,10 +1916,12 @@ export_summary_sen_nosc = (ee.batch.Export.table.toDrive(
   fileFormat = &#39;csv&#39;))
 
 #export_summary_sen_nosc.start()
-
-
-
-def calcArea_sen_sc(image):
+if export_summary == True :
+  export_summary_sen_nosc.start()
+else:
+  print(&#39;Export for Sentinel-2 no shoreline contamination AOI toggled off.&#39;)</code></pre>
+<pre><code>## Export for Sentinel-2 no shoreline contamination AOI toggled off.</code></pre>
+<pre class="python"><code>def calcArea_sen_sc(image):
   areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
   
   area = areaImage.reduceRegions(
@@ -1583,7 +1951,175 @@ export_summary_sen_sc = (ee.batch.Export.table.toDrive(
   folder = &#39;eePlumB_classification&#39;,
   fileFormat = &#39;csv&#39;))
 
-#export_summary_sen_sc.start()</code></pre>
+if export_summary == True :
+  export_summary_sen_sc.start()
+else:
+  print(&#39;Export for Sentinel-2 shoreline contamination AOI toggled off.&#39;)</code></pre>
+<pre><code>## Export for Sentinel-2 shoreline contamination AOI toggled off.</code></pre>
+</div>
+</div>
+<div id="export-geotiffs-to-drive" class="section level2">
+<h2>Export GeoTiffs to drive</h2>
+<p>Load task checker!</p>
+<pre class="python"><code>##Function for limiting the max number of tasks sent to
+#earth engine at one time to avoid time out errors
+def maximum_no_of_tasks(MaxNActive, waitingPeriod):
+  ##maintain a maximum number of active tasks
+  ## initialize submitting jobs
+  ts = list(ee.batch.Task.list())
+  NActive = 0
+  for task in ts:
+     if (&#39;RUNNING&#39; in str(task) or &#39;READY&#39; in str(task)):
+         NActive += 1
+  ## wait if the number of current active tasks reach the maximum number
+  ## defined in MaxNActive
+  while (NActive &gt;= MaxNActive):
+    time.sleep(waitingPeriod) # if reach or over maximum no. of active tasks, wait for 2min and check again
+    ts = list(ee.batch.Task.list())
+    NActive = 0
+    for task in ts:
+      if (&#39;RUNNING&#39; in str(task) or &#39;READY&#39; in str(task)):
+        NActive += 1
+  return()</code></pre>
+<div id="raster-export" class="section level3">
+<h3>Raster Export</h3>
+</div>
+<div id="gtb-images-for-landsat-5" class="section level3">
+<h3>GTB images for Landsat 5</h3>
+<pre class="python"><code>if export_raster == True:
+  
+  date_length_5 = len(uniqueMissDate_l5.getInfo())
+  
+  for d in range(date_length_5):
+    md = uniqueMissDate_l5.get(d)
+    image = (newStack_l5
+      .filter(ee.Filter.eq(&#39;missDate&#39;, md))
+      .first()
+      .select(&#39;classification&#39;))
+    export_image = ee.batch.Export.image.toDrive(
+      image = image,
+      region = aoi_ee.geometry(),
+      description = &#39;GTB_v&#39; + v_date + &#39;_&#39; + str(md.getInfo()),
+      folder = &#39;GTB_v&#39;+v_date,
+      scale = 30,
+      crs = img_crs,
+      maxPixels = 1e13)
+    
+    #Check how many existing tasks are running and take a break of 30 mins if it&#39;s &gt;25
+    maximum_no_of_tasks(10, 5*60)
+    #Send next task.
+    export_image.start()
+else:
+  print(&#39;Raster export for LS5 turned off.&#39;)</code></pre>
+<pre><code>## Raster export for LS5 turned off.</code></pre>
+</div>
+<div id="gtb-images-for-landsat-7" class="section level3">
+<h3>GTB images for Landsat 7</h3>
+<pre class="python"><code>if export_raster == True:
+  date_length_7 = len(uniqueMissDate_l7.getInfo())
+  
+  for d in range(date_length_7):
+    md = uniqueMissDate_l7.get(d)
+    image = (newStack_l7
+      .filter(ee.Filter.eq(&#39;missDate&#39;, md))
+      .first()
+      .select(&#39;classification&#39;))
+    export_image = ee.batch.Export.image.toDrive(
+      image = image,
+      region = aoi_ee.geometry(),
+      description = &#39;GTB_v&#39; + v_date + &#39;_&#39; + str(md.getInfo()),
+      folder = &#39;GTB_v&#39;+v_date,
+      scale = 30,
+      crs = img_crs,
+      maxPixels = 1e13)
+    #Check how many existing tasks are running and take a break of 30 mins if it&#39;s &gt;25
+    maximum_no_of_tasks(10, 5*60)
+    #Send next task.
+    export_image.start()
+else:
+  print(&#39;Raster export turned off for Landsat 7&#39;)</code></pre>
+<pre><code>## Raster export turned off for Landsat 7</code></pre>
+</div>
+<div id="gtb-images-for-landsat-8" class="section level3">
+<h3>GTB images for Landsat 8</h3>
+<pre class="python"><code>if export_raster == True:
+  date_length_8 = len(uniqueMissDate_l8.getInfo())
+  
+  for d in range(date_length_8):
+    md = uniqueMissDate_l8.get(d)
+    image = (newStack_l8
+      .filter(ee.Filter.eq(&#39;missDate&#39;, md))
+      .first()
+      .select(&#39;classification&#39;))
+    export_image = ee.batch.Export.image.toDrive(
+      image = image,
+      region = aoi_ee.geometry(),
+      description = &#39;GTB_v&#39; + v_date + &#39;_&#39; + str(md.getInfo()),
+      folder = &#39;GTB_v&#39;+v_date,
+      scale = 30,
+      crs = img_crs,
+      maxPixels = 1e13)
+    #Check how many existing tasks are running and take a break of 30 mins if it&#39;s &gt;25
+    maximum_no_of_tasks(10, 5*60)
+    #Send next task.
+    export_image.start()
+else:
+  print(&#39;Raster export turned off for Landsat 8&#39;)</code></pre>
+<pre><code>## Raster export turned off for Landsat 8</code></pre>
+</div>
+<div id="gtb-images-for-landsat-9" class="section level3">
+<h3>GTB images for Landsat 9</h3>
+<pre class="python"><code>if export_raster == True:
+  date_length_9 = len(uniqueMissDate_l9.getInfo())
+  
+  for d in range(date_length_9):
+    md = uniqueMissDate_l9.get(d)
+    image = (newStack_l9
+      .filter(ee.Filter.eq(&#39;missDate&#39;, md))
+      .first()
+      .select(&#39;classification&#39;))
+    export_image = ee.batch.Export.image.toDrive(
+      image = image,
+      region = aoi_ee.geometry(),
+      description = &#39;GTB_v&#39; + v_date + &#39;_&#39; + str(md.getInfo()),
+      folder = &#39;GTB_v&#39;+v_date,
+      scale = 30,
+      crs = img_crs,
+      maxPixels = 1e13)
+    #Check how many existing tasks are running and take a break of 30 mins if it&#39;s &gt;25
+    maximum_no_of_tasks(10, 5*60)
+    #Send next task.
+    export_image.start()
+else:
+  print(&#39;Raster export turned off for Landsat 9&#39;)</code></pre>
+<pre><code>## Raster export turned off for Landsat 9</code></pre>
+</div>
+<div id="gtb-images-for-sentinel-2" class="section level3">
+<h3>GTB images for Sentinel 2</h3>
+<pre class="python"><code>if export_raster == True:
+  date_length_sen = len(uniqueMissDate_sen.getInfo())
+  
+  for d in range(date_length_sen):
+    md = uniqueMissDate_sen.get(d)
+    image = (newStack_sen
+      .filter(ee.Filter.eq(&#39;missDate&#39;, md))
+      .first()
+      .select(&#39;classification&#39;))
+    export_image = ee.batch.Export.image.toDrive(
+      image = image,
+      region = aoi_ee.geometry(),
+      description = &#39;GTB_v&#39; + v_date + &#39;_&#39; + str(md.getInfo()),
+      folder = &#39;GTB_v&#39;+v_date,
+      scale = 10,
+      crs = img_crs_sen,
+      maxPixels = 1e13)
+    #Check how many existing tasks are running and take a break of 30 mins if it&#39;s &gt;25
+    maximum_no_of_tasks(10, 5*60)
+    #Send next task.
+    export_image.start()
+else:
+  print(&#39;Raster export turned off for Sentinel-2&#39;)</code></pre>
+<pre><code>## Raster export turned off for Sentinel-2</code></pre>
 </div>
 </div>
 </div>
