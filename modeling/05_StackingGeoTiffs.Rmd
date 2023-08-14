@@ -60,6 +60,7 @@ First, we'll create a temporary local folder
 
 ```{r}
 dir.create('tmp')
+dir.create('tmp/nc')
 ```
 
 And then download the files from drive.
@@ -91,15 +92,20 @@ List files, and write the function to get a single year of data
 # list all files in the directory
 files = os.listdir('tmp')
 
+def correct_landsat_convention(file):
+  return file.replace('SAT_', 'SAT-')
+
+files_corrected = *map(correct_landsat_convention, files),
+
 # function to get the individual years from file name
 def getYear(file):
   f_list = file.split('_')
-  date = f_list[2]
+  date = f_list[3]
   year = date.split('-')[0]
   return year
 
 #grab all years
-years = *map(getYear, files),
+years = *map(getYear, files_corrected),
 #get unique years
 years = set(years)
 #save as list
@@ -113,18 +119,20 @@ for y in enumerate(years):
   year = y[1]
   # create an empty xarray dataset to store the stacked data
   nc = xr.Dataset()
-  year_files =  [file for file in files if (year in file)]
-  
+  #filter the list, but mak sure it only looks at the last chunk
+  year_files =  [file for file in files if year in file[-14:]]
+
   # loop through the GeoTiffs and add them to the dataset
   for i, geotiff_file in enumerate(year_files):
     #get file info
-    file_strings = geotiff_file.split('_')
+    file_strings = correct_landsat_convention(geotiff_file).split('_')
     date = file_strings[3]
+    date = date.split('.')[0]
     mission = file_strings[2]
     
     # open the GeoTiff with rasterio
-    data = rxr.open_rasterio(os.path.join(data_dir, geotiff_file))
-    transform = rasterio.open(os.path.join(data_dir, geotiff_file)).transform
+    data = rxr.open_rasterio(os.path.join('tmp/', geotiff_file))
+    transform = rasterio.open(os.path.join('tmp/', geotiff_file)).transform
     
     # create an xarray data array and add it to the dataset, define coords
     data_array = xr.DataArray(data,
@@ -139,7 +147,7 @@ for y in enumerate(years):
     #set file name
     fn = 'GTB_v2023-08-03_' + year + '_stack.nc'
     # save the dataset to a netCDF file
-    nc.to_netcdf(os.path.join('tmp/', fn))
+    nc.to_netcdf(os.path.join('tmp/nc/', fn))
 
 ```
 
