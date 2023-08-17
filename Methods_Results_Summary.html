@@ -11,9 +11,9 @@
 
 <meta name="author" content="ROSSyndicate" />
 
-<meta name="date" content="2023-08-03" />
+<meta name="date" content="2023-08-07" />
 
-<title>eePlumB per-Satellite Model</title>
+<title>Methods and Results Summary</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -253,6 +253,28 @@ if (window.hljs) {
 
 
 
+<style type="text/css">
+
+div.csl-bib-body { }
+div.csl-entry {
+clear: both;
+}
+.hanging div.csl-entry {
+margin-left:2em;
+text-indent:-2em;
+}
+div.csl-left-margin {
+min-width:2em;
+float:left;
+}
+div.csl-right-inline {
+margin-left:2em;
+padding-left:1em;
+}
+div.csl-indent {
+margin-left: 2em;
+}
+</style>
 
 
 
@@ -350,1776 +372,1171 @@ display: none;
 
 
 
-<h1 class="title toc-ignore">eePlumB per-Satellite Model</h1>
+<h1 class="title toc-ignore">Methods and Results Summary</h1>
 <h4 class="author">ROSSyndicate</h4>
-<h4 class="date">2023-08-03</h4>
+<h4 class="date">2023-08-07</h4>
 
 </div>
 
 
-<pre><code>## ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
-## ✔ dplyr     1.1.2     ✔ readr     2.1.4
-## ✔ forcats   1.0.0     ✔ stringr   1.5.0
-## ✔ ggplot2   3.4.2     ✔ tibble    3.2.1
-## ✔ lubridate 1.9.2     ✔ tidyr     1.3.0
-## ✔ purrr     1.0.1     
-## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
-## ✖ dplyr::filter() masks stats::filter()
-## ✖ dplyr::lag()    masks stats::lag()
-## ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors</code></pre>
-<pre><code>## [[1]]
-## [1] &quot;reticulate&quot; &quot;stats&quot;      &quot;graphics&quot;   &quot;grDevices&quot;  &quot;utils&quot;     
-## [6] &quot;datasets&quot;   &quot;methods&quot;    &quot;base&quot;      
-## 
-## [[2]]
-##  [1] &quot;lubridate&quot;  &quot;forcats&quot;    &quot;stringr&quot;    &quot;dplyr&quot;      &quot;purrr&quot;     
-##  [6] &quot;readr&quot;      &quot;tidyr&quot;      &quot;tibble&quot;     &quot;ggplot2&quot;    &quot;tidyverse&quot; 
-## [11] &quot;reticulate&quot; &quot;stats&quot;      &quot;graphics&quot;   &quot;grDevices&quot;  &quot;utils&quot;     
-## [16] &quot;datasets&quot;   &quot;methods&quot;    &quot;base&quot;</code></pre>
-<div id="purpose" class="section level1">
-<h1>Purpose</h1>
-<p>This script develops and applies Gradient Tree Boost Models to
-Landsat and Sentinel mosaic-ed images.</p>
-<div id="activate-conda-environment" class="section level2">
-<h2>Activate conda environment</h2>
-<p>Check for virtual environment and activate, otherwise, set up virtual
-environment.</p>
-<pre class="r"><code>if (!dir.exists(&quot;env&quot;)) {
-  source(&quot;pySetup.R&quot;)
-} else {
-  use_condaenv(file.path(getwd(), &quot;env&quot;))
-}</code></pre>
-<div id="indicate-whether-or-not-to-send-tasks-to-gee" class="section level3">
-<h3>Indicate whether or not to send tasks to GEE</h3>
-<p>Just a quick toggle to be able to knit this script without
-necessarily sending the tasks to GEE</p>
-<pre class="python"><code># These should either be True or False
-export_summary = False
-export_raster = False</code></pre>
-<p>Indicate the label version</p>
-<pre class="r"><code>label_version = &#39;2023-07-20&#39;</code></pre>
-<p>And then import the needed modules</p>
-<pre class="python"><code>import ee
-import os
-import time
-import pandas as pd
-import geopandas as gpd
-#import geemap as gm
-
-v_date = &#39;2023-08-03&#39;</code></pre>
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>Remote sensing image classification is common in terrestrial
+applications (in particular, land use and land cover), but has not been
+applied in aquatic environments beyond general presence and absence of
+water and wetlands. The primary exception to the use of image
+classification in aquatic environments is assessing the presence of
+submerged aquatic vegetation (“SAV”) (e.g., <span class="citation">(Visser et al. 2018)</span>, <span class="citation">(E.
+L. Hestir, J. A. Greenberg, and S. L. Ustin 2012)</span>); however,
+these classification methods require high resolution imagery with high
+spectral resolution often from land-based high-resolution photography or
+unpersoned aerial vehicles (“UAVs”).</p>
+<p>In the Great Lakes (GL) region, much of the use of image
+classification is completed using moderate resolution (e.g., Landsat,
+Sentinel, MODIS) satellite images, focusing on mapping the distribution
+and types of wetlands throughout the region (<span class="citation">(Mohseni et al. 2023)</span>, <span class="citation">(V. L. Valenti et al. 2020)</span>), as well as SAV
+distribution throughout the system (<span class="citation">(Wolter,
+Johnston, and Niemi 2005)</span>). Most of these analyses focus on a
+relatively short temporal period (months to years), while a some span
+the entire Landsat archive from the mid ’80s through the recent past
+(e.g., <span class="citation">(Amani et al. 2022)</span>).</p>
+<p>In the recent past, much attention has been paid to the apparent
+proliferation of algal blooms in some of the clearest lakes, including
+Lake Superior (cite). While detecting algal blooms from
+moderate-resolution satellite imagery is difficult due to low temporal
+frequency, time of day of acquisition, pixel size, and spectral band
+metrics (cite), as well as the lack of observed, spatially-explicit
+bloom observations to validate presence and absence, detecting sediment
+plumes (which often precede algal blooms) is relatively easy with just
+the red, green, and blue bands common on nearly all moderate-resolution
+satellites.</p>
+<p>In this analysis, we use the Landsat Collection 2 Surface Reflectance
+product archive (missions 5 through 9) and the Sentinel 2 Surface
+Reflectance product archive, a novel crowd-sourced label data set
+(eePlumB), and Google Earth Engine to create image classification models
+to create a time series of rasters that enumerate sediment plumes across
+the western arm of Lake Superior.</p>
+<p>[[image of AOI]]</p>
+</div>
+<div id="methods" class="section level1">
+<h1>Methods</h1>
+<div id="eeplumb" class="section level2">
+<h2>eePlumB</h2>
+<p>Using the overarching architecture presented in the Global Rivers
+Obstruction Database (GROD) (<span class="citation">(Yang et al.
+2022)</span>) to engage volunteer observers, we croudsourced class
+labels for Landsat and Sentinel-2 images for the following classes:
+‘cloud’, ‘open water’, ‘light near shore sediment’, ‘dark near shore
+sediment’, ‘offshore sediment’, ‘shoreline contamination’, ‘other’, and
+‘algae bloom’ using our Earth Engine Plume and Bloom labeling interface
+(“eePlumB”).</p>
+<p>[[more here at a later date, borrow from the eePlumB documentation
+already created]]</p>
+<p>In order to eliminate outlier band information and reduce noise in
+the input for our models, the second and ninety-eighth percentiles were
+calculated for each mission-band combination and label data associated
+with values outside of those cutoffs were dropped from the analysis.
+[[Could add the <code>02_label_class_summaries.Rmd</code> as
+supplemental.]]</p>
+</div>
+<div id="model-development" class="section level2">
+<h2>Model development</h2>
+<p>We used the built-in gradient tree boost (“GTB”) ee.Classifier()
+method within Google Earth Engine to create classification models from
+the crowd-sourced label data. Label data were randomly split into
+training (70%) and test (30%) data sets, with no special handling
+procedures for classes or satellite missions. Data were examined to
+assure that all classes and missions were present in both the training
+and testing data sets.</p>
+<p>GTB models for each mission were trained independently on the
+rescaled band data from red, green, blue, near infrared, and both
+shortwave infrared bands for Landsat missions to classify 5 categories:
+cloud, open water, light near shore sediment, dark near shore sediment,
+and offshore sediment. For Sentinel-2, the bands used to develop the
+classifier were red, green, blue, red edge 1-3, near infrared, and both
+short-wave infrared bands. We did not tune the hyperparameters for the
+GTB model, as performance was already acceptable for discerning open
+water from sediment plume using 10 trees.</p>
+<p>[[if we develop this into a MS, we may wish to add more here,
+including hyperparameter tuning and/or use of other ee.Classifiers).
+Most papers of this nature just use all 4 - like we did with the Yugo
+model - with iterations for hypertuning.]]</p>
+</div>
+<div id="image-classification" class="section level2">
+<h2>Image classification</h2>
+<div id="image-pre-processing" class="section level3">
+<h3>Image Pre-processing</h3>
+<p>Mosaic-ed images were made for each mission-date as mean band values
+where any two path row or tiles overlapped. All Landsat mission-date
+images were pre-processed to remove saturated pixels, and only images
+with an image quality greater than or equal to 7 were included.
+Sentinel-2 bands that had a pixel resoluiton greater than 10m x 10m were
+reprojected (downsampled) to 10m x 10m pixel sizes so that the GTB model
+could be applied to the composite images more efficiently. No further
+pre-processing was completed on the Sentinel-2 data.</p>
+<p>Three areas of interest (AOIs) were used in this analysis: the
+complete AOI, the AOI without shoreline contamination, and the AOI with
+shoreline contamination. The area of shoreline contamination was defined
+as any area within 60 meters of a volunteer-identified pixel with
+shoreline contamination. We assumed that shoreline contamination was
+consistent throughout the analysis and was not specific to any
+particular satellite or time period.</p>
+</div>
+<div id="model-application-and-summaries" class="section level3">
+<h3>Model application and summaries</h3>
+<p>Each GTB model was applied to the corresponding satellite image stack
+and two data types were output: a tabular data summary of the area
+classified and the total area of each class for all three AOIs, as well
+as a .tif raster at the resolution the GTB was applied (10m for
+Sentinel-2 and 30m for Landsat) for each classified mission-date
+image.</p>
 </div>
 </div>
-<div id="gee-setup" class="section level2">
-<h2>GEE Setup</h2>
-<p>In order to access the GEE API, we need to authenticate our identity.
-To do this, you must type <code>earthengine authenticate</code> in the
-terminal window. When your browser states ‘You are now authenticated
-with the gcloud CLI’, the authentication is complete. This
-authentication is valid for 7 days.</p>
-<p>Now, we need to initialize our GEE session.</p>
-<pre class="python"><code>ee.Initialize(project = &#39;ee-ross-superior&#39;)</code></pre>
+<div id="model-evaluation-metrics" class="section level2">
+<h2>Model evaluation metrics</h2>
+<p>Models were evaluated through confusion matrices, error matrices,
+kappa statistics, F1 statistics for each class, and weighted F1
+statistics per model.</p>
+<ul>
+<li>confusion matrix - training: an indication per label class where the
+model-assigned class and label class are compared.</li>
+<li>error matrix - testing: given the test data, does the model assign
+the correct class? These are tibble-style summaries where the
+model-assigned class and label class are compared.</li>
+<li><em>overall accuracy**: percentage of model-assigned labels that
+match the test dataset, an indicator of model precision. No weights are
+given to any class based on the number of labels.</em></li>
+<li><em>training accuracy**: how well does the classification model
+assign the correct class to the training data, an indicator of model
+precision.</em></li>
+<li>kappa statistic: an indicator of how much better or worse a model
+performs than by random chance. score is -1 to 1, where 0 is the same as
+random chance, positive values are better than random chance and
+negative are poorer than random chance</li>
+<li>F1 score: the harmonic mean of precision and recall per class (beta
+= 1, hence F1 where precision and recall are evenly weighted)</li>
+<li>weighted F1: class-weighted (by number of labels) F1 score across
+all classes (sum of the proportional F1 score per class)</li>
+</ul>
+<p><em>**We have unequal distribution of classes, so should not use
+overall accuracy metrics as they can be misleading when the distribution
+of classes are not equal.</em></p>
+<p>Models were evaluated as 5-class categories and 3-class categories
+where all sediment categories were compiled into a single class.</p>
 </div>
 </div>
-<div id="import-assets" class="section level1">
-<h1>Import assets</h1>
-<div id="load-the-labels-file-into-the-environment" class="section level2">
-<h2>Load the labels file into the environment</h2>
-<p>Because of how the later function is written, it works best to read
-these into R. I couldn’t tell you why other than my function doesn’t
-work with pandas dataframes.</p>
-<pre class="r"><code>labels_file &lt;- list.files(&#39;data/labels/&#39;, full.names = T)
-label_file &lt;- labels_file[grepl(label_version, labels_file)]
-label_file &lt;- label_file[!grepl(&#39;filter&#39;, label_file)]
-labels &lt;- read_csv(label_file)</code></pre>
-<pre><code>## Rows: 7862 Columns: 15
-## ── Column specification ────────────────────────────────────────────────────────
-## Delimiter: &quot;,&quot;
-## chr   (3): mission, class, vol_init
-## dbl  (11): lat, lon, Red, Green, Blue, B5, B6, B7, B8, B11, B12
-## date  (1): date
-## 
-## ℹ Use `spec()` to retrieve the full column specification for this data.
-## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
-<pre class="r"><code># subset for sen/ls
-sen_labels = labels %&gt;% 
-  filter(mission == &#39;SEN2&#39;)
-ls_labels = labels %&gt;% 
-  filter(mission != &#39;SEN2&#39;)
-
-# and for 5/7/8/9
-ls5_labels = labels %&gt;% 
-  filter(mission == &#39;LS5&#39;)
-ls7_labels = labels %&gt;% 
-  filter(mission == &#39;LS7&#39;)
-ls8_labels = labels %&gt;% 
-  filter(mission == &#39;LS8&#39;)
-ls9_labels = labels %&gt;% 
-  filter(mission == &#39;LS9&#39;)</code></pre>
-<div id="quick-qaqc-of-the-labels" class="section level3">
-<h3>Quick QAQC of the labels</h3>
-<p>We know there are some outliers in here. To create a good model,
-we’ll want to remove any ‘outliers’ from each of the label sets. Because
-we’re creating models for each mission, we’ll perform these outlier
-clean ups for each mission. We’ll define ‘outliers’ as the outer 0.02
-and 0.98 percentiles.</p>
-<p>Make some helper lists</p>
-<pre class="r"><code>class_list = c(&quot;cloud&quot;, &quot;openWater&quot;, &quot;lightNearShoreSediment&quot;,
-               &quot;darkNearShoreSediment&quot;, &quot;offShoreSediment&quot;)
-
-ls_band_list = c(expr(Red), expr(Green), expr(Blue), expr(B5), expr(B6), expr(B7))
-sen_band_list = c(expr(Red), expr(Green), expr(Blue), expr(B5), expr(B6), expr(B7), expr(B8), expr(B11), expr(B12))</code></pre>
-<p>We need to rescale B11 and B12 for the Sentinel data. While this will
-not change any downstream ‘outlier’ handling, it will [hopefully] help
-with the wonky application of Sentinel models since the range is so
-different for those bands.</p>
-<pre class="r"><code>sen_labels &lt;- sen_labels %&gt;% 
-  mutate_at(vars(B11, B12),
-            ~ .*0.0001)</code></pre>
-<div id="landsat-5" class="section level4">
-<h4>Landsat 5</h4>
-<p>Maybe a tidyfail, maybe a me problem, but we’re creating new, very
-similar functions for each dataset.</p>
-<pre class="r"><code>qaqc_filter_ls5 &lt;- function(band, cl) {
-  df &lt;- ls5_labels %&gt;% filter(class == cl)
-  values = df[{{ band }}] %&gt;% as.vector(.)
-  df_sub = df %&gt;% select(date, mission, lat, lon, class, vol_init, {{ band }})
-  cuts = quantile(values[[1]], c(0.02, 0.98), na.rm = T)
-  df_sub %&gt;% 
-    filter(cuts[1] &lt; {{ band }}, {{ band }} &lt; cuts[2])
+<div id="results" class="section level1">
+<h1>Results</h1>
+<div id="label-dataset" class="section level2">
+<h2>Label dataset</h2>
+<p>The collated crowdsourced label dataset consisted of 7862 labels for
+across all classes. There were labels that were part of the classes of
+interest (cloud, open water, sediment). After filtering for outliers
+from each subset of mission-specific labels, there were 5255 labels with
+complete band information. Table 1 presents a break down of the
+labels.</p>
+<div id="igdlrcksri" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#igdlrcksri table {
+font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+-webkit-font-smoothing: antialiased;
+-moz-osx-font-smoothing: grayscale;
 }
-
-apply_qaqc_bands_ls5 &lt;- function(bn) {
-  map2_dfr(c(bn, bn, bn, bn, bn),
-           class_list,
-           qaqc_filter_ls5)
+#igdlrcksri thead, #igdlrcksri tbody, #igdlrcksri tfoot, #igdlrcksri tr, #igdlrcksri td, #igdlrcksri th {
+border-style: none;
 }
-ls_5_filtered &lt;-  map(ls_band_list, apply_qaqc_bands_ls5)
-
-ls_5_filt &lt;- ls_5_filtered %&gt;% 
-  reduce(full_join) %&gt;%
-  distinct()</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
-</div>
-<div id="landsat-7" class="section level4">
-<h4>Landsat 7</h4>
-<pre class="r"><code>qaqc_filter_ls7 &lt;- function(band, cl) {
-  df &lt;- ls7_labels %&gt;% filter(class == cl)
-  values = df[{{ band }}] %&gt;% as.vector(.)
-  df_sub = df %&gt;% select(date, mission, lat, lon, class, vol_init, {{ band }})
-  cuts = quantile(values[[1]], c(0.02, 0.98), na.rm = T)
-  df_sub %&gt;% 
-    filter(cuts[1] &lt; {{ band }}, {{ band }} &lt; cuts[2])
+#igdlrcksri p {
+margin: 0;
+padding: 0;
 }
-
-apply_qaqc_bands_ls7 &lt;- function(bn) {
-  map2_dfr(c(bn, bn, bn, bn, bn),
-           class_list,
-           qaqc_filter_ls7)
+#igdlrcksri .gt_table {
+display: table;
+border-collapse: collapse;
+line-height: normal;
+margin-left: auto;
+margin-right: auto;
+color: #333333;
+font-size: 16px;
+font-weight: normal;
+font-style: normal;
+background-color: #FFFFFF;
+width: auto;
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #A8A8A8;
+border-right-style: none;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #A8A8A8;
+border-left-style: none;
+border-left-width: 2px;
+border-left-color: #D3D3D3;
 }
-ls_7_filtered &lt;-  map(ls_band_list, apply_qaqc_bands_ls7)
-
-ls_7_filt &lt;- ls_7_filtered %&gt;% 
-  reduce(full_join) %&gt;% 
-  distinct()</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
-</div>
-<div id="landsat-8" class="section level4">
-<h4>Landsat 8</h4>
-<pre class="r"><code>qaqc_filter_ls8 &lt;- function(band, cl) {
-  df &lt;- ls8_labels %&gt;% filter(class == cl)
-  values = df[{{ band }}] %&gt;% as.vector(.)
-  df_sub = df %&gt;% select(date, mission, lat, lon, class, vol_init, {{ band }})
-  cuts = quantile(values[[1]], c(0.02, 0.98), na.rm = T)
-  df_sub %&gt;% 
-    filter(cuts[1] &lt; {{ band }}, {{ band }} &lt; cuts[2])
+#igdlrcksri .gt_caption {
+padding-top: 4px;
+padding-bottom: 4px;
 }
-
-apply_qaqc_bands_ls8 &lt;- function(bn) {
-  map2_dfr(c(bn, bn, bn, bn, bn),
-           class_list,
-           qaqc_filter_ls8)
+#igdlrcksri .gt_title {
+color: #333333;
+font-size: 125%;
+font-weight: initial;
+padding-top: 4px;
+padding-bottom: 4px;
+padding-left: 5px;
+padding-right: 5px;
+border-bottom-color: #FFFFFF;
+border-bottom-width: 0;
 }
-
-ls_8_filtered &lt;-  map(ls_band_list, apply_qaqc_bands_ls8)
-
-ls_8_filt &lt;- ls_8_filtered %&gt;% 
-  reduce(full_join) %&gt;% 
-  distinct()</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
-</div>
-<div id="landsat-9" class="section level4">
-<h4>Landsat 9</h4>
-<pre class="r"><code>qaqc_filter_ls9 &lt;- function(band, cl) {
-  df &lt;- ls9_labels %&gt;% filter(class == cl)
-  values = df[{{ band }}] %&gt;% as.vector(.)
-  df_sub = df %&gt;% select(date, mission, lat, lon, class, vol_init, {{ band }})
-  cuts = quantile(values[[1]], c(0.02, 0.98), na.rm = T)
-  df_sub %&gt;% 
-    filter(cuts[1] &lt; {{ band }}, {{ band }} &lt; cuts[2])
+#igdlrcksri .gt_subtitle {
+color: #333333;
+font-size: 85%;
+font-weight: initial;
+padding-top: 3px;
+padding-bottom: 5px;
+padding-left: 5px;
+padding-right: 5px;
+border-top-color: #FFFFFF;
+border-top-width: 0;
 }
-
-apply_qaqc_bands_ls9 &lt;- function(bn) {
-  map2_dfr(c(bn, bn, bn, bn, bn),
-           class_list,
-           qaqc_filter_ls9)
+#igdlrcksri .gt_heading {
+background-color: #FFFFFF;
+text-align: center;
+border-bottom-color: #FFFFFF;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
 }
-
-ls_9_filtered &lt;-  map(ls_band_list, apply_qaqc_bands_ls9)
-
-ls_9_filt &lt;- ls_9_filtered %&gt;% 
-  reduce(full_join) %&gt;% 
-  distinct()</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
-</div>
-<div id="sentinel-2" class="section level4">
-<h4>Sentinel 2</h4>
-<pre class="r"><code>qaqc_filter_sen &lt;- function(band, cl) {
-  df &lt;- sen_labels %&gt;% filter(class == cl)
-  values = df[{{ band }}] %&gt;% as.vector(.)
-  df_sub = df %&gt;% select(date, mission, lat, lon, class, vol_init, {{ band }})
-  cuts = quantile(values[[1]], c(0.02, 0.98), na.rm = T)
-  df_sub %&gt;% 
-    filter(cuts[1] &lt; {{ band }}, {{ band }} &lt; cuts[2])
+#igdlrcksri .gt_bottom_border {
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
 }
-
-apply_qaqc_bands_sen &lt;- function(bn) {
-  map2_dfr(c(bn, bn, bn, bn, bn),
-           class_list,
-           qaqc_filter_sen)
+#igdlrcksri .gt_col_headings {
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
 }
-
-sen_filtered &lt;- map(sen_band_list, apply_qaqc_bands_sen)
-
-sen_filt &lt;- sen_filtered %&gt;% 
-  reduce(full_join) %&gt;% 
-  distinct()</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init)`</code></pre>
-</div>
-<div id="check-for-complete-obs" class="section level4">
-<h4>Check for complete obs</h4>
-<pre class="r"><code>ls_bands_text = c(&#39;Red&#39;, &#39;Green&#39;, &#39;Blue&#39;, &#39;B5&#39;, &#39;B6&#39;, &#39;B7&#39;)
-sen_bands_text = c(&#39;Red&#39;, &#39;Green&#39;, &#39;Blue&#39;, &#39;B5&#39;, &#39;B6&#39;, &#39;B7&#39;, &#39;B8&#39;, &#39;B11&#39;, &#39;B12&#39;)
-
-ls_5_filt &lt;- ls_5_filt %&gt;% 
-  filter_at(vars(all_of(ls_bands_text)), all_vars(!is.na(.)))
-ls_7_filt &lt;- ls_7_filt %&gt;% 
-  filter_at(vars(all_of(ls_bands_text)), all_vars(!is.na(.)))
-ls_8_filt &lt;- ls_8_filt %&gt;% 
-  filter_at(vars(all_of(ls_bands_text)), all_vars(!is.na(.)))
-ls_9_filt &lt;- ls_9_filt %&gt;% 
-  filter_at(vars(all_of(ls_bands_text)), all_vars(!is.na(.)))
-sen_filt &lt;- sen_filt %&gt;% 
-  filter_at(vars(all_of(sen_bands_text)), all_vars(!is.na(.)))</code></pre>
-<div id="export-filtered-labels-for-other-uses" class="section level5">
-<h5>Export filtered labels for other uses</h5>
-<pre class="r"><code>labels_filtered &lt;- full_join(ls_5_filt, ls_7_filt) %&gt;% 
-  full_join(., ls_8_filt) %&gt;% 
-  full_join(., ls_9_filt) %&gt;% 
-  full_join(., sen_filt)</code></pre>
-<pre><code>## Joining with `by = join_by(date, mission, lat, lon, class, vol_init, Red,
-## Green, Blue, B5, B6, B7)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init, Red,
-## Green, Blue, B5, B6, B7)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init, Red,
-## Green, Blue, B5, B6, B7)`
-## Joining with `by = join_by(date, mission, lat, lon, class, vol_init, Red,
-## Green, Blue, B5, B6, B7)`</code></pre>
-<pre class="r"><code>write_csv(labels_filtered, paste0(&#39;data/labels/collated_label_data_filtered_v&#39;, label_version, &#39;.csv&#39;))</code></pre>
-</div>
-</div>
-<div id="make-ee-feature-collections" class="section level4">
-<h4>Make ee feature collections</h4>
-<p>Transform each of the r dataframes to ee feature collections</p>
-<pre class="python"><code>def ls_to_eeFeat(df):
-  features=[]
-  for i in range(df.shape[0]):
-    x,y = df.lon[i],df.lat[i]
-    latlong =[x,y]
-    loc_properties = ({&#39;class&#39;: str(df[&#39;class&#39;][i]), # note &#39;class&#39; is a special word, must use different syntax
-      &#39;mission&#39;: str(df.mission[i]), 
-      &#39;Red&#39;: df.Red[i],
-      &#39;Green&#39;: df.Green[i],
-      &#39;Blue&#39;: df.Blue[i],
-      &#39;B5&#39;: df.B5[i],
-      &#39;B6&#39;: df.B6[i],
-      &#39;B7&#39;: df.B7[i]
-      })
-    g = ee.Geometry.Point(latlong, &#39;EPSG:4326&#39;)
-    feature = ee.Feature(g, loc_properties)
-    features.append(feature)
-  ee_object = ee.FeatureCollection(features)
-  return ee_object
-
-ee_ls5_labels = ls_to_eeFeat(r.ls_5_filt)
-ee_ls7_labels = ls_to_eeFeat(r.ls_7_filt)
-ee_ls8_labels = ls_to_eeFeat(r.ls_8_filt)
-ee_ls9_labels = ls_to_eeFeat(r.ls_9_filt)
-
-def sen_to_eeFeat(df):
-  features=[]
-  for i in range(df.shape[0]):
-    x,y = df.lon[i],df.lat[i]
-    latlong =[x,y]
-    loc_properties = ({&#39;class&#39;: str(df[&#39;class&#39;][i]), # note &#39;class&#39; is a special word, must use different syntax
-      &#39;mission&#39;: str(df.mission[i]), 
-      &#39;Red&#39;: df.Red[i],
-      &#39;Green&#39;: df.Green[i],
-      &#39;Blue&#39;: df.Blue[i],
-      &#39;B5&#39;: df.B5[i],
-      &#39;B6&#39;: df.B6[i],
-      &#39;B7&#39;: df.B7[i],
-      &#39;B8&#39;: df.B8[i],
-      &#39;B11&#39;: df.B11[i],
-      &#39;B12&#39;: df.B12[i]
-      })
-    g = ee.Geometry.Point(latlong, &#39;EPSG:4326&#39;)
-    feature = ee.Feature(g, loc_properties)
-    features.append(feature)
-  ee_object = ee.FeatureCollection(features)
-  return ee_object
-
-ee_sen_labels = sen_to_eeFeat(r.sen_filt)</code></pre>
-<p>Filter the label sets for the classes we’re interested in
-labeling</p>
-<pre class="python"><code># point to class values we&#39;re interested in labeling
-class_values = ([&#39;cloud&#39;,
-  &#39;openWater&#39;,
-  &#39;lightNearShoreSediment&#39;,
-  &#39;offShoreSediment&#39;,
-  &#39;darkNearShoreSediment&#39;])
-
-ee_ls5_labels_filt = ee_ls5_labels.filter(ee.Filter.inList(&#39;class&#39;, class_values))
-ee_ls7_labels_filt = ee_ls7_labels.filter(ee.Filter.inList(&#39;class&#39;, class_values))
-ee_ls8_labels_filt = ee_ls8_labels.filter(ee.Filter.inList(&#39;class&#39;, class_values))
-ee_ls9_labels_filt = ee_ls9_labels.filter(ee.Filter.inList(&#39;class&#39;, class_values))
-
-ee_sen_labels_filt = ee_sen_labels.filter(ee.Filter.inList(&#39;class&#39;, class_values))</code></pre>
-</div>
-</div>
-</div>
-<div id="create-gradient-boost-tree-model" class="section level2">
-<h2>Create Gradient Boost Tree Model</h2>
-<p>Define the input features and output labels</p>
-<pre class="python"><code>ls_input_feat = [&quot;Red&quot;, &quot;Green&quot;, &quot;Blue&quot;, &quot;B5&quot;, &quot;B6&quot;, &quot;B7&quot;]
-sen_input_feat = [&quot;Red&quot;, &quot;Green&quot;, &quot;Blue&quot;, &quot;B5&quot;, &quot;B6&quot;, &quot;B7&quot;, &#39;B8&#39;, &#39;B11&#39;, &#39;B12&#39;]
-output_label = &quot;class&quot;</code></pre>
-<p>Remap the label values to a 0-based sequential series.</p>
-<pre class="python"><code>remap_values = ee.List.sequence(0, 4)
-labels_ls5_map = ee_ls5_labels_filt.remap(ee.List(class_values), remap_values, ee.String(output_label))
-labels_ls7_map = ee_ls7_labels_filt.remap(ee.List(class_values), remap_values, ee.String(output_label))
-labels_ls8_map = ee_ls8_labels_filt.remap(ee.List(class_values), remap_values, ee.String(output_label))
-labels_ls9_map = ee_ls9_labels_filt.remap(ee.List(class_values), remap_values, ee.String(output_label))
-labels_sen_map = ee_sen_labels_filt.remap(ee.List(class_values), remap_values, ee.String(output_label))
-
-def class_to_byte(feature):
-  byte_value = ee.Number(feature.get(output_label)).toByte()
-  return feature.set(&#39;byte_property&#39;, byte_value)
-
-labels_ls5_map = labels_ls5_map.map(class_to_byte)
-labels_ls7_map = labels_ls7_map.map(class_to_byte)
-labels_ls8_map = labels_ls8_map.map(class_to_byte)
-labels_ls9_map = labels_ls9_map.map(class_to_byte)
-labels_sen_map = labels_sen_map.map(class_to_byte)
-
-def add_class_by_remap(feature):
-  class_no = ee.Number(feature.get(output_label))
-  return feature.set(&#39;class&#39;, ee.List(class_values).get(class_no))
-
-labels_ls5_map = labels_ls5_map.map(add_class_by_remap)
-labels_ls7_map = labels_ls7_map.map(add_class_by_remap)
-labels_ls8_map = labels_ls8_map.map(add_class_by_remap)
-labels_ls9_map = labels_ls9_map.map(add_class_by_remap)
-labels_sen_map = labels_sen_map.map(add_class_by_remap)</code></pre>
-</div>
-<div id="split-labels-into-traintest-sets" class="section level2">
-<h2>Split labels into train/test sets</h2>
-<pre class="python"><code>split = 0.7 # percentage of data to use for training
-labels_ls5_map = labels_ls5_map.randomColumn(&#39;random&#39;) #set up a random column
-labels_ls7_map = labels_ls7_map.randomColumn(&#39;random&#39;) #set up a random column
-labels_ls8_map = labels_ls8_map.randomColumn(&#39;random&#39;) #set up a random column
-labels_ls9_map = labels_ls9_map.randomColumn(&#39;random&#39;) #set up a random column
-labels_sen_map = labels_sen_map.randomColumn(&#39;random&#39;) #set up a random column
-
-training_ls5 = labels_ls5_map.filter(ee.Filter.lt(&quot;random&quot;, split))
-training_ls7 = labels_ls7_map.filter(ee.Filter.lt(&quot;random&quot;, split))
-training_ls8 = labels_ls8_map.filter(ee.Filter.lt(&quot;random&quot;, split))
-training_ls9 = labels_ls9_map.filter(ee.Filter.lt(&quot;random&quot;, split))
-training_sen = labels_sen_map.filter(ee.Filter.lt(&quot;random&quot;, split))
-print(&#39;Training:&#39;)</code></pre>
-<pre><code>## Training:</code></pre>
-<pre class="python"><code>print(training_ls5.aggregate_histogram(&#39;class&#39;).getInfo())</code></pre>
-<pre><code>## {&#39;cloud&#39;: 251, &#39;darkNearShoreSediment&#39;: 87, &#39;lightNearShoreSediment&#39;: 173, &#39;offShoreSediment&#39;: 169, &#39;openWater&#39;: 252}</code></pre>
-<pre class="python"><code>print(training_ls7.aggregate_histogram(&#39;class&#39;).getInfo())</code></pre>
-<pre><code>## {&#39;cloud&#39;: 285, &#39;darkNearShoreSediment&#39;: 53, &#39;lightNearShoreSediment&#39;: 202, &#39;offShoreSediment&#39;: 203, &#39;openWater&#39;: 236}</code></pre>
-<pre class="python"><code>print(training_ls8.aggregate_histogram(&#39;class&#39;).getInfo())</code></pre>
-<pre><code>## {&#39;cloud&#39;: 283, &#39;darkNearShoreSediment&#39;: 71, &#39;lightNearShoreSediment&#39;: 136, &#39;offShoreSediment&#39;: 112, &#39;openWater&#39;: 69}</code></pre>
-<pre class="python"><code>print(training_ls9.aggregate_histogram(&#39;class&#39;).getInfo())</code></pre>
-<pre><code>## {&#39;cloud&#39;: 124, &#39;darkNearShoreSediment&#39;: 26, &#39;lightNearShoreSediment&#39;: 66, &#39;offShoreSediment&#39;: 77, &#39;openWater&#39;: 49}</code></pre>
-<pre class="python"><code>print(training_sen.aggregate_histogram(&#39;class&#39;).getInfo())</code></pre>
-<pre><code>## {&#39;cloud&#39;: 352, &#39;darkNearShoreSediment&#39;: 35, &#39;lightNearShoreSediment&#39;: 82, &#39;offShoreSediment&#39;: 101, &#39;openWater&#39;: 99}</code></pre>
-<pre class="python"><code>testing_ls5 = labels_ls5_map.filter(ee.Filter.gte(&quot;random&quot;, split))
-testing_ls7 = labels_ls7_map.filter(ee.Filter.gte(&quot;random&quot;, split))
-testing_ls8 = labels_ls8_map.filter(ee.Filter.gte(&quot;random&quot;, split))
-testing_ls9 = labels_ls9_map.filter(ee.Filter.gte(&quot;random&quot;, split))
-testing_sen = labels_sen_map.filter(ee.Filter.gte(&quot;random&quot;, split))
-print(&#39;Testing:&#39;)</code></pre>
-<pre><code>## Testing:</code></pre>
-<pre class="python"><code>print(testing_ls5.aggregate_histogram(&#39;class&#39;).getInfo())</code></pre>
-<pre><code>## {&#39;cloud&#39;: 139, &#39;darkNearShoreSediment&#39;: 38, &#39;lightNearShoreSediment&#39;: 73, &#39;offShoreSediment&#39;: 83, &#39;openWater&#39;: 132}</code></pre>
-<pre class="python"><code>print(testing_ls7.aggregate_histogram(&#39;class&#39;).getInfo())</code></pre>
-<pre><code>## {&#39;cloud&#39;: 122, &#39;darkNearShoreSediment&#39;: 22, &#39;lightNearShoreSediment&#39;: 93, &#39;offShoreSediment&#39;: 108, &#39;openWater&#39;: 85}</code></pre>
-<pre class="python"><code>print(testing_ls8.aggregate_histogram(&#39;class&#39;).getInfo())</code></pre>
-<pre><code>## {&#39;cloud&#39;: 131, &#39;darkNearShoreSediment&#39;: 35, &#39;lightNearShoreSediment&#39;: 51, &#39;offShoreSediment&#39;: 52, &#39;openWater&#39;: 32}</code></pre>
-<pre class="python"><code>print(testing_ls9.aggregate_histogram(&#39;class&#39;).getInfo())</code></pre>
-<pre><code>## {&#39;cloud&#39;: 60, &#39;darkNearShoreSediment&#39;: 13, &#39;lightNearShoreSediment&#39;: 31, &#39;offShoreSediment&#39;: 32, &#39;openWater&#39;: 20}</code></pre>
-<pre class="python"><code>print(testing_sen.aggregate_histogram(&#39;class&#39;).getInfo())</code></pre>
-<pre><code>## {&#39;cloud&#39;: 148, &#39;darkNearShoreSediment&#39;: 15, &#39;lightNearShoreSediment&#39;: 33, &#39;offShoreSediment&#39;: 48, &#39;openWater&#39;: 66}</code></pre>
-</div>
-<div id="train-the-gtb-model" class="section level2">
-<h2>Train the GTB model</h2>
-<div id="landsat-5-1" class="section level3">
-<h3>Landsat 5</h3>
-<pre class="python"><code>trainedGTB_ls5 = (ee.Classifier.smileGradientTreeBoost(10).train(
-  features = training_ls5,
-  classProperty = &#39;byte_property&#39;,
-  inputProperties = ls_input_feat
-))</code></pre>
-</div>
-<div id="landsat-7-1" class="section level3">
-<h3>Landsat 7</h3>
-<pre class="python"><code>trainedGTB_ls7 = (ee.Classifier.smileGradientTreeBoost(10).train(
-  features = training_ls7,
-  classProperty = &#39;byte_property&#39;,
-  inputProperties = ls_input_feat
-))</code></pre>
-</div>
-<div id="landsat-8-1" class="section level3">
-<h3>Landsat 8</h3>
-<pre class="python"><code>trainedGTB_ls8 = (ee.Classifier.smileGradientTreeBoost(10).train(
-  features = training_ls8,
-  classProperty = &#39;byte_property&#39;,
-  inputProperties = ls_input_feat
-))</code></pre>
-</div>
-<div id="landsat-9-1" class="section level3">
-<h3>Landsat 9</h3>
-<pre class="python"><code>trainedGTB_ls9 = (ee.Classifier.smileGradientTreeBoost(10).train(
-  features = training_ls9,
-  classProperty = &#39;byte_property&#39;,
-  inputProperties = ls_input_feat
-))</code></pre>
-</div>
-<div id="sentinel-2-1" class="section level3">
-<h3>Sentinel 2</h3>
-<pre class="python"><code>trainedGTB_sen = (ee.Classifier.smileGradientTreeBoost(10).train(
-  features = training_sen,
-  classProperty = &#39;byte_property&#39;,
-  inputProperties = sen_input_feat
-))</code></pre>
-</div>
-</div>
-<div id="evaluate-the-models" class="section level2">
-<h2>Evaluate the models</h2>
-<div id="landsat-5-2" class="section level3">
-<h3>Landsat 5</h3>
-<pre class="python"><code>trainingMatrixGTB_ls5 = (trainedGTB_ls5
-  .confusionMatrix())
-
-#convert to pandas dataframe with class info
-training_conf_l5 = (pd.DataFrame(
-  trainingMatrixGTB_ls5.getInfo(),
-  index=[class_values],
-  columns =[class_values]
-  ))
-print(&#39;GTB Training Confusion Matrix for Landsat 5:&#39;)</code></pre>
-<pre><code>## GTB Training Confusion Matrix for Landsat 5:</code></pre>
-<pre class="python"><code>print(training_conf_l5)</code></pre>
-<pre><code>##                        cloud openWater  ... offShoreSediment darkNearShoreSediment
-## cloud                    251         0  ...                0                     0
-## openWater                  0       247  ...                5                     0
-## lightNearShoreSediment     0         0  ...               14                     4
-## offShoreSediment           0         5  ...              159                     3
-## darkNearShoreSediment      0         0  ...                1                    81
-## 
-## [5 rows x 5 columns]</code></pre>
-<pre class="python"><code>#reformat and save
-training_conf_l5[&#39;mission&#39;] = &#39;Landsat 5&#39;
-training_conf_l5.reset_index(inplace = True)
-training_conf_l5 = training_conf_l5.rename(columns = {&#39;level_0&#39;: &#39;class&#39;})  
-training_conf_l5.to_csv(&#39;data/output/GTB_&#39;+v_date+&#39;_L5_training_confusion.csv&#39;, index = False)
-
-confusionMatrixGTB_ls5 = (testing_ls5
-  .classify(trainedGTB_ls5)
-  .errorMatrix(&#39;byte_property&#39;, &quot;classification&quot;))
-
-#convert to pandas dataframe with class info
-confusion_l5 = (pd.DataFrame(
-  confusionMatrixGTB_ls5.getInfo(),
-  index=[class_values],
-  columns =[class_values]
-  ))
-print(&#39;GTB Confusion Matrix for Landsat 5:&#39;)</code></pre>
-<pre><code>## GTB Confusion Matrix for Landsat 5:</code></pre>
-<pre class="python"><code>print(confusion_l5)</code></pre>
-<pre><code>##                        cloud openWater  ... offShoreSediment darkNearShoreSediment
-## cloud                    137         0  ...                1                     0
-## openWater                  0       124  ...                7                     0
-## lightNearShoreSediment     2         0  ...                6                     8
-## offShoreSediment           0         8  ...               64                     1
-## darkNearShoreSediment      1         1  ...                5                    24
-## 
-## [5 rows x 5 columns]</code></pre>
-<pre class="python"><code>#reformat and save
-confusion_l5[&#39;mission&#39;] = &#39;Landsat 5&#39;
-confusion_l5.reset_index(inplace = True)
-confusion_l5 = confusion_l5.rename(columns = {&#39;level_0&#39;: &#39;class&#39;})  
-confusion_l5.to_csv(&#39;data/output/GTB_&#39;+v_date+&#39;_L5_confusion.csv&#39;, index = False)
-
-acc_values_GTB_ls5 = (confusionMatrixGTB_ls5.accuracy().getInfo())
-print(&quot;GTB Confusion Overall Accuracy for Landsat 5: &quot;, acc_values_GTB_ls5)</code></pre>
-<pre><code>## GTB Confusion Overall Accuracy for Landsat 5:  0.8731182795698925</code></pre>
-<pre class="python"><code>k_GTB_ls5 = (confusionMatrixGTB_ls5.kappa().getInfo())
-print(&quot;GTB kappa for LS5: &quot;, k_GTB_ls5)</code></pre>
-<pre><code>## GTB kappa for LS5:  0.8342476346983411</code></pre>
-<pre class="python"><code>fs_GTB_ls5 = (confusionMatrixGTB_ls5.fscore().getInfo())
-print(&#39;GTB fScore for each class: &#39;, fs_GTB_ls5)</code></pre>
-<pre><code>## GTB fScore for each class:  [0.9820788530465949, 0.9358490566037736, 0.7651006711409396, 0.7710843373493976, 0.676056338028169]</code></pre>
-</div>
-<div id="landsat-7-2" class="section level3">
-<h3>Landsat 7</h3>
-<pre class="python"><code>trainingMatrixGTB_ls7 = (trainedGTB_ls7
-  .confusionMatrix())
-
-#convert to pandas dataframe with class info
-training_conf_l7 = (pd.DataFrame(
-  trainingMatrixGTB_ls7.getInfo(),
-  index=[class_values],
-  columns =[class_values]
-  ))
-print(&#39;GTB Training Confusion Matrix for Landsat 7:&#39;)</code></pre>
-<pre><code>## GTB Training Confusion Matrix for Landsat 7:</code></pre>
-<pre class="python"><code>print(training_conf_l7)</code></pre>
-<pre><code>##                        cloud openWater  ... offShoreSediment darkNearShoreSediment
-## cloud                    284         0  ...                0                     0
-## openWater                  0       233  ...                3                     0
-## lightNearShoreSediment     1         0  ...                4                     0
-## offShoreSediment           0         1  ...              200                     0
-## darkNearShoreSediment      0         0  ...                2                    45
-## 
-## [5 rows x 5 columns]</code></pre>
-<pre class="python"><code>#reformat and save
-training_conf_l7[&#39;mission&#39;] = &#39;Landsat 7&#39;
-training_conf_l7.reset_index(inplace = True)
-training_conf_l7 = training_conf_l7.rename(columns = {&#39;level_0&#39;: &#39;class&#39;})  
-training_conf_l7.to_csv(&#39;data/output/GTB_&#39;+v_date+&#39;_l7_training_confusion.csv&#39;, index = False)
-
-confusionMatrixGTB_ls7 = (testing_ls7
-  .classify(trainedGTB_ls7)
-  .errorMatrix(&#39;byte_property&#39;, &quot;classification&quot;))
-
-#convert to pandas dataframe with class info
-confusion_l7 = (pd.DataFrame(
-  confusionMatrixGTB_ls7.getInfo(),
-  index=[class_values],
-  columns =[class_values]
-  ))
-print(&#39;GTB Confusion Matrix for Landsat 7:&#39;)</code></pre>
-<pre><code>## GTB Confusion Matrix for Landsat 7:</code></pre>
-<pre class="python"><code>print(confusion_l7)</code></pre>
-<pre><code>##                        cloud openWater  ... offShoreSediment darkNearShoreSediment
-## cloud                    120         0  ...                1                     0
-## openWater                  0        84  ...                1                     0
-## lightNearShoreSediment     0         0  ...                3                     5
-## offShoreSediment           1         4  ...              100                     0
-## darkNearShoreSediment      0         1  ...                1                    12
-## 
-## [5 rows x 5 columns]</code></pre>
-<pre class="python"><code>#reformat and save
-confusion_l7[&#39;mission&#39;] = &#39;Landsat 7&#39;
-confusion_l7.reset_index(inplace = True)
-confusion_l7 = confusion_l7.rename(columns = {&#39;level_0&#39;: &#39;class&#39;})  
-confusion_l7.to_csv(&#39;data/output/GTB_&#39;+v_date+&#39;_l7_confusion.csv&#39;, index = False)
-
-acc_values_GTB_ls7 = (confusionMatrixGTB_ls7.accuracy().getInfo())
-print(&quot;GTB Confusion Overall Accuracy for Landsat 7: &quot;, acc_values_GTB_ls7)</code></pre>
-<pre><code>## GTB Confusion Overall Accuracy for Landsat 7:  0.9325581395348838</code></pre>
-<pre class="python"><code>k_GTB_ls7 = (confusionMatrixGTB_ls7.kappa().getInfo())
-print(&quot;GTB kappa for LS7: &quot;, k_GTB_ls7)</code></pre>
-<pre><code>## GTB kappa for LS7:  0.9120158046990758</code></pre>
-<pre class="python"><code>fs_GTB_ls7 = (confusionMatrixGTB_ls7.fscore().getInfo())
-print(&#39;GTB fScore for each class: &#39;, fs_GTB_ls7)</code></pre>
-<pre><code>## GTB fScore for each class:  [0.9876543209876544, 0.9655172413793103, 0.894736842105263, 0.9345794392523364, 0.6153846153846153]</code></pre>
-</div>
-<div id="landsat-8-2" class="section level3">
-<h3>Landsat 8</h3>
-<pre class="python"><code>trainingMatrixGTB_ls8 = (trainedGTB_ls8
-  .confusionMatrix())
-
-#convert to pandas dataframe with class info
-training_conf_l8 = (pd.DataFrame(
-  trainingMatrixGTB_ls8.getInfo(),
-  index=[class_values],
-  columns =[class_values]
-  ))
-print(&#39;GTB Training Confusion Matrix for Landsat 8:&#39;)</code></pre>
-<pre><code>## GTB Training Confusion Matrix for Landsat 8:</code></pre>
-<pre class="python"><code>print(training_conf_l8)</code></pre>
-<pre><code>##                        cloud openWater  ... offShoreSediment darkNearShoreSediment
-## cloud                    282         0  ...                0                     0
-## openWater                  0        68  ...                1                     0
-## lightNearShoreSediment     1         0  ...                7                     4
-## offShoreSediment           0         0  ...              106                     1
-## darkNearShoreSediment      0         1  ...                0                    66
-## 
-## [5 rows x 5 columns]</code></pre>
-<pre class="python"><code>#reformat and save
-training_conf_l8[&#39;mission&#39;] = &#39;Landsat 8&#39;
-training_conf_l8.reset_index(inplace = True)
-training_conf_l8 = training_conf_l8.rename(columns = {&#39;level_0&#39;: &#39;class&#39;})  
-training_conf_l8.to_csv(&#39;data/output/GTB_&#39;+v_date+&#39;_l8_training_confusion.csv&#39;, index = False)
-
-confusionMatrixGTB_ls8 = (testing_ls8
-  .classify(trainedGTB_ls8)
-  .errorMatrix(&#39;byte_property&#39;, &quot;classification&quot;))
-
-#convert to pandas dataframe with class info
-confusion_l8 = (pd.DataFrame(
-  confusionMatrixGTB_ls8.getInfo(),
-  index=[class_values],
-  columns =[class_values]
-  ))
-print(&#39;GTB Confusion Matrix for Landsat 8:&#39;)</code></pre>
-<pre><code>## GTB Confusion Matrix for Landsat 8:</code></pre>
-<pre class="python"><code>print(confusion_l8)</code></pre>
-<pre><code>##                        cloud openWater  ... offShoreSediment darkNearShoreSediment
-## cloud                    130         0  ...                0                     0
-## openWater                  0        27  ...                5                     0
-## lightNearShoreSediment     1         0  ...                7                     1
-## offShoreSediment           0         0  ...               50                     0
-## darkNearShoreSediment      0         1  ...                0                    29
-## 
-## [5 rows x 5 columns]</code></pre>
-<pre class="python"><code>#reformat and save
-confusion_l8[&#39;mission&#39;] = &#39;Landsat 8&#39;
-confusion_l8.reset_index(inplace = True)
-confusion_l8 = confusion_l8.rename(columns = {&#39;level_0&#39;: &#39;class&#39;})  
-confusion_l8.to_csv(&#39;data/output/GTB_&#39;+v_date+&#39;_l8_confusion.csv&#39;, index = False)
-  
-acc_values_GTB_ls8 = (confusionMatrixGTB_ls8.accuracy().getInfo())
-print(&quot;GTB Confusion Overall Accuracy for Landsat 8: &quot;, acc_values_GTB_ls8)</code></pre>
-<pre><code>## GTB Confusion Overall Accuracy for Landsat 8:  0.9235880398671097</code></pre>
-<pre class="python"><code>k_GTB_ls8 = (confusionMatrixGTB_ls8.kappa().getInfo())
-print(&quot;GTB kappa for LS8: &quot;, k_GTB_ls8)</code></pre>
-<pre><code>## GTB kappa for LS8:  0.8946591600730373</code></pre>
-<pre class="python"><code>fs_GTB_ls8 = (confusionMatrixGTB_ls8.fscore().getInfo())
-print(&#39;GTB fScore for each class: &#39;, fs_GTB_ls8)</code></pre>
-<pre><code>## GTB fScore for each class:  [0.9923664122137404, 0.8999999999999999, 0.8316831683168315, 0.8771929824561403, 0.8923076923076922]</code></pre>
-</div>
-<div id="landsat-9-2" class="section level3">
-<h3>Landsat 9</h3>
-<pre class="python"><code>trainingMatrixGTB_ls9 = (trainedGTB_ls9
-  .confusionMatrix())
-
-#convert to pandas dataframe with class info
-training_conf_l9 = (pd.DataFrame(
-  trainingMatrixGTB_ls9.getInfo(),
-  index=[class_values],
-  columns =[class_values]
-  ))
-print(&#39;GTB Training Confusion Matrix for Landsat 9:&#39;)</code></pre>
-<pre><code>## GTB Training Confusion Matrix for Landsat 9:</code></pre>
-<pre class="python"><code>print(training_conf_l9)</code></pre>
-<pre><code>##                        cloud openWater  ... offShoreSediment darkNearShoreSediment
-## cloud                    124         0  ...                0                     0
-## openWater                  0        47  ...                2                     0
-## lightNearShoreSediment     0         0  ...                5                     1
-## offShoreSediment           0         1  ...               75                     1
-## darkNearShoreSediment      0         0  ...                1                    22
-## 
-## [5 rows x 5 columns]</code></pre>
-<pre class="python"><code>#reformat and save
-training_conf_l9[&#39;mission&#39;] = &#39;Landsat 9&#39;
-training_conf_l9.reset_index(inplace = True)
-training_conf_l9 = training_conf_l9.rename(columns = {&#39;level_0&#39;: &#39;class&#39;})  
-training_conf_l9.to_csv(&#39;data/output/GTB_&#39;+v_date+&#39;_l9_training_confusion.csv&#39;, index = False)
-
-confusionMatrixGTB_ls9 = (testing_ls9
-  .classify(trainedGTB_ls9)
-  .errorMatrix(&#39;byte_property&#39;, &quot;classification&quot;))
-
-#convert to pandas dataframe with class info
-confusion_l9 = (pd.DataFrame(
-  confusionMatrixGTB_ls9.getInfo(),
-  index=[class_values],
-  columns =[class_values]
-  ))
-print(&#39;GTB Confusion Matrix for Landsat 9:&#39;)</code></pre>
-<pre><code>## GTB Confusion Matrix for Landsat 9:</code></pre>
-<pre class="python"><code>print(confusion_l9)</code></pre>
-<pre><code>##                        cloud openWater  ... offShoreSediment darkNearShoreSediment
-## cloud                     59         1  ...                0                     0
-## openWater                  0        16  ...                4                     0
-## lightNearShoreSediment     1         0  ...                6                     2
-## offShoreSediment           0         0  ...               30                     0
-## darkNearShoreSediment      0         0  ...                4                     7
-## 
-## [5 rows x 5 columns]</code></pre>
-<pre class="python"><code>#reformat and save
-confusion_l9[&#39;mission&#39;] = &#39;Landsat 9&#39;
-confusion_l9.reset_index(inplace = True)
-confusion_l9 = confusion_l9.rename(columns = {&#39;level_0&#39;: &#39;class&#39;})  
-confusion_l9.to_csv(&#39;data/output/GTB_&#39;+v_date+&#39;_l9_confusion.csv&#39;, index = False)
-
-acc_values_GTB_ls9 = (confusionMatrixGTB_ls9.accuracy().getInfo())
-print(&quot;GTB Confusion Overall Accuracy for Landsat 9: &quot;, acc_values_GTB_ls9)</code></pre>
-<pre><code>## GTB Confusion Overall Accuracy for Landsat 9:  0.8589743589743589</code></pre>
-<pre class="python"><code>k_GTB_ls9 = (confusionMatrixGTB_ls9.kappa().getInfo())
-print(&quot;GTB kappa for LS9: &quot;, k_GTB_ls9)</code></pre>
-<pre><code>## GTB kappa for LS9:  0.8100193744810407</code></pre>
-<pre class="python"><code>fs_GTB_ls9 = (confusionMatrixGTB_ls9.fscore().getInfo())
-print(&#39;GTB fScore for each class: &#39;, fs_GTB_ls9)</code></pre>
-<pre><code>## GTB fScore for each class:  [0.9833333333333333, 0.8648648648648648, 0.7719298245614036, 0.7894736842105263, 0.6363636363636364]</code></pre>
-</div>
-<div id="sentinel-2-2" class="section level3">
-<h3>Sentinel 2</h3>
-<pre class="python"><code>trainingMatrixGTB_sen = (trainedGTB_sen
-  .confusionMatrix())
-
-#convert to pandas dataframe with class info
-training_conf_sen = (pd.DataFrame(
-  trainingMatrixGTB_sen.getInfo(),
-  index=[class_values],
-  columns =[class_values]
-  ))
-print(&#39;GTB Training Confusion Matrix for Sentinel-2:&#39;)</code></pre>
-<pre><code>## GTB Training Confusion Matrix for Sentinel-2:</code></pre>
-<pre class="python"><code>print(training_conf_sen)</code></pre>
-<pre><code>##                        cloud openWater  ... offShoreSediment darkNearShoreSediment
-## cloud                    351         0  ...                0                     0
-## openWater                  0        99  ...                0                     0
-## lightNearShoreSediment     0         0  ...                2                     1
-## offShoreSediment           0         3  ...               96                     0
-## darkNearShoreSediment      0         0  ...                0                    33
-## 
-## [5 rows x 5 columns]</code></pre>
-<pre class="python"><code>#reformat and save
-training_conf_sen[&#39;mission&#39;] = &#39;Sentinel-2&#39;
-training_conf_sen.reset_index(inplace = True)
-training_conf_sen = training_conf_sen.rename(columns = {&#39;level_0&#39;: &#39;class&#39;})  
-training_conf_sen.to_csv(&#39;data/output/GTB_&#39;+v_date+&#39;_sen_training_confusion.csv&#39;, index = False)
-
-confusionMatrixGTB_sen = (testing_sen
-  .classify(trainedGTB_sen)
-  .errorMatrix(&#39;byte_property&#39;, &quot;classification&quot;))
-
-#convert to pandas dataframe with class info
-confusion_sen = (pd.DataFrame(
-  confusionMatrixGTB_sen.getInfo(),
-  index=[class_values],
-  columns =[class_values]
-  ))
-print(&#39;GTB Confusion Matrix for Sentinel-2:&#39;)</code></pre>
-<pre><code>## GTB Confusion Matrix for Sentinel-2:</code></pre>
-<pre class="python"><code>print(confusion_sen)</code></pre>
-<pre><code>##                        cloud openWater  ... offShoreSediment darkNearShoreSediment
-## cloud                    148         0  ...                0                     0
-## openWater                  0        65  ...                1                     0
-## lightNearShoreSediment     0         0  ...                3                     4
-## offShoreSediment           0         1  ...               42                     4
-## darkNearShoreSediment      0         1  ...                0                    10
-## 
-## [5 rows x 5 columns]</code></pre>
-<pre class="python"><code>#reformat and save
-confusion_sen[&#39;mission&#39;] = &#39;Sentinel-2&#39;
-confusion_sen.reset_index(inplace = True)
-confusion_sen = confusion_sen.rename(columns = {&#39;level_0&#39;: &#39;class&#39;})  
-confusion_sen.to_csv(&#39;data/output/GTB_&#39;+v_date+&#39;_sen_confusion.csv&#39;, index = False)
-
-acc_values_GTB_sen = (confusionMatrixGTB_sen.accuracy().getInfo())
-print(&quot;GTB Confusion Overall Accuracy for Sentinel 2: &quot;, acc_values_GTB_sen)</code></pre>
-<pre><code>## GTB Confusion Overall Accuracy for Sentinel 2:  0.9387096774193548</code></pre>
-<pre class="python"><code>k_GTB_sen = (confusionMatrixGTB_sen.kappa().getInfo())
-print(&quot;GTB kappa for S2: &quot;, k_GTB_ls5)</code></pre>
-<pre><code>## GTB kappa for S2:  0.8342476346983411</code></pre>
-<pre class="python"><code>fs_GTB_sen = (confusionMatrixGTB_sen.fscore().getInfo())
-print(&#39;GTB fScore for each class: &#39;, fs_GTB_sen)</code></pre>
-<pre><code>## GTB fScore for each class:  [1, 0.9774436090225564, 0.8125, 0.8936170212765957, 0.606060606060606]</code></pre>
-</div>
-<div id="collate-model-stats-save-to-data-folder" class="section level3">
-<h3>Collate model stats, save to data folder</h3>
-<p>First, we’ll copy over some values and make a big pandas dataframe.
-Note that the df.copy() function unlinks the original list from the new
-one. Silly python.</p>
-<pre class="python"><code>accuracy_heads = class_values.copy()
-accuracy_heads.extend([&#39;GTB_accuracy&#39;, &#39;GTB_kappa&#39;])
-landsat5_perf = fs_GTB_ls5.copy()
-landsat5_perf.extend([acc_values_GTB_ls5, k_GTB_ls5])
-landsat7_perf = fs_GTB_ls7.copy()
-landsat7_perf.extend([acc_values_GTB_ls7, k_GTB_ls7])
-landsat8_perf = fs_GTB_ls8.copy()
-landsat8_perf.extend([acc_values_GTB_ls8, k_GTB_ls8])
-landsat9_perf = fs_GTB_ls9.copy()
-landsat9_perf.extend([acc_values_GTB_ls9, k_GTB_ls9])
-sentinel2_perf = fs_GTB_sen.copy()
-sentinel2_perf.extend([acc_values_GTB_sen, k_GTB_sen])
-
-performance_collation = pd.DataFrame(
-  [landsat5_perf,
-  landsat7_perf,
-  landsat8_perf,
-  landsat9_perf,
-  sentinel2_perf],
-  index = [
-    &#39;Landsat 5&#39;,
-    &#39;Landsat 7&#39;,
-    &#39;Landsat 8&#39;, 
-    &#39;Landsat 9&#39;,
-    &#39;Sentinel 2&#39;
-    ],
-  columns = [accuracy_heads]
-  )
-
-# reset the index
-performance_collation.reset_index(inplace = True)
-performance_collation.rename(columns = {&#39;index&#39;:&#39;satellite&#39;}).to_csv(&#39;data/output/GTB_&#39;+v_date+&#39;_performance_stats.csv&#39;, index = False)</code></pre>
-</div>
-</div>
-<div id="apply-model-to-image-stack-for-landsat" class="section level2">
-<h2>Apply model to image stack for Landsat</h2>
-<p>We’ll go through and apply the Landsat and Sentinel separately due to
-the differences in bands.</p>
-<div id="load-the-image-collection" class="section level3">
-<h3>Load the image collection</h3>
-<pre class="python"><code># list bandnames; in part for L7 bands to match l8/9
-bn457 = [&#39;SR_B1&#39;, &#39;SR_B2&#39;, &#39;SR_B3&#39;, &#39;SR_B4&#39;, &#39;SR_B5&#39;, &#39;SR_B7&#39;, &#39;QA_RADSAT&#39;]
-bn89 = [&#39;SR_B2&#39;, &#39;SR_B3&#39;, &#39;SR_B4&#39;, &#39;SR_B5&#39;, &#39;SR_B6&#39;, &#39;SR_B7&#39;, &#39;QA_RADSAT&#39;]
-bn = [&#39;Blue&#39;, &#39;Green&#39;, &#39;Red&#39;, &#39;B5&#39;, &#39;B6&#39;, &#39;B7&#39;, &#39;QA_RADSAT&#39;]
-
-# filter stack for desired PRs
-ROWS = ee.List([27, 28])
-
-def applyScaleFactors(image):
-  opticalBands = image.select(bn).multiply(0.0000275).add(-0.2) #flagging this - this applies the offset to QA RADSAT. :(
-  return image.addBands(opticalBands, None, True)
-
-# load Landsat 5, 7, 8, 9 Surface Reflectance and rename bands
-l9 = (ee.ImageCollection(&quot;LANDSAT/LC09/C02/T1_L2&quot;)
-  .filter(ee.Filter.eq(&#39;WRS_PATH&#39;, 26))
-  .filter(ee.Filter.inList(&#39;WRS_ROW&#39;, ROWS))
-  .filter(ee.Filter.gte(&#39;IMAGE_QUALITY_OLI&#39;, 7))
-  .select(bn89, bn)
-  .map(applyScaleFactors))
-l8 = (ee.ImageCollection(&quot;LANDSAT/LC08/C02/T1_L2&quot;)
-  .filter(ee.Filter.eq(&#39;WRS_PATH&#39;, 26))
-  .filter(ee.Filter.inList(&#39;WRS_ROW&#39;, ROWS))
-  .filter(ee.Filter.gte(&#39;IMAGE_QUALITY_OLI&#39;, 7))
-  .select(bn89, bn)
-  .map(applyScaleFactors))
-l7 = (ee.ImageCollection(&#39;LANDSAT/LE07/C02/T1_L2&#39;)
-  .filter(ee.Filter.eq(&#39;WRS_PATH&#39;, 26))
-  .filter(ee.Filter.inList(&#39;WRS_ROW&#39;, ROWS))
-  .filter(ee.Filter.gte(&#39;IMAGE_QUALITY&#39;, 7))
-  .select(bn457, bn)
-  .map(applyScaleFactors))
-l5 = (ee.ImageCollection(&#39;LANDSAT/LT05/C02/T1_L2&#39;)
-  .filter(ee.Filter.eq(&#39;WRS_PATH&#39;, 26))
-  .filter(ee.Filter.inList(&#39;WRS_ROW&#39;, ROWS))
-  .filter(ee.Filter.gte(&#39;IMAGE_QUALITY&#39;, 7))
-  .select(bn457, bn)
-  .map(applyScaleFactors))</code></pre>
-<p>Add QA_RADSAT mask to mask where any band was saturated [[adding flag
-here!!]]</p>
-<pre class="python"><code>def apply_radsat_mask(image):
-  radsat = image.select(&#39;QA_RADSAT&#39;).eq(0)
-  return image.updateMask(radsat)
-
-l9 = l9.map(apply_radsat_mask)
-l8 = l8.map(apply_radsat_mask)
-l7 = l7.map(apply_radsat_mask)
-l5 = l5.map(apply_radsat_mask)</code></pre>
-</div>
-<div id="load-modeling-aois-and-clip-stack" class="section level3">
-<h3>Load modeling AOIs and clip stack</h3>
-<p>Note, some AOIs are too big to load in here and use as ‘virtual’ ee
-Feature Collections. Given that, we have manually uploaded the
-shapefiles as an Earth Engine Feature Collection.</p>
-<pre class="python"><code># aoi_gpd = gpd.read_file(&#39;data/aoi/Superior_AOI_modeling.shp&#39;)
-# aoi_ee = gm.geopandas_to_ee(aoi_gpd)
-
-aoi_ee = ee.FeatureCollection(&#39;projects/ee-ross-superior/assets/aoi/Superior_AOI_modeling&#39;)
-
-#Calculate total area of AOI
-def calc_area(feat):
-  feat_area = feat.geometry().area()
-  feat_area_ha = ee.Number(feat_area).divide(1e5)
-  return feat.set(&#39;area_ha&#39;, feat_area_ha)
-
-aoi_area = aoi_ee.map(calc_area).aggregate_sum(&#39;area_ha&#39;)
-aoi_area_ha = aoi_area.getInfo()
-print(&#39;total AOI area: &#39;, aoi_area_ha)</code></pre>
-<pre><code>## total AOI area:  74935.14484406907</code></pre>
-<p>And then clip each image by that aoi</p>
-<pre class="python"><code># clip images to aoi
-def clip(image):
-  return image.clip(aoi_ee.geometry())
-
-l5_aoi = l5.map(clip)
-l7_aoi = l7.map(clip)
-l8_aoi = l8.map(clip)
-l9_aoi = l9.map(clip)</code></pre>
-<p>Load other AOIs to summarize over</p>
-<pre class="python"><code># aoi_no_sc_gpd = gpd.read_file(&#39;data/aoi/Superior_AOI_minus_shoreline_contamination.shp&#39;)
-# aoi_no_sc_ee = gm.geopandas_to_ee(aoi_no_sc_gpd)
-aoi_no_sc_ee = ee.FeatureCollection(&#39;projects/ee-ross-superior/assets/aoi/Superior_AOI_minus_shoreline_contamination&#39;)
-
-aoi_no_sc_area = aoi_no_sc_ee.map(calc_area).aggregate_sum(&#39;area_ha&#39;)
-aoi_no_sc_area_ha = aoi_no_sc_area.getInfo()
-print(&#39;total AOI area without shoreline contamination: &#39;, aoi_no_sc_area_ha)</code></pre>
-<pre><code>## total AOI area without shoreline contamination:  74899.76837432255</code></pre>
-<pre class="python"><code># aoi_sc_gpd = gpd.read_file(&#39;data/aoi/Superior_shoreline_contamination.shp&#39;)
-# aoi_sc_ee = gm.geopandas_to_ee(aoi_sc_gpd)
-aoi_sc_ee = ee.FeatureCollection(&#39;projects/ee-ross-superior/assets/aoi/Superior_shoreline_contamination&#39;)
-
-aoi_sc_area = aoi_sc_ee.map(calc_area).aggregate_sum(&#39;area_ha&#39;)
-aoi_sc_area_ha = aoi_sc_area.getInfo()
-print(&#39;total AOI area identified as shoreline contamination: &#39;, aoi_sc_area_ha)</code></pre>
-<pre><code>## total AOI area identified as shoreline contamination:  35.373876896241235</code></pre>
-<div id="helper-functions" class="section level4">
-<h4>Helper functions</h4>
-<pre class="python"><code># get CRS info
-img_crs = l5.first().projection()
-img_crsTrans = img_crs.getInfo().get(&#39;transform&#39;)
-
-#function to apply the GTB model
-def applyGTB_ls5(image):
-  # Select the bands that correspond to the input features of the GTB model
-  imageFeatures = image.select(ls_input_feat)
-  missDate = image.get(&#39;missDate&#39;)
-  # Classify the image using the trained GTB model
-  classifiedImage = (imageFeatures
-    .classify(trainedGTB_ls5)
-    .set(&#39;missDate&#39;, missDate))
-  return image.addBands(classifiedImage)
-
-def applyGTB_ls7(image):
-  # Select the bands that correspond to the input features of the GTB model
-  imageFeatures = image.select(ls_input_feat)
-  missDate = image.get(&#39;missDate&#39;)
-  # Classify the image using the trained GTB model
-  classifiedImage = (imageFeatures
-    .classify(trainedGTB_ls7)
-    .set(&#39;missDate&#39;, missDate))
-  return image.addBands(classifiedImage)
-
-def applyGTB_ls8(image):
-  # Select the bands that correspond to the input features of the GTB model
-  imageFeatures = image.select(ls_input_feat)
-  missDate = image.get(&#39;missDate&#39;)
-  # Classify the image using the trained GTB model
-  classifiedImage = (imageFeatures
-    .classify(trainedGTB_ls8)
-    .set(&#39;missDate&#39;, missDate))
-  return image.addBands(classifiedImage)
-
-def applyGTB_ls9(image):
-  # Select the bands that correspond to the input features of the GTB model
-  imageFeatures = image.select(ls_input_feat)
-  missDate = image.get(&#39;missDate&#39;)
-  # Classify the image using the trained GTB model
-  classifiedImage = (imageFeatures
-    .classify(trainedGTB_ls9)
-    .set(&#39;missDate&#39;, missDate))
-  return image.addBands(classifiedImage)
-
-
-# save each value as its own band and mask
-def extract_classes(image):
-  cl = image.select(&#39;classification&#39;)
-  cloud = cl.eq(0).rename(&#39;cloud&#39;).selfMask()
-  openWater = cl.eq(1).rename(&#39;openWater&#39;).selfMask()
-  lightNSSed = cl.eq(2).rename(&#39;lightNSSed&#39;).selfMask()
-  OSSed = cl.eq(3).rename(&#39;OSSed&#39;).selfMask()
-  dNSSed = cl.eq(4).rename(&#39;dNSSed&#39;).selfMask()
-  classified = cl.gte(0).rename(&#39;classified&#39;).selfMask()
-  img_addBand = (image.addBands(cloud)
-    .addBands(openWater)
-    .addBands(lightNSSed)
-    .addBands(OSSed)
-    .addBands(dNSSed)
-    .addBands(classified))
-  return img_addBand
-
-
-def applyPerMissionDate_ls5(missDate):
-  mission = ee.String(missDate).slice(0,9)
-  date = ee.String(missDate).slice(10,20)
-  short_stack = (l5
-    .filter(ee.Filter.eq(&#39;SPACECRAFT_ID&#39;, mission))
-    .filter(ee.Filter.eq(&#39;DATE_ACQUIRED&#39;, date)))
-  oneMissDate = short_stack.mean()
-  ls_miss_date_GTB = applyGTB_ls5(oneMissDate)
-  ls_GTB_class = extract_classes(ls_miss_date_GTB)
-  return (ls_GTB_class.set(&#39;missDate&#39;, missDate))
-
-def applyPerMissionDate_ls7(missDate):
-  mission = ee.String(missDate).slice(0,9)
-  date = ee.String(missDate).slice(10,20)
-  short_stack = (l7
-    .filter(ee.Filter.eq(&#39;SPACECRAFT_ID&#39;, mission))
-    .filter(ee.Filter.eq(&#39;DATE_ACQUIRED&#39;, date)))
-  oneMissDate = short_stack.mean()
-  ls_miss_date_GTB = applyGTB_ls7(oneMissDate)
-  ls_GTB_class = extract_classes(ls_miss_date_GTB)
-  return (ls_GTB_class.set(&#39;missDate&#39;, missDate))
-
-def applyPerMissionDate_ls8(missDate):
-  mission = ee.String(missDate).slice(0,9)
-  date = ee.String(missDate).slice(10,20)
-  short_stack = (l8
-    .filter(ee.Filter.eq(&#39;SPACECRAFT_ID&#39;, mission))
-    .filter(ee.Filter.eq(&#39;DATE_ACQUIRED&#39;, date)))
-  oneMissDate = short_stack.mean()
-  ls_miss_date_GTB = applyGTB_ls8(oneMissDate)
-  ls_GTB_class = extract_classes(ls_miss_date_GTB)
-  return (ls_GTB_class.set(&#39;missDate&#39;, missDate))
-
-def applyPerMissionDate_ls9(missDate):
-  mission = ee.String(missDate).slice(0,9)
-  date = ee.String(missDate).slice(10,20)
-  short_stack = (l9
-    .filter(ee.Filter.eq(&#39;SPACECRAFT_ID&#39;, mission))
-    .filter(ee.Filter.eq(&#39;DATE_ACQUIRED&#39;, date)))
-  oneMissDate = short_stack.mean()
-  ls_miss_date_GTB = applyGTB_ls9(oneMissDate)
-  ls_GTB_class = extract_classes(ls_miss_date_GTB)
-  return (ls_GTB_class.set(&#39;missDate&#39;, missDate))</code></pre>
-</div>
-</div>
-<div id="consolidate-stack-by-image-date" class="section level3">
-<h3>consolidate stack by image date</h3>
-<pre class="python"><code>def addImageDate(image):
-  mission = image.get(&#39;SPACECRAFT_ID&#39;)
-  date = image.date().format(&#39;YYYY-MM-dd&#39;)
-  missDate = ee.String(mission).cat(&#39;_&#39;).cat(ee.String(date))
-  return image.set(&#39;missDate&#39;, missDate)
-
-l5_aoi = l5_aoi.map(addImageDate)
-l7_aoi = l7_aoi.map(addImageDate)
-l8_aoi = l8_aoi.map(addImageDate)
-l9_aoi = l9_aoi.map(addImageDate)
-
-# summarize by missionDate field
-uniqueMissDate_l5 = l5_aoi.aggregate_array(&#39;missDate&#39;).distinct()
-uniqueMissDate_l7 = l7_aoi.aggregate_array(&#39;missDate&#39;).distinct()
-uniqueMissDate_l8 = l8_aoi.aggregate_array(&#39;missDate&#39;).distinct()
-uniqueMissDate_l9 = l9_aoi.aggregate_array(&#39;missDate&#39;).distinct()</code></pre>
-</div>
-<div id="create-mosaics" class="section level3">
-<h3>Create mosaics</h3>
-<pre class="python"><code>def mosaicStack_l5(missDate):
-  md_GTB = applyPerMissionDate_ls5(missDate)
-  return md_GTB
-
-def mosaicStack_l7(missDate):
-  md_GTB = applyPerMissionDate_ls7(missDate)
-  return md_GTB
-
-def mosaicStack_l8(missDate):
-  md_GTB = applyPerMissionDate_ls8(missDate)
-  return md_GTB
-
-def mosaicStack_l9(missDate):
-  md_GTB = applyPerMissionDate_ls9(missDate)
-  return md_GTB
-
-newStack_list_l5 = uniqueMissDate_l5.map(mosaicStack_l5)
-newStack_l5 = ee.ImageCollection(newStack_list_l5)
-
-newStack_list_l7 = uniqueMissDate_l7.map(mosaicStack_l7)
-newStack_l7 = ee.ImageCollection(newStack_list_l7)
-
-newStack_list_l8 = uniqueMissDate_l8.map(mosaicStack_l8)
-newStack_l8 = ee.ImageCollection(newStack_list_l8)
-
-newStack_list_l9 = uniqueMissDate_l9.map(mosaicStack_l9)
-newStack_l9 = ee.ImageCollection(newStack_list_l9)</code></pre>
-</div>
-<div id="lighten-up-each-of-the-stacks-to-only-the-bands-we-care-about" class="section level3">
-<h3>Lighten up each of the stacks to only the bands we care about</h3>
-<pre class="python"><code>lightStack_l5 = newStack_l5.select([
-    &#39;classified&#39;,
-    &#39;cloud&#39;,
-    &#39;openWater&#39;,
-    &#39;lightNSSed&#39;,
-    &#39;OSSed&#39;,
-    &#39;dNSSed&#39;
-    ])
-
-lightStack_l7 = newStack_l7.select([
-    &#39;classified&#39;,
-    &#39;cloud&#39;,
-    &#39;openWater&#39;,
-    &#39;lightNSSed&#39;,
-    &#39;OSSed&#39;,
-    &#39;dNSSed&#39;
-    ])
-
-lightStack_l8 = newStack_l8.select([
-    &#39;classified&#39;,
-    &#39;cloud&#39;,
-    &#39;openWater&#39;,
-    &#39;lightNSSed&#39;,
-    &#39;OSSed&#39;,
-    &#39;dNSSed&#39;
-    ])
-
-lightStack_l9 = newStack_l9.select([
-    &#39;classified&#39;,
-    &#39;cloud&#39;,
-    &#39;openWater&#39;,
-    &#39;lightNSSed&#39;,
-    &#39;OSSed&#39;,
-    &#39;dNSSed&#39;
-    ])</code></pre>
-</div>
-<div id="calculate-area-per-image-and-export" class="section level3">
-<h3>Calculate area per image and export</h3>
-<pre class="python"><code>#because these geometries are rather large, we have to create a function for each AOI
-def calcArea_aoi(image):
-  areaImage =  (image
-    .multiply(ee.Image.pixelArea()).divide(1e5))
-
-  area = areaImage.reduceRegions(
-    collection = aoi_ee,
-    reducer = ee.Reducer.sum().forEachBand(areaImage),
-    crs = img_crs,
-    crsTransform = img_crsTrans
-  )
-
-  missDate = image.get(&#39;missDate&#39;)
-
-  # Create a feature with the calculated area and properties
-  a = area.first().set({&#39;missDate&#39;: missDate, 
-                        &#39;area_ha&#39;: aoi_area_ha, 
-                        &#39;extent&#39;: &#39;aoi&#39;})
-  
-  return ee.FeatureCollection(a)
-
-
-def calcArea_nosc(image):
-  areaImage =  (image
-    .multiply(ee.Image.pixelArea()).divide(1e5)
-    .clip(aoi_no_sc_ee.geometry()))
-  
-  area = areaImage.reduceRegions(
-    collection = aoi_no_sc_ee,
-    reducer = ee.Reducer.sum().forEachBand(areaImage),
-    crs = img_crs,
-    crsTransform = img_crsTrans
-  )
-  
-  missDate = image.get(&#39;missDate&#39;)
-  
-  # Create a feature with the calculated area and properties
-  a = area.first().set({&#39;missDate&#39;: missDate, 
-                        &#39;area_ha&#39;: aoi_no_sc_area_ha, 
-                        &#39;extent&#39;: &#39;aoi no sc&#39;})
-  
-  return ee.FeatureCollection(a)
-
-
-def calcArea_sc(image):
-  areaImage =  (image
-    .multiply(ee.Image.pixelArea()).divide(1e5)
-    .clip(aoi_sc_ee.geometry()))
-
-  area = areaImage.reduceRegions(
-    collection = aoi_sc_ee,
-    reducer = ee.Reducer.sum().forEachBand(areaImage),
-    crs = img_crs,
-    crsTransform = img_crsTrans
-  )
-
-  missDate = image.get(&#39;missDate&#39;)
-
-  # Create a feature with the calculated area and properties
-  a = area.first().set({&#39;missDate&#39;: missDate, 
-                        &#39;area_ha&#39;: aoi_sc_area_ha, 
-                        &#39;extent&#39;: &#39;shoreline contamination&#39;})
-  
-  return ee.FeatureCollection(a)</code></pre>
-<p>And then map them over all the stacks</p>
-<pre class="python"><code>
-allAreas_l5_aoi = lightStack_l5.map(calcArea_aoi)
-allAreas_l7_aoi = lightStack_l7.map(calcArea_aoi)
-allAreas_l8_aoi = lightStack_l8.map(calcArea_aoi)
-allAreas_l9_aoi = lightStack_l9.map(calcArea_aoi)
-
-allAreas_l5_nosc = lightStack_l5.map(calcArea_nosc)
-allAreas_l7_nosc = lightStack_l7.map(calcArea_nosc)
-allAreas_l8_nosc = lightStack_l8.map(calcArea_nosc)
-allAreas_l9_nosc = lightStack_l9.map(calcArea_nosc)
-
-allAreas_l5_sc = lightStack_l5.map(calcArea_sc)
-allAreas_l7_sc = lightStack_l7.map(calcArea_sc)
-allAreas_l8_sc = lightStack_l8.map(calcArea_sc)
-allAreas_l9_sc = lightStack_l9.map(calcArea_sc)</code></pre>
-<p>And then, sadly, these individual aoi geometries are too big to
-merge, so you have to export them each individually</p>
-<div id="landsat-5-3" class="section level4">
-<h4>Landsat 5</h4>
-<pre class="python"><code>## export to drive
-export_summary_5_aoi = (ee.batch.Export.table.toDrive(
-  collection = allAreas_l5_aoi,
-  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
-  description = &#39;gradientTreeBoost_landsat_5_stack_v&#39; + v_date,
-  folder = &#39;eePlumB_classification&#39;,
-  fileFormat = &#39;csv&#39;))
-
-if export_summary == True :
-  export_summary_5_aoi.start()
-else:
-  print(&#39;Export for LS5 whole AOI toggled off.&#39;)</code></pre>
-<pre><code>## Export for LS5 whole AOI toggled off.</code></pre>
-<pre class="python"><code>export_summary_5_nosc = (ee.batch.Export.table.toDrive(
-  collection = allAreas_l5_nosc,
-  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
-  description = &#39;gradientTreeBoost_landsat_5_stack_nosc_v&#39; + v_date,
-  folder = &#39;eePlumB_classification&#39;,
-  fileFormat = &#39;csv&#39;))
-
-if export_summary == True :
-  export_summary_5_nosc.start()
-else:
-  print(&#39;Export for LS5 no shoreline contamination AOI toggled off.&#39;)</code></pre>
-<pre><code>## Export for LS5 no shoreline contamination AOI toggled off.</code></pre>
-<pre class="python"><code>export_summary_5_sc = (ee.batch.Export.table.toDrive(
-  collection = allAreas_l5_sc,
-  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
-  description = &#39;gradientTreeBoost_landsat_5_stack_sc_v&#39; + v_date,
-  folder = &#39;eePlumB_classification&#39;,
-  fileFormat = &#39;csv&#39;))
-
-if export_summary == True :
-  export_summary_5_sc.start()
-else:
-  print(&#39;Export for LS5 shoreline contamination AOI toggled off.&#39;)</code></pre>
-<pre><code>## Export for LS5 shoreline contamination AOI toggled off.</code></pre>
-</div>
-<div id="landsat-7-3" class="section level4">
-<h4>Landsat 7</h4>
-<pre class="python"><code>export_summary_7_aoi = (ee.batch.Export.table.toDrive(
-  collection = allAreas_l7_aoi,
-  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
-  description = &#39;gradientTreeBoost_landsat_7_stack_v&#39; + v_date,
-  folder = &#39;eePlumB_classification&#39;,
-  fileFormat = &#39;csv&#39;))
-
-if export_summary == True :
-  export_summary_7_aoi.start()
-else:
-  print(&#39;Export for LS7 whole AOI toggled off.&#39;)</code></pre>
-<pre><code>## Export for LS7 whole AOI toggled off.</code></pre>
-<pre class="python"><code>export_summary_7_nosc = (ee.batch.Export.table.toDrive(
-  collection = allAreas_l7_nosc,
-  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
-  description = &#39;gradientTreeBoost_landsat_7_stack_nosc_v&#39; + v_date,
-  folder = &#39;eePlumB_classification&#39;,
-  fileFormat = &#39;csv&#39;))
-
-if export_summary == True :
-  export_summary_7_nosc.start()
-else:
-  print(&#39;Export for LS7 no shoreline contamination AOI toggled off.&#39;)</code></pre>
-<pre><code>## Export for LS7 no shoreline contamination AOI toggled off.</code></pre>
-<pre class="python"><code>export_summary_7_sc = (ee.batch.Export.table.toDrive(
-  collection = allAreas_l7_sc,
-  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
-  description = &#39;gradientTreeBoost_landsat_7_stack_sc_v&#39; + v_date,
-  folder = &#39;eePlumB_classification&#39;,
-  fileFormat = &#39;csv&#39;))
-
-if export_summary == True :
-  export_summary_7_sc.start()
-else:
-  print(&#39;Export for LS7 shoreline contamination AOI toggled off.&#39;)</code></pre>
-<pre><code>## Export for LS7 shoreline contamination AOI toggled off.</code></pre>
-</div>
-<div id="landsat-8-3" class="section level4">
-<h4>Landsat 8</h4>
-<pre class="python"><code>export_summary_8_aoi = (ee.batch.Export.table.toDrive(
-  collection = allAreas_l8_aoi,
-  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
-  description = &#39;gradientTreeBoost_landsat_8_stack_v&#39; + v_date,
-  folder = &#39;eePlumB_classification&#39;,
-  fileFormat = &#39;csv&#39;))
-
-if export_summary == True :
-  export_summary_8_aoi.start()
-else:
-  print(&#39;Export for LS8 whole AOI toggled off.&#39;)</code></pre>
-<pre><code>## Export for LS8 whole AOI toggled off.</code></pre>
-<pre class="python"><code>export_summary_8_nosc = (ee.batch.Export.table.toDrive(
-  collection = allAreas_l8_nosc,
-  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
-  description = &#39;gradientTreeBoost_landsat_8_stack_nosc_v&#39; + v_date,
-  folder = &#39;eePlumB_classification&#39;,
-  fileFormat = &#39;csv&#39;))
-
-if export_summary == True :
-  export_summary_8_nosc.start()
-else:
-  print(&#39;Export for LS8 no shoreline contamination AOI toggled off.&#39;)</code></pre>
-<pre><code>## Export for LS8 no shoreline contamination AOI toggled off.</code></pre>
-<pre class="python"><code>export_summary_8_sc = (ee.batch.Export.table.toDrive(
-  collection = allAreas_l8_sc,
-  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
-  description = &#39;gradientTreeBoost_landsat_8_stack_sc_v&#39; + v_date,
-  folder = &#39;eePlumB_classification&#39;,
-  fileFormat = &#39;csv&#39;))
-
-if export_summary == True :
-  export_summary_8_sc.start()
-else:
-  print(&#39;Export for LS8 shoreline contamination AOI toggled off.&#39;)</code></pre>
-<pre><code>## Export for LS8 shoreline contamination AOI toggled off.</code></pre>
-</div>
-<div id="landsat-9-3" class="section level4">
-<h4>Landsat 9</h4>
-<pre class="python"><code>export_summary_9_aoi = (ee.batch.Export.table.toDrive(
-  collection = allAreas_l9_aoi,
-  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
-  description = &#39;gradientTreeBoost_landsat_9_stack_v&#39; + v_date,
-  folder = &#39;eePlumB_classification&#39;,
-  fileFormat = &#39;csv&#39;))
-
-if export_summary == True :
-  export_summary_9_aoi.start()
-else:
-  print(&#39;Export for LS9 whole AOI toggled off.&#39;)</code></pre>
-<pre><code>## Export for LS9 whole AOI toggled off.</code></pre>
-<pre class="python"><code>export_summary_9_nosc = (ee.batch.Export.table.toDrive(
-  collection = allAreas_l9_nosc,
-  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
-  description = &#39;gradientTreeBoost_landsat_9_stack_nosc_v&#39; + v_date,
-  folder = &#39;eePlumB_classification&#39;,
-  fileFormat = &#39;csv&#39;))
-
-if export_summary == True :
-  export_summary_9_nosc.start()
-else:
-  print(&#39;Export for LS9 no shoreline contamination AOI toggled off.&#39;)</code></pre>
-<pre><code>## Export for LS9 no shoreline contamination AOI toggled off.</code></pre>
-<pre class="python"><code>export_summary_9_sc = (ee.batch.Export.table.toDrive(
-  collection = allAreas_l9_sc,
-  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
-  description = &#39;gradientTreeBoost_landsat_9_stack_sc_v&#39; + v_date,
-  folder = &#39;eePlumB_classification&#39;,
-  fileFormat = &#39;csv&#39;))
-
-if export_summary == True :
-  export_summary_9_sc.start()
-else:
-  print(&#39;Export for LS9 shoreline contamination AOI toggled off.&#39;)</code></pre>
-<pre><code>## Export for LS9 shoreline contamination AOI toggled off.</code></pre>
-</div>
-</div>
-</div>
-<div id="apply-model-to-image-stack-for-sentinel" class="section level2">
-<h2>Apply model to image stack for Sentinel</h2>
-<div id="load-the-image-collection-1" class="section level3">
-<h3>Load the image collection</h3>
-<pre class="python"><code># list bandnames; in part for L7 bands to match l8/9
-bnsen = [&#39;B2&#39;, &#39;B3&#39;, &#39;B4&#39;, &#39;B5&#39;, &#39;B6&#39;, &#39;B7&#39;, &#39;B8&#39;, &#39;B11&#39;, &#39;B12&#39;]
-bn = [&#39;Blue&#39;, &#39;Green&#39;, &#39;Red&#39;, &#39;B5&#39;, &#39;B6&#39;, &#39;B7&#39;, &#39;B8&#39;, &#39;B11&#39;, &#39;B12&#39;]
-
-# filter stack for desired tiles
-TILES = ee.List([&#39;15TWN&#39;, &#39;15TXN&#39;, &#39;15TYN&#39;, &#39;15TWM&#39;, &#39;15TXM&#39;, &#39;15TYM&#39;])
-
-s2 = ee.ImageCollection(&#39;COPERNICUS/S2_SR_HARMONIZED&#39;)
-
-# apply scaling factor
-def applySenScale(image):
-  optical = image.select(&#39;B.&#39;).multiply(0.0001)
-  optical2 = image.select(&#39;B..&#39;).multiply(0.0001)
-  return image.addBands(optical, None, True).addBands(optical2, None, True)
-
-sen = (s2
-  .filter(ee.Filter.inList(&#39;MGRS_TILE&#39;, TILES))
-  .map(applySenScale)
-  .select(bnsen, bn))
-
-resample_crs_transform = sen.first().select(&#39;Red&#39;).projection().getInfo().get(&#39;transform&#39;)
-
-targetCRS = &#39;EPSG:32615&#39;  # UTM Zone 15N
-targetScale = 10  # 10m resolution
-
-# and now resample the 20m pixels to 10m
-def reprojectBands(image):
-  bands = [&#39;B5&#39;, &#39;B6&#39;, &#39;B7&#39;, &#39;B11&#39;, &#39;B12&#39;]
-  reprojectedBands = [image.select(band).resample(&#39;bilinear&#39;).reproject(
-    crs = targetCRS,
-    scale = targetScale
-  ).rename(band) for band in bands]
-  return image.addBands(reprojectedBands, None, True)
-
-# Apply the resample function to the image collection
-sen = sen.map(reprojectBands)</code></pre>
-<p>And then clip each image by the aoi</p>
-<pre class="python"><code>sen_aoi = sen.map(clip)
-
-# get CRS info
-img_crs_sen = sen_aoi.first().select(&#39;Red&#39;).projection()
-img_crsTrans_sen = img_crs_sen.getInfo().get(&#39;transform&#39;)</code></pre>
-<div id="helper-functions-1" class="section level4">
-<h4>Helper functions</h4>
-<pre class="python"><code>#function to apply the GTB model
-def applyGTB_sen(image):
-  # Select the bands that correspond to the input features of the GTB model
-  imageFeatures = image.select(sen_input_feat)
-  missDate = image.get(&#39;missDate&#39;)
-  # Classify the image using the trained GTB model
-  classifiedImage = (imageFeatures
-    .classify(trainedGTB_sen)
-    .set(&#39;missDate&#39;, missDate))
-  return image.addBands(classifiedImage)
-
-def applyPerMissionDate_sen(missDate):
-  mission = ee.String(missDate).slice(0,11)
-  date = ee.String(missDate).slice(12,22)
-  short_stack = (sen
-    .filter(ee.Filter.eq(&#39;SPACECRAFT_NAME&#39;, mission))
-    .filterDate(date, ee.Date(date).advance(1,&#39;day&#39;)))
-  oneMissDate = short_stack.mean()
-  sen_miss_date_GTB = applyGTB_sen(oneMissDate)
-  sen_GTB_class = extract_classes(sen_miss_date_GTB)
-  return (sen_GTB_class.set(&#39;missDate&#39;, missDate))</code></pre>
-</div>
-</div>
-<div id="consolidate-stack-by-image-date-1" class="section level3">
-<h3>Consolidate stack by image date</h3>
-<pre class="python"><code>def addImageDate(image):
-  mission = image.get(&#39;SPACECRAFT_NAME&#39;)
-  date = image.date().format(&#39;YYYY-MM-dd&#39;)
-  missDate = ee.String(mission).cat(&#39;_&#39;).cat(ee.String(date))
-  return image.set(&#39;missDate&#39;, missDate)
-
-sen_aoi = sen_aoi.map(addImageDate)
-
-# summarize by missionDate field
-uniqueMissDate_sen = sen_aoi.aggregate_array(&#39;missDate&#39;).distinct()</code></pre>
-<p>And then mosaic per mission date.</p>
-<pre class="python"><code>def mosaicStack_sen(missDate):
-  md_GTB = applyPerMissionDate_sen(missDate)
-  return md_GTB
-
-newStack_list_sen = uniqueMissDate_sen.map(mosaicStack_sen)
-newStack_sen = ee.ImageCollection(newStack_list_sen)</code></pre>
-</div>
-<div id="calculate-area-per-image-and-export-1" class="section level3">
-<h3>Calculate area per image and export</h3>
-<pre class="python"><code>sen_stack_light = newStack_sen.select([
-    &#39;classified&#39;,
-    &#39;cloud&#39;,
-    &#39;openWater&#39;,
-    &#39;lightNSSed&#39;,
-    &#39;OSSed&#39;,
-    &#39;dNSSed&#39;
-    ])
-
-def calcArea_sen_aoi(image):
-  areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
-  
-  area = areaImage.reduceRegions(
-    collection = aoi_ee,
-    reducer = ee.Reducer.sum().forEachBand(areaImage),
-    crs = img_crs_sen,
-    crsTransform = img_crsTrans_sen
-  )
-  
-  missDate = image.get(&#39;missDate&#39;)
-  
-  # Create a feature with the calculated area and properties
-  a = area.first().set({&#39;missDate&#39;: missDate, 
-                        &#39;area_ha&#39;: aoi_area_ha,
-                        &#39;extent&#39;: &#39;aoi&#39;})
-  
-  return ee.FeatureCollection(a)
-
-
-allAreas_sen_aoi = sen_stack_light.map(calcArea_sen_aoi)
-
-## export to drive
-export_summary_sen_aoi = (ee.batch.Export.table.toDrive(
-  collection = allAreas_sen_aoi,
-  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
-  description = &#39;gradientTreeBoost_sen2_stack_v&#39; + v_date,
-  folder = &#39;eePlumB_classification&#39;,
-  fileFormat = &#39;csv&#39;))
-
-if export_summary == True :
-  export_summary_sen_aoi.start()
-else:
-  print(&#39;Export for Sentinel-2 whole AOI toggled off.&#39;)</code></pre>
-<pre><code>## Export for Sentinel-2 whole AOI toggled off.</code></pre>
-<pre class="python"><code>def calcArea_sen_nosc(image):
-  areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
-  
-  area = areaImage.reduceRegions(
-    collection = aoi_no_sc_ee,
-    reducer = ee.Reducer.sum().forEachBand(areaImage),
-    crs = img_crs_sen,
-    crsTransform = img_crsTrans_sen
-  )
-  
-  missDate = image.get(&#39;missDate&#39;)
-  
-  # Create a feature with the calculated area and properties
-  a = area.first().set({&#39;missDate&#39;: missDate, 
-                        &#39;area_ha&#39;: aoi_no_sc_area_ha,
-                        &#39;extent&#39;: &#39;aoi no sc&#39;})
-  
-  return ee.FeatureCollection(a)
-
-
-allAreas_sen_nosc = sen_stack_light.map(calcArea_sen_nosc)
-
-## export to drive
-export_summary_sen_nosc = (ee.batch.Export.table.toDrive(
-  collection = allAreas_sen_nosc,
-  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
-  description = &#39;gradientTreeBoost_sen2_nosc_stack_v&#39; + v_date,
-  folder = &#39;eePlumB_classification&#39;,
-  fileFormat = &#39;csv&#39;))
-
-#export_summary_sen_nosc.start()
-if export_summary == True :
-  export_summary_sen_nosc.start()
-else:
-  print(&#39;Export for Sentinel-2 no shoreline contamination AOI toggled off.&#39;)</code></pre>
-<pre><code>## Export for Sentinel-2 no shoreline contamination AOI toggled off.</code></pre>
-<pre class="python"><code>def calcArea_sen_sc(image):
-  areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5)
-  
-  area = areaImage.reduceRegions(
-    collection = aoi_sc_ee,
-    reducer = ee.Reducer.sum().forEachBand(areaImage),
-    crs = img_crs_sen,
-    crsTransform = img_crsTrans_sen
-  )
-  
-  missDate = image.get(&#39;missDate&#39;)
-  
-  # Create a feature with the calculated area and properties
-  a = area.first().set({&#39;missDate&#39;: missDate, 
-                        &#39;area_ha&#39;: aoi_sc_area_ha,
-                        &#39;extent&#39;: &#39;shoreline contamination&#39;})
-  
-  return ee.FeatureCollection(a)
-
-
-allAreas_sen_sc = sen_stack_light.map(calcArea_sen_sc)
-
-## export to drive
-export_summary_sen_sc = (ee.batch.Export.table.toDrive(
-  collection = allAreas_sen_sc,
-  selectors = [&#39;missDate&#39;, &#39;classified&#39;, &#39;cloud&#39;, &#39;openWater&#39;, &#39;lightNSSed&#39;,&#39;OSSed&#39;, &#39;dNSSed&#39;, &#39;area_ha&#39;, &#39;extent&#39;],
-  description = &#39;gradientTreeBoost_sen2_sc_stack_v&#39; + v_date,
-  folder = &#39;eePlumB_classification&#39;,
-  fileFormat = &#39;csv&#39;))
-
-if export_summary == True :
-  export_summary_sen_sc.start()
-else:
-  print(&#39;Export for Sentinel-2 shoreline contamination AOI toggled off.&#39;)</code></pre>
-<pre><code>## Export for Sentinel-2 shoreline contamination AOI toggled off.</code></pre>
-</div>
-</div>
-<div id="export-geotiffs-to-drive" class="section level2">
-<h2>Export GeoTiffs to drive</h2>
-<p>Load task checker!</p>
-<pre class="python"><code>##Function for limiting the max number of tasks sent to
-#earth engine at one time to avoid time out errors
-def maximum_no_of_tasks(MaxNActive, waitingPeriod):
-  ##maintain a maximum number of active tasks
-  ## initialize submitting jobs
-  ts = list(ee.batch.Task.list())
-  NActive = 0
-  for task in ts:
-     if (&#39;RUNNING&#39; in str(task) or &#39;READY&#39; in str(task)):
-         NActive += 1
-  ## wait if the number of current active tasks reach the maximum number
-  ## defined in MaxNActive
-  while (NActive &gt;= MaxNActive):
-    time.sleep(waitingPeriod) # if reach or over maximum no. of active tasks, wait for 2min and check again
-    ts = list(ee.batch.Task.list())
-    NActive = 0
-    for task in ts:
-      if (&#39;RUNNING&#39; in str(task) or &#39;READY&#39; in str(task)):
-        NActive += 1
-  return()</code></pre>
-<div id="raster-export" class="section level3">
-<h3>Raster Export</h3>
-</div>
-<div id="gtb-images-for-landsat-5" class="section level3">
-<h3>GTB images for Landsat 5</h3>
-<pre class="python"><code>if export_raster == True:
-  
-  date_length_5 = len(uniqueMissDate_l5.getInfo())
-  
-  for d in range(date_length_5):
-    md = uniqueMissDate_l5.get(d)
-    image = (newStack_l5
-      .filter(ee.Filter.eq(&#39;missDate&#39;, md))
-      .first()
-      .select(&#39;classification&#39;))
-    export_image = ee.batch.Export.image.toDrive(
-      image = image,
-      region = aoi_ee.geometry(),
-      description = &#39;GTB_v&#39; + v_date + &#39;_&#39; + str(md.getInfo()),
-      folder = &#39;GTB_v&#39;+v_date,
-      scale = 30,
-      crs = img_crs,
-      maxPixels = 1e13)
+#igdlrcksri .gt_col_heading {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: normal;
+text-transform: inherit;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+vertical-align: bottom;
+padding-top: 5px;
+padding-bottom: 6px;
+padding-left: 5px;
+padding-right: 5px;
+overflow-x: hidden;
+}
+#igdlrcksri .gt_column_spanner_outer {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: normal;
+text-transform: inherit;
+padding-top: 0;
+padding-bottom: 0;
+padding-left: 4px;
+padding-right: 4px;
+}
+#igdlrcksri .gt_column_spanner_outer:first-child {
+padding-left: 0;
+}
+#igdlrcksri .gt_column_spanner_outer:last-child {
+padding-right: 0;
+}
+#igdlrcksri .gt_column_spanner {
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+vertical-align: bottom;
+padding-top: 5px;
+padding-bottom: 5px;
+overflow-x: hidden;
+display: inline-block;
+width: 100%;
+}
+#igdlrcksri .gt_spanner_row {
+border-bottom-style: hidden;
+}
+#igdlrcksri .gt_group_heading {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+text-transform: inherit;
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+vertical-align: middle;
+text-align: left;
+}
+#igdlrcksri .gt_empty_group_heading {
+padding: 0.5px;
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+vertical-align: middle;
+}
+#igdlrcksri .gt_from_md > :first-child {
+margin-top: 0;
+}
+#igdlrcksri .gt_from_md > :last-child {
+margin-bottom: 0;
+}
+#igdlrcksri .gt_row {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+margin: 10px;
+border-top-style: solid;
+border-top-width: 1px;
+border-top-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+vertical-align: middle;
+overflow-x: hidden;
+}
+#igdlrcksri .gt_stub {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+text-transform: inherit;
+border-right-style: solid;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+padding-left: 5px;
+padding-right: 5px;
+}
+#igdlrcksri .gt_stub_row_group {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+text-transform: inherit;
+border-right-style: solid;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+padding-left: 5px;
+padding-right: 5px;
+vertical-align: top;
+}
+#igdlrcksri .gt_row_group_first td {
+border-top-width: 2px;
+}
+#igdlrcksri .gt_row_group_first th {
+border-top-width: 2px;
+}
+#igdlrcksri .gt_summary_row {
+color: #333333;
+background-color: #FFFFFF;
+text-transform: inherit;
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+}
+#igdlrcksri .gt_first_summary_row {
+border-top-style: solid;
+border-top-color: #D3D3D3;
+}
+#igdlrcksri .gt_first_summary_row.thick {
+border-top-width: 2px;
+}
+#igdlrcksri .gt_last_summary_row {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+}
+#igdlrcksri .gt_grand_summary_row {
+color: #333333;
+background-color: #FFFFFF;
+text-transform: inherit;
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+}
+#igdlrcksri .gt_first_grand_summary_row {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+border-top-style: double;
+border-top-width: 6px;
+border-top-color: #D3D3D3;
+}
+#igdlrcksri .gt_last_grand_summary_row_top {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+border-bottom-style: double;
+border-bottom-width: 6px;
+border-bottom-color: #D3D3D3;
+}
+#igdlrcksri .gt_striped {
+background-color: rgba(128, 128, 128, 0.05);
+}
+#igdlrcksri .gt_table_body {
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+}
+#igdlrcksri .gt_footnotes {
+color: #333333;
+background-color: #FFFFFF;
+border-bottom-style: none;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 2px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+}
+#igdlrcksri .gt_footnote {
+margin: 0px;
+font-size: 90%;
+padding-top: 4px;
+padding-bottom: 4px;
+padding-left: 5px;
+padding-right: 5px;
+}
+#igdlrcksri .gt_sourcenotes {
+color: #333333;
+background-color: #FFFFFF;
+border-bottom-style: none;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 2px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+}
+#igdlrcksri .gt_sourcenote {
+font-size: 90%;
+padding-top: 4px;
+padding-bottom: 4px;
+padding-left: 5px;
+padding-right: 5px;
+}
+#igdlrcksri .gt_left {
+text-align: left;
+}
+#igdlrcksri .gt_center {
+text-align: center;
+}
+#igdlrcksri .gt_right {
+text-align: right;
+font-variant-numeric: tabular-nums;
+}
+#igdlrcksri .gt_font_normal {
+font-weight: normal;
+}
+#igdlrcksri .gt_font_bold {
+font-weight: bold;
+}
+#igdlrcksri .gt_font_italic {
+font-style: italic;
+}
+#igdlrcksri .gt_super {
+font-size: 65%;
+}
+#igdlrcksri .gt_footnote_marks {
+font-size: 75%;
+vertical-align: 0.4em;
+position: initial;
+}
+#igdlrcksri .gt_asterisk {
+font-size: 100%;
+vertical-align: 0;
+}
+#igdlrcksri .gt_indent_1 {
+text-indent: 5px;
+}
+#igdlrcksri .gt_indent_2 {
+text-indent: 10px;
+}
+#igdlrcksri .gt_indent_3 {
+text-indent: 15px;
+}
+#igdlrcksri .gt_indent_4 {
+text-indent: 20px;
+}
+#igdlrcksri .gt_indent_5 {
+text-indent: 25px;
+}
+</style>
+<table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+  <thead>
     
-    #Check how many existing tasks are running and take a break of 30 mins if it&#39;s &gt;25
-    maximum_no_of_tasks(10, 5*60)
-    #Send next task.
-    export_image.start()
-else:
-  print(&#39;Raster export for LS5 turned off.&#39;)</code></pre>
-<pre><code>## Raster export for LS5 turned off.</code></pre>
-</div>
-<div id="gtb-images-for-landsat-7" class="section level3">
-<h3>GTB images for Landsat 7</h3>
-<pre class="python"><code>if export_raster == True:
-  date_length_7 = len(uniqueMissDate_l7.getInfo())
+    <tr class="gt_col_headings gt_spanner_row">
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" style="font-size: small;" scope="col" id="class">class</th>
+      <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="5" scope="colgroup" id="all labels">
+        <span class="gt_column_spanner">all labels</span>
+      </th>
+      <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="5" scope="colgroup" id="filtered for model development and testing">
+        <span class="gt_column_spanner">filtered for model development and testing</span>
+      </th>
+    </tr>
+    <tr class="gt_col_headings">
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" style="font-size: small;" scope="col" id="Landsat 5 (all)">Landsat 5 (all)</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" style="font-size: small;" scope="col" id="Landsat 7 (all)">Landsat 7 (all)</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" style="font-size: small;" scope="col" id="Landsat 8 (all)">Landsat 8 (all)</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" style="font-size: small;" scope="col" id="Landsat 9 (all)">Landsat 9 (all)</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" style="font-size: small;" scope="col" id="Sentinel-2 (all)">Sentinel-2 (all)</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" style="font-size: small;" scope="col" id="Landsat 5 (filtered)">Landsat 5 (filtered)</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" style="font-size: small;" scope="col" id="Landsat 7 (filtered)">Landsat 7 (filtered)</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" style="font-size: small;" scope="col" id="Landsat 8 (filtered)">Landsat 8 (filtered)</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" style="font-size: small;" scope="col" id="Landsat 9 (filtered)">Landsat 9 (filtered)</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" style="font-size: small;" scope="col" id="Sentinel-2 (filtered)">Sentinel-2 (filtered)</th>
+    </tr>
+  </thead>
+  <tbody class="gt_table_body">
+    <tr><td headers="class" class="gt_row gt_left" style="font-size: small;">cloud</td>
+<td headers="Landsat 5 (all)" class="gt_row gt_center" style="font-size: small;">647</td>
+<td headers="Landsat 7 (all)" class="gt_row gt_center" style="font-size: small;">646</td>
+<td headers="Landsat 8 (all)" class="gt_row gt_center" style="font-size: small;">457</td>
+<td headers="Landsat 9 (all)" class="gt_row gt_center" style="font-size: small;">204</td>
+<td headers="Sentinel-2 (all)" class="gt_row gt_center" style="font-size: small;">539</td>
+<td headers="Landsat 5 (filtered)" class="gt_row gt_center" style="font-size: small;">390</td>
+<td headers="Landsat 7 (filtered)" class="gt_row gt_center" style="font-size: small;">407</td>
+<td headers="Landsat 8 (filtered)" class="gt_row gt_center" style="font-size: small;">414</td>
+<td headers="Landsat 9 (filtered)" class="gt_row gt_center" style="font-size: small;">184</td>
+<td headers="Sentinel-2 (filtered)" class="gt_row gt_center" style="font-size: small;">500</td></tr>
+    <tr><td headers="class" class="gt_row gt_left" style="font-size: small;">darkNearShoreSediment</td>
+<td headers="Landsat 5 (all)" class="gt_row gt_center" style="font-size: small;">167</td>
+<td headers="Landsat 7 (all)" class="gt_row gt_center" style="font-size: small;">104</td>
+<td headers="Landsat 8 (all)" class="gt_row gt_center" style="font-size: small;">124</td>
+<td headers="Landsat 9 (all)" class="gt_row gt_center" style="font-size: small;">54</td>
+<td headers="Sentinel-2 (all)" class="gt_row gt_center" style="font-size: small;">67</td>
+<td headers="Landsat 5 (filtered)" class="gt_row gt_center" style="font-size: small;">125</td>
+<td headers="Landsat 7 (filtered)" class="gt_row gt_center" style="font-size: small;">75</td>
+<td headers="Landsat 8 (filtered)" class="gt_row gt_center" style="font-size: small;">106</td>
+<td headers="Landsat 9 (filtered)" class="gt_row gt_center" style="font-size: small;">39</td>
+<td headers="Sentinel-2 (filtered)" class="gt_row gt_center" style="font-size: small;">50</td></tr>
+    <tr><td headers="class" class="gt_row gt_left" style="font-size: small;">lightNearShoreSediment</td>
+<td headers="Landsat 5 (all)" class="gt_row gt_center" style="font-size: small;">300</td>
+<td headers="Landsat 7 (all)" class="gt_row gt_center" style="font-size: small;">367</td>
+<td headers="Landsat 8 (all)" class="gt_row gt_center" style="font-size: small;">225</td>
+<td headers="Landsat 9 (all)" class="gt_row gt_center" style="font-size: small;">119</td>
+<td headers="Sentinel-2 (all)" class="gt_row gt_center" style="font-size: small;">139</td>
+<td headers="Landsat 5 (filtered)" class="gt_row gt_center" style="font-size: small;">246</td>
+<td headers="Landsat 7 (filtered)" class="gt_row gt_center" style="font-size: small;">295</td>
+<td headers="Landsat 8 (filtered)" class="gt_row gt_center" style="font-size: small;">187</td>
+<td headers="Landsat 9 (filtered)" class="gt_row gt_center" style="font-size: small;">97</td>
+<td headers="Sentinel-2 (filtered)" class="gt_row gt_center" style="font-size: small;">115</td></tr>
+    <tr><td headers="class" class="gt_row gt_left" style="font-size: small;">offShoreSediment</td>
+<td headers="Landsat 5 (all)" class="gt_row gt_center" style="font-size: small;">310</td>
+<td headers="Landsat 7 (all)" class="gt_row gt_center" style="font-size: small;">377</td>
+<td headers="Landsat 8 (all)" class="gt_row gt_center" style="font-size: small;">196</td>
+<td headers="Landsat 9 (all)" class="gt_row gt_center" style="font-size: small;">128</td>
+<td headers="Sentinel-2 (all)" class="gt_row gt_center" style="font-size: small;">170</td>
+<td headers="Landsat 5 (filtered)" class="gt_row gt_center" style="font-size: small;">252</td>
+<td headers="Landsat 7 (filtered)" class="gt_row gt_center" style="font-size: small;">311</td>
+<td headers="Landsat 8 (filtered)" class="gt_row gt_center" style="font-size: small;">164</td>
+<td headers="Landsat 9 (filtered)" class="gt_row gt_center" style="font-size: small;">109</td>
+<td headers="Sentinel-2 (filtered)" class="gt_row gt_center" style="font-size: small;">149</td></tr>
+    <tr><td headers="class" class="gt_row gt_left" style="font-size: small;">openWater</td>
+<td headers="Landsat 5 (all)" class="gt_row gt_center" style="font-size: small;">463</td>
+<td headers="Landsat 7 (all)" class="gt_row gt_center" style="font-size: small;">402</td>
+<td headers="Landsat 8 (all)" class="gt_row gt_center" style="font-size: small;">118</td>
+<td headers="Landsat 9 (all)" class="gt_row gt_center" style="font-size: small;">84</td>
+<td headers="Sentinel-2 (all)" class="gt_row gt_center" style="font-size: small;">218</td>
+<td headers="Landsat 5 (filtered)" class="gt_row gt_center" style="font-size: small;">384</td>
+<td headers="Landsat 7 (filtered)" class="gt_row gt_center" style="font-size: small;">321</td>
+<td headers="Landsat 8 (filtered)" class="gt_row gt_center" style="font-size: small;">101</td>
+<td headers="Landsat 9 (filtered)" class="gt_row gt_center" style="font-size: small;">69</td>
+<td headers="Sentinel-2 (filtered)" class="gt_row gt_center" style="font-size: small;">165</td></tr>
+    <tr><td headers="class" class="gt_row gt_left" style="font-size: small;">other</td>
+<td headers="Landsat 5 (all)" class="gt_row gt_center" style="font-size: small;">94</td>
+<td headers="Landsat 7 (all)" class="gt_row gt_center" style="font-size: small;">87</td>
+<td headers="Landsat 8 (all)" class="gt_row gt_center" style="font-size: small;">43</td>
+<td headers="Landsat 9 (all)" class="gt_row gt_center" style="font-size: small;">61</td>
+<td headers="Sentinel-2 (all)" class="gt_row gt_center" style="font-size: small;">62</td>
+<td headers="Landsat 5 (filtered)" class="gt_row gt_center" style="font-size: small;">NA</td>
+<td headers="Landsat 7 (filtered)" class="gt_row gt_center" style="font-size: small;">NA</td>
+<td headers="Landsat 8 (filtered)" class="gt_row gt_center" style="font-size: small;">NA</td>
+<td headers="Landsat 9 (filtered)" class="gt_row gt_center" style="font-size: small;">NA</td>
+<td headers="Sentinel-2 (filtered)" class="gt_row gt_center" style="font-size: small;">NA</td></tr>
+    <tr><td headers="class" class="gt_row gt_left" style="font-size: small;">shorelineContamination</td>
+<td headers="Landsat 5 (all)" class="gt_row gt_center" style="font-size: small;">409</td>
+<td headers="Landsat 7 (all)" class="gt_row gt_center" style="font-size: small;">226</td>
+<td headers="Landsat 8 (all)" class="gt_row gt_center" style="font-size: small;">98</td>
+<td headers="Landsat 9 (all)" class="gt_row gt_center" style="font-size: small;">91</td>
+<td headers="Sentinel-2 (all)" class="gt_row gt_center" style="font-size: small;">51</td>
+<td headers="Landsat 5 (filtered)" class="gt_row gt_center" style="font-size: small;">NA</td>
+<td headers="Landsat 7 (filtered)" class="gt_row gt_center" style="font-size: small;">NA</td>
+<td headers="Landsat 8 (filtered)" class="gt_row gt_center" style="font-size: small;">NA</td>
+<td headers="Landsat 9 (filtered)" class="gt_row gt_center" style="font-size: small;">NA</td>
+<td headers="Sentinel-2 (filtered)" class="gt_row gt_center" style="font-size: small;">NA</td></tr>
+    <tr><td headers="class" class="gt_row gt_left" style="font-size: small;">algalBloom</td>
+<td headers="Landsat 5 (all)" class="gt_row gt_center" style="font-size: small;">NA</td>
+<td headers="Landsat 7 (all)" class="gt_row gt_center" style="font-size: small;">NA</td>
+<td headers="Landsat 8 (all)" class="gt_row gt_center" style="font-size: small;">10</td>
+<td headers="Landsat 9 (all)" class="gt_row gt_center" style="font-size: small;">NA</td>
+<td headers="Sentinel-2 (all)" class="gt_row gt_center" style="font-size: small;">5</td>
+<td headers="Landsat 5 (filtered)" class="gt_row gt_center" style="font-size: small;">NA</td>
+<td headers="Landsat 7 (filtered)" class="gt_row gt_center" style="font-size: small;">NA</td>
+<td headers="Landsat 8 (filtered)" class="gt_row gt_center" style="font-size: small;">NA</td>
+<td headers="Landsat 9 (filtered)" class="gt_row gt_center" style="font-size: small;">NA</td>
+<td headers="Sentinel-2 (filtered)" class="gt_row gt_center" style="font-size: small;">NA</td></tr>
+  </tbody>
   
-  for d in range(date_length_7):
-    md = uniqueMissDate_l7.get(d)
-    image = (newStack_l7
-      .filter(ee.Filter.eq(&#39;missDate&#39;, md))
-      .first()
-      .select(&#39;classification&#39;))
-    export_image = ee.batch.Export.image.toDrive(
-      image = image,
-      region = aoi_ee.geometry(),
-      description = &#39;GTB_v&#39; + v_date + &#39;_&#39; + str(md.getInfo()),
-      folder = &#39;GTB_v&#39;+v_date,
-      scale = 30,
-      crs = img_crs,
-      maxPixels = 1e13)
-    #Check how many existing tasks are running and take a break of 30 mins if it&#39;s &gt;25
-    maximum_no_of_tasks(10, 5*60)
-    #Send next task.
-    export_image.start()
-else:
-  print(&#39;Raster export turned off for Landsat 7&#39;)</code></pre>
-<pre><code>## Raster export turned off for Landsat 7</code></pre>
+  <tfoot class="gt_footnotes">
+    <tr>
+      <td class="gt_footnote" colspan="11"> Table 1. Summary of eePlumB classes per mission (version 2023-07-20). All labels (left group) are the raw number of collated labels, the right group are labels that have been filtered as described.</td>
+    </tr>
+  </tfoot>
+</table>
 </div>
-<div id="gtb-images-for-landsat-8" class="section level3">
-<h3>GTB images for Landsat 8</h3>
-<pre class="python"><code>if export_raster == True:
-  date_length_8 = len(uniqueMissDate_l8.getInfo())
+<p>Labels were present from 104 individual mission-date combinations
+spanning the dates of 1984-07-07 to 2023-04-11. Labels in the filtered
+dataset were present from 102 mission-date combinations spanning the
+dates 1984-07-07 to 2023-04-11. See Table 2 for a complete breakdown of
+labels by mission-date combination.</p>
+<div id="vzhydamefw" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#vzhydamefw table {
+font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+-webkit-font-smoothing: antialiased;
+-moz-osx-font-smoothing: grayscale;
+}
+#vzhydamefw thead, #vzhydamefw tbody, #vzhydamefw tfoot, #vzhydamefw tr, #vzhydamefw td, #vzhydamefw th {
+border-style: none;
+}
+#vzhydamefw p {
+margin: 0;
+padding: 0;
+}
+#vzhydamefw .gt_table {
+display: table;
+border-collapse: collapse;
+line-height: normal;
+margin-left: auto;
+margin-right: auto;
+color: #333333;
+font-size: 16px;
+font-weight: normal;
+font-style: normal;
+background-color: #FFFFFF;
+width: auto;
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #A8A8A8;
+border-right-style: none;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #A8A8A8;
+border-left-style: none;
+border-left-width: 2px;
+border-left-color: #D3D3D3;
+}
+#vzhydamefw .gt_caption {
+padding-top: 4px;
+padding-bottom: 4px;
+}
+#vzhydamefw .gt_title {
+color: #333333;
+font-size: 125%;
+font-weight: initial;
+padding-top: 4px;
+padding-bottom: 4px;
+padding-left: 5px;
+padding-right: 5px;
+border-bottom-color: #FFFFFF;
+border-bottom-width: 0;
+}
+#vzhydamefw .gt_subtitle {
+color: #333333;
+font-size: 85%;
+font-weight: initial;
+padding-top: 3px;
+padding-bottom: 5px;
+padding-left: 5px;
+padding-right: 5px;
+border-top-color: #FFFFFF;
+border-top-width: 0;
+}
+#vzhydamefw .gt_heading {
+background-color: #FFFFFF;
+text-align: center;
+border-bottom-color: #FFFFFF;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+}
+#vzhydamefw .gt_bottom_border {
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+}
+#vzhydamefw .gt_col_headings {
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+}
+#vzhydamefw .gt_col_heading {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: normal;
+text-transform: inherit;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+vertical-align: bottom;
+padding-top: 5px;
+padding-bottom: 6px;
+padding-left: 5px;
+padding-right: 5px;
+overflow-x: hidden;
+}
+#vzhydamefw .gt_column_spanner_outer {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: normal;
+text-transform: inherit;
+padding-top: 0;
+padding-bottom: 0;
+padding-left: 4px;
+padding-right: 4px;
+}
+#vzhydamefw .gt_column_spanner_outer:first-child {
+padding-left: 0;
+}
+#vzhydamefw .gt_column_spanner_outer:last-child {
+padding-right: 0;
+}
+#vzhydamefw .gt_column_spanner {
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+vertical-align: bottom;
+padding-top: 5px;
+padding-bottom: 5px;
+overflow-x: hidden;
+display: inline-block;
+width: 100%;
+}
+#vzhydamefw .gt_spanner_row {
+border-bottom-style: hidden;
+}
+#vzhydamefw .gt_group_heading {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+text-transform: inherit;
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+vertical-align: middle;
+text-align: left;
+}
+#vzhydamefw .gt_empty_group_heading {
+padding: 0.5px;
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+vertical-align: middle;
+}
+#vzhydamefw .gt_from_md > :first-child {
+margin-top: 0;
+}
+#vzhydamefw .gt_from_md > :last-child {
+margin-bottom: 0;
+}
+#vzhydamefw .gt_row {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+margin: 10px;
+border-top-style: solid;
+border-top-width: 1px;
+border-top-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+vertical-align: middle;
+overflow-x: hidden;
+}
+#vzhydamefw .gt_stub {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+text-transform: inherit;
+border-right-style: solid;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+padding-left: 5px;
+padding-right: 5px;
+}
+#vzhydamefw .gt_stub_row_group {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+text-transform: inherit;
+border-right-style: solid;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+padding-left: 5px;
+padding-right: 5px;
+vertical-align: top;
+}
+#vzhydamefw .gt_row_group_first td {
+border-top-width: 2px;
+}
+#vzhydamefw .gt_row_group_first th {
+border-top-width: 2px;
+}
+#vzhydamefw .gt_summary_row {
+color: #333333;
+background-color: #FFFFFF;
+text-transform: inherit;
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+}
+#vzhydamefw .gt_first_summary_row {
+border-top-style: solid;
+border-top-color: #D3D3D3;
+}
+#vzhydamefw .gt_first_summary_row.thick {
+border-top-width: 2px;
+}
+#vzhydamefw .gt_last_summary_row {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+}
+#vzhydamefw .gt_grand_summary_row {
+color: #333333;
+background-color: #FFFFFF;
+text-transform: inherit;
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+}
+#vzhydamefw .gt_first_grand_summary_row {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+border-top-style: double;
+border-top-width: 6px;
+border-top-color: #D3D3D3;
+}
+#vzhydamefw .gt_last_grand_summary_row_top {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+border-bottom-style: double;
+border-bottom-width: 6px;
+border-bottom-color: #D3D3D3;
+}
+#vzhydamefw .gt_striped {
+background-color: rgba(128, 128, 128, 0.05);
+}
+#vzhydamefw .gt_table_body {
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+}
+#vzhydamefw .gt_footnotes {
+color: #333333;
+background-color: #FFFFFF;
+border-bottom-style: none;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 2px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+}
+#vzhydamefw .gt_footnote {
+margin: 0px;
+font-size: 90%;
+padding-top: 4px;
+padding-bottom: 4px;
+padding-left: 5px;
+padding-right: 5px;
+}
+#vzhydamefw .gt_sourcenotes {
+color: #333333;
+background-color: #FFFFFF;
+border-bottom-style: none;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 2px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+}
+#vzhydamefw .gt_sourcenote {
+font-size: 90%;
+padding-top: 4px;
+padding-bottom: 4px;
+padding-left: 5px;
+padding-right: 5px;
+}
+#vzhydamefw .gt_left {
+text-align: left;
+}
+#vzhydamefw .gt_center {
+text-align: center;
+}
+#vzhydamefw .gt_right {
+text-align: right;
+font-variant-numeric: tabular-nums;
+}
+#vzhydamefw .gt_font_normal {
+font-weight: normal;
+}
+#vzhydamefw .gt_font_bold {
+font-weight: bold;
+}
+#vzhydamefw .gt_font_italic {
+font-style: italic;
+}
+#vzhydamefw .gt_super {
+font-size: 65%;
+}
+#vzhydamefw .gt_footnote_marks {
+font-size: 75%;
+vertical-align: 0.4em;
+position: initial;
+}
+#vzhydamefw .gt_asterisk {
+font-size: 100%;
+vertical-align: 0;
+}
+#vzhydamefw .gt_indent_1 {
+text-indent: 5px;
+}
+#vzhydamefw .gt_indent_2 {
+text-indent: 10px;
+}
+#vzhydamefw .gt_indent_3 {
+text-indent: 15px;
+}
+#vzhydamefw .gt_indent_4 {
+text-indent: 20px;
+}
+#vzhydamefw .gt_indent_5 {
+text-indent: 25px;
+}
+</style>
+<table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+  <thead>
+    
+    <tr class="gt_col_headings">
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" style="font-size: small;" scope="col" id="mission">mission</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" style="font-size: small;" scope="col" id="unique mission-dates (all)">unique mission-dates (all)</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" style="font-size: small;" scope="col" id="unique mission-dates (filtered)">unique mission-dates (filtered)</th>
+    </tr>
+  </thead>
+  <tbody class="gt_table_body">
+    <tr><td headers="mission" class="gt_row gt_left" style="font-size: small;">LS5</td>
+<td headers="unique mission-dates (all)" class="gt_row gt_center" style="font-size: small;">28</td>
+<td headers="unique mission-dates (filtered)" class="gt_row gt_center" style="font-size: small;">26</td></tr>
+    <tr><td headers="mission" class="gt_row gt_left" style="font-size: small;">LS7</td>
+<td headers="unique mission-dates (all)" class="gt_row gt_center" style="font-size: small;">30</td>
+<td headers="unique mission-dates (filtered)" class="gt_row gt_center" style="font-size: small;">30</td></tr>
+    <tr><td headers="mission" class="gt_row gt_left" style="font-size: small;">LS8</td>
+<td headers="unique mission-dates (all)" class="gt_row gt_center" style="font-size: small;">17</td>
+<td headers="unique mission-dates (filtered)" class="gt_row gt_center" style="font-size: small;">17</td></tr>
+    <tr><td headers="mission" class="gt_row gt_left" style="font-size: small;">LS9</td>
+<td headers="unique mission-dates (all)" class="gt_row gt_center" style="font-size: small;">6</td>
+<td headers="unique mission-dates (filtered)" class="gt_row gt_center" style="font-size: small;">6</td></tr>
+    <tr><td headers="mission" class="gt_row gt_left" style="font-size: small;">SEN2</td>
+<td headers="unique mission-dates (all)" class="gt_row gt_center" style="font-size: small;">23</td>
+<td headers="unique mission-dates (filtered)" class="gt_row gt_center" style="font-size: small;">23</td></tr>
+  </tbody>
   
-  for d in range(date_length_8):
-    md = uniqueMissDate_l8.get(d)
-    image = (newStack_l8
-      .filter(ee.Filter.eq(&#39;missDate&#39;, md))
-      .first()
-      .select(&#39;classification&#39;))
-    export_image = ee.batch.Export.image.toDrive(
-      image = image,
-      region = aoi_ee.geometry(),
-      description = &#39;GTB_v&#39; + v_date + &#39;_&#39; + str(md.getInfo()),
-      folder = &#39;GTB_v&#39;+v_date,
-      scale = 30,
-      crs = img_crs,
-      maxPixels = 1e13)
-    #Check how many existing tasks are running and take a break of 30 mins if it&#39;s &gt;25
-    maximum_no_of_tasks(10, 5*60)
-    #Send next task.
-    export_image.start()
-else:
-  print(&#39;Raster export turned off for Landsat 8&#39;)</code></pre>
-<pre><code>## Raster export turned off for Landsat 8</code></pre>
+  <tfoot class="gt_footnotes">
+    <tr>
+      <td class="gt_footnote" colspan="3"> Table 2. Summary of eePlumB mission-dates present in the label dataset. When filtered for ouliers, only two mission-dates, both Landsat 5 images, were lost from the dataset.</td>
+    </tr>
+  </tfoot>
+</table>
 </div>
-<div id="gtb-images-for-landsat-9" class="section level3">
-<h3>GTB images for Landsat 9</h3>
-<pre class="python"><code>if export_raster == True:
-  date_length_9 = len(uniqueMissDate_l9.getInfo())
-  
-  for d in range(date_length_9):
-    md = uniqueMissDate_l9.get(d)
-    image = (newStack_l9
-      .filter(ee.Filter.eq(&#39;missDate&#39;, md))
-      .first()
-      .select(&#39;classification&#39;))
-    export_image = ee.batch.Export.image.toDrive(
-      image = image,
-      region = aoi_ee.geometry(),
-      description = &#39;GTB_v&#39; + v_date + &#39;_&#39; + str(md.getInfo()),
-      folder = &#39;GTB_v&#39;+v_date,
-      scale = 30,
-      crs = img_crs,
-      maxPixels = 1e13)
-    #Check how many existing tasks are running and take a break of 30 mins if it&#39;s &gt;25
-    maximum_no_of_tasks(10, 5*60)
-    #Send next task.
-    export_image.start()
-else:
-  print(&#39;Raster export turned off for Landsat 9&#39;)</code></pre>
-<pre><code>## Raster export turned off for Landsat 9</code></pre>
 </div>
-<div id="gtb-images-for-sentinel-2" class="section level3">
-<h3>GTB images for Sentinel 2</h3>
-<pre class="python"><code>if export_raster == True:
-  date_length_sen = len(uniqueMissDate_sen.getInfo())
-  
-  for d in range(date_length_sen):
-    md = uniqueMissDate_sen.get(d)
-    image = (newStack_sen
-      .filter(ee.Filter.eq(&#39;missDate&#39;, md))
-      .first()
-      .select(&#39;classification&#39;))
-    export_image = ee.batch.Export.image.toDrive(
-      image = image,
-      region = aoi_ee.geometry(),
-      description = &#39;GTB_v&#39; + v_date + &#39;_&#39; + str(md.getInfo()),
-      folder = &#39;GTB_v&#39;+v_date,
-      scale = 10,
-      crs = img_crs_sen,
-      maxPixels = 1e13)
-    #Check how many existing tasks are running and take a break of 30 mins if it&#39;s &gt;25
-    maximum_no_of_tasks(10, 5*60)
-    #Send next task.
-    export_image.start()
-else:
-  print(&#39;Raster export turned off for Sentinel-2&#39;)</code></pre>
-<pre><code>## Raster export turned off for Sentinel-2</code></pre>
+<div id="model-evaluation" class="section level2">
+<h2>Model evaluation</h2>
+<p>Models performance was acceptable across open water, cloud, and the
+generalized sediment (where the 3 sediment categories were grouped
+together).</p>
+</div>
+<div id="model-application" class="section level2">
+<h2>Model application</h2>
+<p>look at n images over time (histo-ts distribution)</p>
+<p>look at proportion of aoi classified over time?</p>
+</div>
+</div>
+<div id="references" class="section level1 unnumbered">
+<h1 class="unnumbered">References</h1>
+<div id="refs" class="references csl-bib-body hanging-indent">
+<div id="ref-amani2022" class="csl-entry">
+Amani, Meisam, Mohammad Kakooei, Arsalan Ghorbanian, Rebecca Warren,
+Sahel Mahdavi, Brian Brisco, Armin Moghimi, et al. 2022. <span>“Forty
+Years of Wetland Status and Trends Analyses in the Great Lakes Using
+Landsat Archive Imagery and Google Earth Engine.”</span> <em>Remote
+Sensing</em> 14 (15). <a href="https://doi.org/10.3390/rs14153778">https://doi.org/10.3390/rs14153778</a>.
+</div>
+<div id="ref-e.l.hestir2012" class="csl-entry">
+E. L. Hestir, J. A. Greenberg, and S. L. Ustin. 2012.
+<span>“Classification Trees for Aquatic Vegetation Community Prediction
+from Imaging Spectroscopy.”</span> <em>IEEE Journal of Selected Topics
+in Applied Earth Observations and Remote Sensing</em> 5 (5): 1572–84. <a href="https://doi.org/10.1109/JSTARS.2012.2200878">https://doi.org/10.1109/JSTARS.2012.2200878</a>.
+</div>
+<div id="ref-mohseni2023" class="csl-entry">
+Mohseni, Farzane, Meisam Amani, Pegah Mohammadpour, Mohammad Kakooei,
+Shuanggen Jin, and Armin Moghimi. 2023. <span>“Wetland Mapping in Great
+Lakes Using Sentinel-1/2 Time-Series Imagery and DEM Data in Google
+Earth Engine.”</span> <em>Remote Sensing</em> 15 (14). <a href="https://doi.org/10.3390/rs15143495">https://doi.org/10.3390/rs15143495</a>.
+</div>
+<div id="ref-v.l.valenti2020" class="csl-entry">
+V. L. Valenti, E. C. Carcelen, K. Lange, N. J. Russo, and B. Chapman.
+2020. <span>“Leveraging Google Earth Engine User Interface for
+Semiautomated Wetland Classification in the Great Lakes Basin at 10 m
+with Optical and Radar Geospatial Datasets.”</span> <em>IEEE Journal of
+Selected Topics in Applied Earth Observations and Remote Sensing</em>
+13: 6008–18. <a href="https://doi.org/10.1109/JSTARS.2020.3023901">https://doi.org/10.1109/JSTARS.2020.3023901</a>.
+</div>
+<div id="ref-visser2018" class="csl-entry">
+Visser, Fleur, Kerst Buis, Veerle Verschoren, and Jonas Schoelynck.
+2018. <span>“Mapping of Submerged Aquatic Vegetation in Rivers from Very
+High-Resolution Image Data, Using Object-Based Image Analysis Combined
+with Expert Knowledge.”</span> <em>Hydrobiologia</em> 812 (1): 157–75.
+<a href="https://doi.org/10.1007/s10750-016-2928-y">https://doi.org/10.1007/s10750-016-2928-y</a>.
+</div>
+<div id="ref-wolter2005" class="csl-entry">
+Wolter, Peter T., Carol A. Johnston, and Gerald J. Niemi. 2005.
+<span>“Mapping Submergent Aquatic Vegetation in the US Great Lakes Using
+Quickbird Satellite Data.”</span> <em>International Journal of Remote
+Sensing</em> 26 (23): 5255–74. <a href="https://doi.org/10.1080/01431160500219208">https://doi.org/10.1080/01431160500219208</a>.
+</div>
+<div id="ref-yang2022" class="csl-entry">
+Yang, Xiao, Tamlin M. Pavelsky, Matthew R. V. Ross, Stephanie R.
+Januchowski-Hartley, Wayana Dolan, Elizabeth H. Altenau, Michael
+Belanger, et al. 2022. <span>“Mapping Flow-Obstructing Structures on
+Global Rivers.”</span> <em>Water Resources Research</em> 58 (1):
+e2021WR030386. <a href="https://doi.org/10.1029/2021WR030386">https://doi.org/10.1029/2021WR030386</a>.
 </div>
 </div>
 </div>
