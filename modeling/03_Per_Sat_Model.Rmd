@@ -523,7 +523,7 @@ print(training_conf_l5)
 training_conf_l5['mission'] = 'Landsat 5'
 training_conf_l5.reset_index(inplace = True)
 training_conf_l5 = training_conf_l5.rename(columns = {'level_0': 'class'})  
-training_conf_l5.to_csv('data/output/GTB_'+v_date+'_L5_training_confusion.csv', index = False)
+training_conf_l5.to_csv('data/output/GTB_'+v_date+'_l5_training_confusion.csv', index = False)
 
 confusionMatrixGTB_ls5 = (testing_ls5
   .classify(trainedGTB_ls5)
@@ -542,7 +542,7 @@ print(confusion_l5)
 confusion_l5['mission'] = 'Landsat 5'
 confusion_l5.reset_index(inplace = True)
 confusion_l5 = confusion_l5.rename(columns = {'level_0': 'class'})  
-confusion_l5.to_csv('data/output/GTB_'+v_date+'_L5_confusion.csv', index = False)
+confusion_l5.to_csv('data/output/GTB_'+v_date+'_l5_confusion.csv', index = False)
 
 acc_values_GTB_ls5 = (confusionMatrixGTB_ls5.accuracy().getInfo())
 print("GTB Confusion Overall Accuracy for Landsat 5: ", acc_values_GTB_ls5)
