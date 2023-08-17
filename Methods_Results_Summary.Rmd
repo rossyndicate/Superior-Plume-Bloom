@@ -166,6 +166,8 @@ look at n images over time (histo-ts distribution)
 
 look at proportion of aoi classified over time?
 
+# References
+
 ```{r, echo = F}
 knitr::wrap_rmd('Methods_Results_Summary.Rmd', width = 80, backup = NULL)
 ```
