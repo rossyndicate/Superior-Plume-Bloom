@@ -49,7 +49,7 @@ the tasks to GEE
 ```{python}
 # These should either be True or False
 export_summary = False
-export_raster = False
+export_raster = True
 ```
 
 Indicate the label version
@@ -67,7 +67,7 @@ import time
 import pandas as pd
 import geopandas as gpd
 
-v_date = '2023-08-03'
+v_date = '2023-10-23'
 ```
 
 ## GEE Setup
@@ -802,7 +802,7 @@ bn = ['Blue', 'Green', 'Red', 'B5', 'B6', 'B7', 'QA_RADSAT']
 ROWS = ee.List([27, 28])
 
 def applyScaleFactors(image):
-  opticalBands = image.select(bn).multiply(0.0000275).add(-0.2) #flagging this - this applies the offset to QA RADSAT. :(
+  opticalBands = image.select(bn).multiply(0.0000275).add(-0.2) #note - this applies the offset to QA RADSAT - the 0 value will now be -0.2!
   return image.addBands(opticalBands, None, True)
 
 # load Landsat 5, 7, 8, 9 Surface Reflectance and rename bands
@@ -832,11 +832,11 @@ l5 = (ee.ImageCollection('LANDSAT/LT05/C02/T1_L2')
   .map(applyScaleFactors))
 ```
 
-Add QA_RADSAT mask to mask where any band was saturated [[adding flag here!!]]
+Add QA_RADSAT mask to mask where any band was saturated
 
 ```{python}
 def apply_radsat_mask(image):
-  radsat = image.select('QA_RADSAT').eq(0)
+  radsat = image.select('QA_RADSAT').eq(-0.2) # this is due to the application of the scaling factor
   return image.updateMask(radsat)
 
 l9 = l9.map(apply_radsat_mask)
