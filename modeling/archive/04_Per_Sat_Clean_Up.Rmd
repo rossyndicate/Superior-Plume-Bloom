@@ -28,7 +28,7 @@ v_date = '2023-08-03'
 # Purpose
 
 This script pulls down the tabular data export from GEE that lives in the
-ROSSyndicate account and uploads to the Superior Folder after makeing some area
+ROSSyndicate account and uploads to the Superior Folder after making some area
 calculations.
 
 ```{r, echo = F}
