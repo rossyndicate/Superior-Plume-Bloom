@@ -1,13 +1,15 @@
 ---
 title: "Methods and Results Summary"
 author: "ROSSyndicate"
-date: "2023-08-07"
+date: "`r Sys.Date()`"
 output: html_document
 bibliography: references.bib
 ---
 
 ```{r, include = F}
-packages <- c('tidyverse', 'gt')
+knitr::opts_chunk$set(message = F, echo = F, error = F, warning = F)
+
+packages <- c("tidyverse", "gt", "sf", "tmap")
 
 package_loader <- function(x) {
     if (x %in% installed.packages()) {
@@ -18,28 +20,35 @@ package_loader <- function(x) {
     }
 }
 
-lapply(packages, package_loader)
+invisible(lapply(packages, package_loader))
 ```
 
 # Introduction
 
-Remote sensing image classification is common in terrestrial applications (in particular, land use and land cover), but has not been applied in aquatic environments beyond general presence and absence of water and wetlands. The primary exception to the use of image classification in aquatic environments is assessing the presence of submerged aquatic vegetation ("SAV") (e.g., [@visser2018], [@e.l.hestir2012]); however, these classification methods require high resolution imagery with high spectral resolution often from land-based high-resolution photography or unpersoned aerial vehicles ("UAVs").
+Remote sensing image classification is common in terrestrial applications (in particular, land use and land cover), but has not been applied in aquatic environments beyond general presence and absence of water and wetlands. The primary exception to the use of image classification in aquatic environments is assessing the presence of submerged aquatic vegetation ("SAV") (e.g., [@visser2018, @e.l.hestir2012]); however, these classification methods require high resolution imagery with high spectral resolution often from land-based high-resolution photography or unpersoned aerial vehicles ("UAVs").
 
-In the Great Lakes (GL) region, much of the use of image classification is completed using moderate resolution (e.g., Landsat, Sentinel, MODIS) satellite images, focusing on mapping the distribution and types of wetlands throughout the region ([@mohseni2023], [@v.l.valenti2020]), as well as SAV distribution throughout the system ([@wolter2005]). Most of these analyses focus on a relatively short temporal period (months to years), while a some span the entire Landsat archive from the mid '80s through the recent past (e.g., [@amani2022]).
+In the Great Lakes (GL) region, much of the use of image classification is completed using moderate resolution (e.g., Landsat, Sentinel, MODIS) satellite images, focusing on mapping the distribution and types of wetlands throughout the region ([@mohseni2023, @v.l.valenti2020]), as well as SAV distribution throughout the system [@wolter2005]. Most of these analyses focus on a relatively short temporal period (months to years), while a some span the entire Landsat archive from the mid '80s through the recent past (e.g., [@amani2022]).
 
 In the recent past, much attention has been paid to the apparent proliferation of algal blooms in some of the clearest lakes, including Lake Superior (cite). While detecting algal blooms from moderate-resolution satellite imagery is difficult due to low temporal frequency, time of day of acquisition, pixel size, and spectral band metrics (cite), as well as the lack of observed, spatially-explicit bloom observations to validate presence and absence, detecting sediment plumes (which often precede algal blooms) is relatively easy with just the red, green, and blue bands common on nearly all moderate-resolution satellites.
 
-In this analysis, we use the Landsat Collection 2 Surface Reflectance product archive (missions 5 through 9) and the Sentinel 2 Surface Reflectance product archive, a novel crowd-sourced label data set (eePlumB), and Google Earth Engine to create image classification models to create a time series of rasters that enumerate sediment plumes across the western arm of Lake Superior.
+In this analysis, we use the Landsat Collection 2 Surface Reflectance product archive (missions 5 through 9, [@vermote2016, @masek2006]) and the Sentinel 2 Surface Reflectance product archive [@drusch2012], a novel crowd-sourced label data set (eePlumB), and Google Earth Engine to create image classification models to create a time series of rasters that enumerate sediment plumes across the western arm of Lake Superior.
 
-[[image of AOI]]
+```{r fig-aoi, fig.dpi = 300, fig.align="center", fig.width=2, fig.height=1, fig.cap = "Area of interest for this analysis in purple, consisting of a portion the western extent of Lake Superior, the Apostle Islands, and Chequamegon Bay."}
+aoi <- read_sf("data/aoi/Superior_AOI_modeling.shp") %>%
+  st_make_valid()
+
+tmap_mode("view")
+tm_basemap("CartoDB.Positron") +
+  tm_shape(aoi) + tm_polygons(col = "#b97eea", alpha = 0.5) +
+  tm_scale_bar() 
+
+```
 
 # Methods
 
 ## eePlumB
 
-Using the overarching architecture presented in the Global Rivers Obstruction Database (GROD) ([@yang2022]) to engage volunteer observers, we croudsourced class labels for Landsat and Sentinel-2 images for the following classes: 'cloud', 'open water', 'light near shore sediment', 'dark near shore sediment', 'offshore sediment', 'shoreline contamination', 'other', and 'algae bloom' using our Earth Engine Plume and Bloom labeling interface ("eePlumB").
-
-[[more here at a later date, borrow from the eePlumB documentation already created]]
+Using the overarching architecture presented in the Global Rivers Obstruction Database (GROD) [@yang2022] to engage volunteer observers, we croudsourced class labels for Landsat and Sentinel-2 images for the following classes: 'cloud', 'open water', 'light near shore sediment', 'dark near shore sediment', 'offshore sediment', 'shoreline contamination', 'other', and 'algae bloom' using our Earth Engine Plume and Bloom labeling interface ("eePlumB").
 
 In order to eliminate outlier band information and reduce noise in the input for our models, the second and ninety-eighth percentiles were calculated for each mission-band combination and label data associated with values outside of those cutoffs were dropped from the analysis. [[Could add the `02_label_class_summaries.Rmd` as supplemental.]]
 
