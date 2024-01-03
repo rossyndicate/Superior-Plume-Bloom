@@ -58,8 +58,6 @@ We used the built-in gradient tree boost ("GTB") ee.Classifier() method within G
 
 GTB models for each mission were trained independently on the rescaled band data from red, green, blue, near infrared, and both shortwave infrared bands for Landsat missions to classify 5 categories: cloud, open water, light near shore sediment, dark near shore sediment, and offshore sediment. For Sentinel-2, the bands used to develop the classifier were red, green, blue, red edge 1-3, near infrared, and both short-wave infrared bands. We did not tune the hyperparameters for the GTB model, as performance was already acceptable for discerning open water from sediment plume using 10 trees.
 
-[[if we develop this into a MS, we may wish to add more here, including hyperparameter tuning and/or use of other ee.Classifiers). Most papers of this nature just use all 4 - like we did with the Yugo model - with iterations for hypertuning.]]
-
 ## Image classification
 
 ### Image Pre-processing
@@ -70,7 +68,18 @@ Three areas of interest (AOIs) were used in this analysis: the complete AOI, the
 
 ### Model application and summaries
 
-Each GTB model was applied to the corresponding satellite image stack and two data types were output: a tabular data summary of the area classified and the total area of each class for all three AOIs, as well as a .tif raster at the resolution the GTB was applied (10m for Sentinel-2 and 30m for Landsat) for each classified mission-date image.
+Each GTB model was applied to the corresponding satellite image stack and two data types were output: a tabular data summary of the area classified and the total area of each class for all three AOIs, as well as a .tif raster at the resolution the GTB was applied (10m for Sentinel-2 and 30m for Landsat) for each classified mission-date image. The .tif rasters were labeled by pixel with the following values:
+
+| Pixel Value | Pixel Description          |
+|-------------|----------------------------|
+| 0           | cloud                      |
+| 1           | open water                 |
+| 2           | light, near-shore sediment |
+| 3           | dark, near-shore sediment  |
+| 4           | offshore sediment          |
+| NULL        | out of area/masked         |
+
+: Pixel values and description for the GTB model.
 
 ## Model evaluation metrics
 
