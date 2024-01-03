@@ -1629,9 +1629,8 @@ First, we need to define a function to add one to the classification band:
 
 ```{python}
 def add_one_to_classification(image):
-  cl = image.select('classification')
-  cl_plus_one = cl.add(1).rename('classification_plus1')
-  return cl_plus_one
+  cl = image.select('classification').add(1)
+  return image.addBands(cl)
 
 ```
 
@@ -1650,7 +1649,7 @@ if export_raster == True:
       .first()
       .clip(aoi_ee.geometry()))
     image_new_class = (add_one_to_classification(image)
-      .select('classification_plus1'))
+      .select('classification'))
     export_image = ee.batch.Export.image.toDrive(
       image = image_new_class,
       region = aoi_ee.geometry(),
@@ -1682,7 +1681,7 @@ if export_raster == True:
       .first()
       .clip(aoi_ee.geometry()))
     image_new_class = (add_one_to_classification(image)
-      .select('classification_plus1'))
+      .select('classification'))
     export_image = ee.batch.Export.image.toDrive(
       image = image_new_class,
       region = aoi_ee.geometry(),
@@ -1713,7 +1712,7 @@ if export_raster == True:
       .first()
       .clip(aoi_ee.geometry()))
     image_new_class = (add_one_to_classification(image)
-      .select('classification_plus1'))
+      .select('classification'))
     export_image = ee.batch.Export.image.toDrive(
       image = image_new_class,
       region = aoi_ee.geometry(),
@@ -1744,7 +1743,7 @@ if export_raster == True:
       .first()
       .clip(aoi_ee.geometry()))
     image_new_class = (add_one_to_classification(image)
-      .select('classification_plus1'))
+      .select('classification'))
     export_image = ee.batch.Export.image.toDrive(
       image = image_new_class,
       region = aoi_ee.geometry(),
@@ -1775,7 +1774,7 @@ if export_raster == True:
       .first()
       .clip(aoi_ee.geometry()))
     image_new_class = (add_one_to_classification(image)
-      .select('classification_plus1'))
+      .select('classification'))
     export_image = ee.batch.Export.image.toDrive(
       image = image_new_class,
       region = aoi_ee.geometry(),
