@@ -21,6 +21,8 @@ package_loader <- function(x) {
 }
 
 invisible(lapply(packages, package_loader))
+
+model_version = "2024-01-03"
 ```
 
 # Introduction
@@ -40,7 +42,7 @@ aoi <- read_sf("data/aoi/Superior_AOI_modeling.shp") %>%
 tmap_mode("view")
 tm_basemap("CartoDB.Positron") +
   tm_shape(aoi) + tm_polygons(col = "#b97eea", alpha = 0.5) +
-  tm_scale_bar() 
+  tm_scale_bar()
 
 ```
 
@@ -70,30 +72,19 @@ Three areas of interest (AOIs) were used in this analysis: the complete AOI, the
 
 Each GTB model was applied to the corresponding satellite image stack and two data types were output: a tabular data summary of the area classified and the total area of each class for all three AOIs, as well as a .tif raster at the resolution the GTB was applied (10m for Sentinel-2 and 30m for Landsat) for each classified mission-date image. The .tif rasters were labeled by pixel with the following values:
 
-| Pixel Value | Pixel Description          |
-|-------------|----------------------------|
-| 0           | cloud                      |
-| 1           | open water                 |
-| 2           | light, near-shore sediment |
-| 3           | dark, near-shore sediment  |
-| 4           | offshore sediment          |
-| NULL        | out of area/masked         |
+| Pixel Value \| Pixel Description \|
 
-: Pixel values and description for the GTB model.
+\|-------------\|----------------------------\| \| 1 \| cloud \| \| 2 \| open water \| \| 3 \| light, near-shore sediment \| \| 4 \| dark, near-shore sediment \| \| 5 \| offshore sediment \| \| 0 \| out of area/masked \|
+
+: Pixel values and description for the GTB tif model output.
 
 ## Model evaluation metrics
 
-Models were evaluated through confusion matrices, error matrices, kappa statistics, F1 statistics for each class, and weighted F1 statistics per model.
+Models were evaluated through error matrices, kappa statistics, and F1 statistics for each class.
 
--   confusion matrix - training: an indication per label class where the model-assigned class and label class are compared.
 -   error matrix - testing: given the test data, does the model assign the correct class? These are tibble-style summaries where the model-assigned class and label class are compared.
--   *overall accuracy\*\*: percentage of model-assigned labels that match the test dataset, an indicator of model precision. No weights are given to any class based on the number of labels.*
--   *training accuracy\*\*: how well does the classification model assign the correct class to the training data, an indicator of model precision.*
 -   kappa statistic: an indicator of how much better or worse a model performs than by random chance. score is -1 to 1, where 0 is the same as random chance, positive values are better than random chance and negative are poorer than random chance
--   F1 score: the harmonic mean of precision and recall per class (beta = 1, hence F1 where precision and recall are evenly weighted)
--   weighted F1: class-weighted (by number of labels) F1 score across all classes (sum of the proportional F1 score per class)
-
-*\*\*We have unequal distribution of classes, so should not use overall accuracy metrics as they can be misleading when the distribution of classes are not equal.*
+-   F1 score: the harmonic mean of precision and recall per class (beta = 1, hence F1 where precision and recall are evenly weighted). Scores of 0 means the model cannot predict the correct class, a score of 1 means the model perfectly predicts the correct class.
 
 Models were evaluated as 5-class categories and 3-class categories where all sediment categories were compiled into a single class.
 
@@ -142,7 +133,7 @@ gt(label_table_join) %>%
               c('Landsat 5 (filtered)':'Sentinel-2 (filtered)')) %>%
   tab_style(cell_text(size = 'small'), cells_body()) %>%
   tab_style(cell_text(size = 'small'), cells_column_labels()) %>%
-  tab_footnote('Table 1. Summary of eePlumB classes per mission (version 2023-07-20). All labels (left group) are the raw number of collated labels, the right group are labels that have been filtered as described.')
+  tab_footnote('Table 2. Summary of eePlumB classes per mission (version 2023-07-20). All labels (left group) are the raw number of collated labels, the right group are labels that have been filtered as described.')
 ```
 
 ```{r, include = F, echo = F}
@@ -171,12 +162,149 @@ gt(summary_table_join) %>%
   cols_align(., 'center', columns = c('unique mission-dates (all)', 'unique mission-dates (filtered)')) %>%
   tab_style(cell_text(size = 'small'), cells_body()) %>%
   tab_style(cell_text(size = 'small'), cells_column_labels()) %>%
-  tab_footnote('Table 2. Summary of eePlumB mission-dates present in the label dataset. When filtered for ouliers, only two mission-dates, both Landsat 5 images, were lost from the dataset.')
+  tab_footnote('Table 3. Summary of eePlumB mission-dates present in the label dataset. When filtered for ouliers, only two mission-dates, both Landsat 5 images, were lost from the dataset.')
 ```
 
 ## Model evaluation
 
-Models performance was acceptable across open water, cloud, and the generalized sediment (where the 3 sediment categories were grouped together).
+Models performance was acceptable across open water, cloud, and discrete sediment categories. All statistics presented in this section represent summary statistics for classes from the testing set. Kappa statistic across all missions was always greater than 0.8, indicating much better performance than random assignment (Table 4). The F1 score, balanced equally between precision and recall, was reasonable across all categories and missions with the minimum F1 score being 0.62 for "dark near-shore sediment" for Landsat 7 (Table 4). Cloud and open water classification F1 scores were always greater than 0.86 (Table 4).
+
+```{r, echo = F}
+perf_metrics <- read_csv(paste0("data/output/GTB_", model_version, "_performance_stats.csv")) %>%
+  select(-GTB_accuracy) %>%
+  mutate(across(c(cloud:GTB_kappa),
+                ~ round(., 2))) %>%
+  rename("cloud" = "cloud",
+         "open water" = "openWater",
+         "light near-shore sediment" = "lightNearShoreSediment",
+         "off-shore sediment" = "offShoreSediment",
+         "dark near-shore sediment" = "darkNearShoreSediment",
+         "model kappa statistic" = "GTB_kappa")
+gt(perf_metrics) %>%
+  cols_align(., 'center', columns = c("cloud":"model kappa statistic")) %>%
+  tab_spanner("classification F1 score",
+              c("cloud":"dark near-shore sediment")) %>%
+  tab_style(cell_text(size = 'small'), cells_body()) %>%
+  tab_style(cell_text(size = 'small'), cells_column_labels()) %>%
+  tab_footnote('Table 4. Summary of F1 scores per class and across-class kappa statisic for the GTB model.')
+```
+
+When the sediment classes were aggregated to a single sediment class, F1 scores and the kappa statistic increased dramatically (Table 5).
+
+```{r echo = F}
+# load confusion files
+confusion_files <- list.files("data/output", pattern = c(model_version), full.names = T)
+confusion_files <- confusion_files[!grepl("performance", confusion_files)]
+confusion_files <- confusion_files[!grepl("training", confusion_files)]
+# and read them in
+confusion <- map_dfr(confusion_files, read_csv)
+# and re-org them with simplified sediment classes
+confusion_simple <- confusion %>%
+  mutate(new_class = if_else(grepl("sed", class, ignore.case = T),
+                             "sediment",
+                             class)) %>%
+  group_by(new_class, mission) %>%
+  summarize(across(c(cloud:darkNearShoreSediment),
+                   ~ sum(.))) %>%
+  pivot_longer(cols = c(cloud:darkNearShoreSediment),
+               names_to = 'class_pred',
+               values_to = 'n_pred') %>%
+  mutate(new_class_pred = if_else(grepl("sed", class_pred, ignore.case = T),
+                             "sediment",
+                             class_pred)) %>%
+  group_by(new_class, new_class_pred, mission) %>%
+  summarize(n = sum(n_pred)) %>%
+  pivot_wider(names_from = "new_class_pred",
+              values_from = "n")
+
+# now calculate F1 score and kappa statistic.
+# precision = true positive /(true pos + false positives)
+precision_simple <- confusion_simple %>%
+  mutate(precision_cloud = cloud/(cloud + openWater + sediment),
+         precision_water = openWater/(cloud + openWater + sediment),
+         precision_sediment = sediment/((cloud + openWater + sediment))) %>%
+  mutate(precision = case_when(new_class == "cloud" ~ precision_cloud,
+                               new_class == "openWater" ~ precision_water,
+                               new_class == "sediment" ~ precision_sediment)) %>%
+  select(new_class, mission, precision)
+
+# recall = true positive /(true pos + false neg)
+recall_simple <- confusion_simple %>%
+  pivot_longer(cols = c("cloud":"sediment"),
+               names_to = "new_class_pred",
+               values_to = "count") %>%
+  pivot_wider(names_from = "new_class",
+              values_from = "count") %>%
+  mutate(recall_cloud = cloud/(cloud + openWater + sediment),
+         recall_water = openWater/(cloud + openWater + sediment),
+         recall_sediment = sediment/((cloud + openWater + sediment))) %>%
+  mutate(recall = case_when(new_class_pred == "cloud" ~ recall_cloud,
+                               new_class_pred == "openWater" ~ recall_water,
+                               new_class_pred == "sediment" ~ recall_sediment)) %>%
+  select(new_class = new_class_pred,
+         mission, recall)
+
+# F1 score = 2 * (precision*recall)/(precision+recall)
+summary_simple = full_join(precision_simple, recall_simple) %>%
+  mutate(f1score = 2*precision*recall/(precision+recall)) %>%
+  select(mission, new_class, f1score)
+
+# kappa statistic = observed accuracy - expected accuracy / 1 - expected accuracy
+# observed accuracy = number of correct labels / total number of labels
+observed_accuracy = confusion_simple %>%
+  group_by(mission) %>%
+  mutate(total_labels = sum(across(cloud:sediment))) %>%
+  pivot_longer(cols = c(cloud:sediment),
+               names_to = "new_class_pred",
+               values_to = "count") %>%
+  filter(new_class == new_class_pred) %>%
+  group_by(mission, total_labels) %>%
+  summarize(count_correct = sum(count)) %>%
+  mutate(accuracy = count_correct/total_labels)
+
+# expected accuracy = sum of marginal frequencys across all classes / total labels
+# marginal frequency = actual number of labels correct * predicted number of labels correct / total labels
+expected_accuracy = confusion_simple %>%
+  mutate(actual_correct = cloud + openWater + sediment) %>%
+  pivot_longer(cols = c(cloud:sediment),
+               names_to = "new_class_pred",
+               values_to = "count") %>%
+  mutate(pred_correct = if_else(new_class == new_class_pred,
+                                  count,
+                                  NA_real_)) %>%
+  filter(!is.na(pred_correct)) %>%
+  left_join(observed_accuracy) %>%
+  mutate(marginal_frequency = actual_correct*pred_correct/total_labels) %>%
+  ungroup() %>%
+  select(mission, marginal_frequency) %>%
+  group_by(mission) %>%
+  slice(1) %>%
+  left_join(observed_accuracy) %>%
+  mutate(expect_acc = sum(marginal_frequency)/total_labels)
+
+kappa = expected_accuracy %>%
+  mutate(kappa = (accuracy - expect_acc)/(1-expect_acc)) %>%
+  select(mission, kappa)
+
+summary_simple <- summary_simple %>%
+  pivot_wider(names_from = "new_class",
+              values_from = "f1score") %>%
+  full_join(kappa) %>%
+  mutate(across(cloud:kappa,
+                ~ round(., 2))) %>%
+  rename("model kappa statistic" = "kappa",
+         "open water" = "openWater")
+```
+
+```{r echo = F}
+gt(summary_simple) %>%
+  cols_align(., 'center', columns = c("cloud":"model kappa statistic")) %>%
+  tab_spanner("classification F1 score",
+              c("cloud":"sediment")) %>%
+  tab_style(cell_text(size = 'small'), cells_body()) %>%
+  tab_style(cell_text(size = 'small'), cells_column_labels()) %>%
+  tab_footnote('Table 4. Summary of F1 scores per class and across-class kappa statisic for the GTB model with simplified sediment category.')
+```
 
 ## Model application
 
