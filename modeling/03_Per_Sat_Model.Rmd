@@ -48,7 +48,7 @@ the tasks to GEE
 
 ```{python}
 # These should either be True or False
-export_summary = True
+export_summary = False
 export_raster = True
 ```
 
@@ -67,7 +67,7 @@ import time
 import pandas as pd
 import geopandas as gpd
 
-v_date = '2024-01-03'
+v_date = '2024-01-08'
 ```
 
 ## GEE Setup
@@ -1208,7 +1208,7 @@ export_summary_5_aoi = (ee.batch.Export.table.toDrive(
   collection = allAreas_l5_aoi,
   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
   description = 'gradientTreeBoost_landsat_5_stack_v' + v_date,
-  folder = 'eePlumB_classification_v2024-01-04',
+  folder = 'eePlumB_classification_v2024-01-03',
   fileFormat = 'csv'))
 
 if export_summary == True :
@@ -1221,7 +1221,7 @@ export_summary_5_nosc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l5_nosc,
   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
   description = 'gradientTreeBoost_landsat_5_stack_nosc_v' + v_date,
-  folder = 'eePlumB_classification_v2024-01-04',
+  folder = 'eePlumB_classification_v2024-01-03',
   fileFormat = 'csv'))
 
 if export_summary == True :
@@ -1234,7 +1234,7 @@ export_summary_5_sc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l5_sc,
   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
   description = 'gradientTreeBoost_landsat_5_stack_sc_v' + v_date,
-  folder = 'eePlumB_classification_v2024-01-04',
+  folder = 'eePlumB_classification_v2024-01-03',
   fileFormat = 'csv'))
 
 if export_summary == True :
@@ -1251,7 +1251,7 @@ export_summary_7_aoi = (ee.batch.Export.table.toDrive(
   collection = allAreas_l7_aoi,
   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
   description = 'gradientTreeBoost_landsat_7_stack_v' + v_date,
-  folder = 'eePlumB_classification_v2024-01-04',
+  folder = 'eePlumB_classification_v2024-01-03',
   fileFormat = 'csv'))
 
 if export_summary == True :
@@ -1263,7 +1263,7 @@ export_summary_7_nosc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l7_nosc,
   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
   description = 'gradientTreeBoost_landsat_7_stack_nosc_v' + v_date,
-  folder = 'eePlumB_classification_v2024-01-04',
+  folder = 'eePlumB_classification_v2024-01-03',
   fileFormat = 'csv'))
 
 if export_summary == True :
@@ -1276,7 +1276,7 @@ export_summary_7_sc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l7_sc,
   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
   description = 'gradientTreeBoost_landsat_7_stack_sc_v' + v_date,
-  folder = 'eePlumB_classification_v2024-01-04',
+  folder = 'eePlumB_classification_v2024-01-03',
   fileFormat = 'csv'))
 
 if export_summary == True :
@@ -1292,7 +1292,7 @@ export_summary_8_aoi = (ee.batch.Export.table.toDrive(
   collection = allAreas_l8_aoi,
   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
   description = 'gradientTreeBoost_landsat_8_stack_v' + v_date,
-  folder = 'eePlumB_classification_v2024-01-04',
+  folder = 'eePlumB_classification_v2024-01-03',
   fileFormat = 'csv'))
 
 if export_summary == True :
@@ -1304,7 +1304,7 @@ export_summary_8_nosc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l8_nosc,
   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
   description = 'gradientTreeBoost_landsat_8_stack_nosc_v' + v_date,
-  folder = 'eePlumB_classification_v2024-01-04',
+  folder = 'eePlumB_classification_v2024-01-03',
   fileFormat = 'csv'))
 
 if export_summary == True :
@@ -1316,7 +1316,7 @@ export_summary_8_sc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l8_sc,
   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
   description = 'gradientTreeBoost_landsat_8_stack_sc_v' + v_date,
-  folder = 'eePlumB_classification_v2024-01-04',
+  folder = 'eePlumB_classification_v2024-01-03',
   fileFormat = 'csv'))
 
 if export_summary == True :
@@ -1332,7 +1332,7 @@ export_summary_9_aoi = (ee.batch.Export.table.toDrive(
   collection = allAreas_l9_aoi,
   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
   description = 'gradientTreeBoost_landsat_9_stack_v' + v_date,
-  folder = 'eePlumB_classification_v2024-01-04',
+  folder = 'eePlumB_classification_v2024-01-03',
   fileFormat = 'csv'))
 
 if export_summary == True :
@@ -1344,7 +1344,7 @@ export_summary_9_nosc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l9_nosc,
   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
   description = 'gradientTreeBoost_landsat_9_stack_nosc_v' + v_date,
-  folder = 'eePlumB_classification_v2024-01-04',
+  folder = 'eePlumB_classification_v2024-01-03',
   fileFormat = 'csv'))
 
 if export_summary == True :
@@ -1356,7 +1356,7 @@ export_summary_9_sc = (ee.batch.Export.table.toDrive(
   collection = allAreas_l9_sc,
   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
   description = 'gradientTreeBoost_landsat_9_stack_sc_v' + v_date,
-  folder = 'eePlumB_classification_v2024-01-04',
+  folder = 'eePlumB_classification_v2024-01-03',
   fileFormat = 'csv'))
 
 if export_summary == True :
@@ -1513,7 +1513,7 @@ export_summary_sen_aoi = (ee.batch.Export.table.toDrive(
   collection = allAreas_sen_aoi,
   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
   description = 'gradientTreeBoost_sen2_stack_v' + v_date,
-  folder = 'eePlumB_classification_v2024-01-04',
+  folder = 'eePlumB_classification_v2024-01-03',
   fileFormat = 'csv'))
 
 if export_summary == True :
@@ -1548,7 +1548,7 @@ export_summary_sen_nosc = (ee.batch.Export.table.toDrive(
   collection = allAreas_sen_nosc,
   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
   description = 'gradientTreeBoost_sen2_nosc_stack_v' + v_date,
-  folder = 'eePlumB_classification_v2024-01-04',
+  folder = 'eePlumB_classification_v2024-01-03',
   fileFormat = 'csv'))
 
 #export_summary_sen_nosc.start()
@@ -1585,7 +1585,7 @@ export_summary_sen_sc = (ee.batch.Export.table.toDrive(
   collection = allAreas_sen_sc,
   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'],
   description = 'gradientTreeBoost_sen2_sc_stack_v' + v_date,
-  folder = 'eePlumB_classification_v2024-01-04',
+  folder = 'eePlumB_classification_v2024-01-03',
   fileFormat = 'csv'))
 
 if export_summary == True :
@@ -1625,12 +1625,18 @@ def maximum_no_of_tasks(MaxNActive, waitingPeriod):
 
 ### Raster Export
 
-First, we need to define a function to add one to the classification band:
+First, we need to define a function to use the data from the multiple classified
+bands to populate a single band.
 
 ```{python}
-def add_one_to_classification(image):
-  cl = image.select('classification').add(1)
-  return image.addBands(cl)
+fromlist = [0,1,2,3,4]
+tolist = [1,2,3,4,5]
+def classifications_to_one_band(image):
+  cl = image.select('classification').clip(aoi_ee.geometry())
+  img_classified = (cl
+    .remap(fromlist, tolist, defaultValue = -99)
+    .rename('reclass'))
+  return image.addBands(img_classified)
 
 ```
 
@@ -1648,8 +1654,8 @@ if export_raster == True:
       .filter(ee.Filter.eq('missDate', md))
       .first()
       .clip(aoi_ee.geometry()))
-    image_new_class = (add_one_to_classification(image)
-      .select('classification'))
+    image_new_class = (classifications_to_one_band(image)
+      .select('reclass'))
     export_image = ee.batch.Export.image.toDrive(
       image = image_new_class,
       region = aoi_ee.geometry(),
@@ -1680,8 +1686,8 @@ if export_raster == True:
       .filter(ee.Filter.eq('missDate', md))
       .first()
       .clip(aoi_ee.geometry()))
-    image_new_class = (add_one_to_classification(image)
-      .select('classification'))
+    image_new_class = (classifications_to_one_band(image)
+      .select('reclass'))
     export_image = ee.batch.Export.image.toDrive(
       image = image_new_class,
       region = aoi_ee.geometry(),
@@ -1711,8 +1717,8 @@ if export_raster == True:
       .filter(ee.Filter.eq('missDate', md))
       .first()
       .clip(aoi_ee.geometry()))
-    image_new_class = (add_one_to_classification(image)
-      .select('classification'))
+    image_new_class = (classifications_to_one_band(image)
+      .select('reclass'))
     export_image = ee.batch.Export.image.toDrive(
       image = image_new_class,
       region = aoi_ee.geometry(),
@@ -1742,8 +1748,8 @@ if export_raster == True:
       .filter(ee.Filter.eq('missDate', md))
       .first()
       .clip(aoi_ee.geometry()))
-    image_new_class = (add_one_to_classification(image)
-      .select('classification'))
+    image_new_class = (classifications_to_one_band(image)
+      .select('reclass'))
     export_image = ee.batch.Export.image.toDrive(
       image = image_new_class,
       region = aoi_ee.geometry(),
@@ -1773,8 +1779,8 @@ if export_raster == True:
       .filter(ee.Filter.eq('missDate', md))
       .first()
       .clip(aoi_ee.geometry()))
-    image_new_class = (add_one_to_classification(image)
-      .select('classification'))
+    image_new_class = (classifications_to_one_band(image)
+      .select('reclass'))
     export_image = ee.batch.Export.image.toDrive(
       image = image_new_class,
       region = aoi_ee.geometry(),
