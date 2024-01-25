@@ -50,7 +50,7 @@ tm_basemap("CartoDB.Positron") +
 
 ## eePlumB
 
-Using the overarching architecture presented in the Global Rivers Obstruction Database (GROD) [@yang2022] to engage volunteer observers, we croudsourced class labels for Landsat and Sentinel-2 images for the following classes: 'cloud', 'open water', 'light near shore sediment', 'dark near shore sediment', 'offshore sediment', 'shoreline contamination', 'other', and 'algae bloom' using our Earth Engine Plume and Bloom labeling interface ("eePlumB").
+Using the overarching architecture presented in the Global Rivers Obstruction Database (GROD) [@yang2022] to engage volunteer observers, we croudsourced class labels for Landsat and Sentinel-2 images for the following classes: 'cloud', 'open water', 'light near shore sediment', 'dark near shore sediment', 'offshore sediment', 'shoreline contamination', 'other', and 'algae bloom' using our Earth Engine Plume and Bloom labeling interface ("eePlumB"). Dates for labeling were limited to the months of April through November to avoid ice-on.
 
 In order to eliminate outlier band information and reduce noise in the input for our models, the second and ninety-eighth percentiles were calculated for each mission-band combination and label data associated with values outside of those cutoffs were dropped from the analysis. [[Could add the `02_label_class_summaries.Rmd` as supplemental.]]
 
@@ -76,7 +76,7 @@ Each GTB model was applied to the corresponding satellite image stack and two da
 
 \|-------------\|-----------------------------------------\| \| 1 \| cloud \| \| 2 \| open water \| \| 3 \| light, near-shore sediment \| \| 4 \| dark, near-shore sediment \| \| 5 \| offshore sediment \| \| 0 \| out of area/masked for saturated pixels \|
 
-: Pixel values and description for the GTB tif model output.
+:   Pixel values and description for the GTB tif model output.
 
 ## Model evaluation metrics
 
@@ -309,6 +309,8 @@ gt(summary_simple) %>%
 # Discussion
 
 The GTB model was applied to all images in the Landsat and Sentinel 2 stacks, irregardless of time of year and presence/absence of ice. Classified images should only be used during ice-free periods, as no attempt was made to mask ice or to classify ice. It is important to note that evaluation of the GTB model was only done on the available by-pixel labels and that accuracy at classification edges may not be precise.
+
+In some cases, hazy dispersed clouds are incorrectly classified as off-shore sediment. Caution should be used clouds characterize a large proportion of the AOI.
 
 # References
 
