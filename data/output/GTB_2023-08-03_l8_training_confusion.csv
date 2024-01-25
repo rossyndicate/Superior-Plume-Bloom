@@ -1,6 +1,0 @@
-class,cloud,openWater,lightNearShoreSediment,offShoreSediment,darkNearShoreSediment,mission
-cloud,282,0,1,0,0,Landsat 8
-openWater,0,68,0,1,0,Landsat 8
-lightNearShoreSediment,1,0,124,7,4,Landsat 8
-offShoreSediment,0,0,5,106,1,Landsat 8
-darkNearShoreSediment,0,1,4,0,66,Landsat 8

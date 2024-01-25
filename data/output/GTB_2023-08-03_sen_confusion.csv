@@ -1,6 +1,0 @@
-class,cloud,openWater,lightNearShoreSediment,offShoreSediment,darkNearShoreSediment,mission
-cloud,148,0,0,0,0,Sentinel-2
-openWater,0,65,0,1,0,Sentinel-2
-lightNearShoreSediment,0,0,26,3,4,Sentinel-2
-offShoreSediment,0,1,1,42,4,Sentinel-2
-darkNearShoreSediment,0,1,4,0,10,Sentinel-2
