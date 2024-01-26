@@ -1,0 +1,509 @@
+---
+title: "eePlumB Train-Test Set"
+author: "ROSSyndicate"
+date: "2024-01-25"
+output: html_document
+editor_options:
+  markdown:
+    wrap: 80
+---
+
+```{r setup, echo = F}
+libs = c('reticulate', 'tidyverse')
+
+package_loader <- function(x) {
+    if (x %in% installed.packages()) {
+      library(x, character.only = TRUE)
+    } else {
+      install.packages(x)
+      library(x, character.only = TRUE)
+    }
+}
+
+lapply(libs, package_loader)
+```
+
+# Purpose
+
+This script processes the eePlumB labels and creates a train-test-split for model
+development. 
+
+## Activate conda environment
+
+Check for virtual environment and activate, otherwise, set up virtual
+environment.
+
+```{r, conda env}
+if (!dir.exists("env")) {
+  source("pySetup.R")
+} else {
+  use_condaenv(file.path(getwd(), "env"))
+}
+```
+
+### Settings/modules
+
+Indicate the label version
+
+```{r}
+label_version = '2023-07-20'
+```
+
+And then import the needed modules
+
+```{python}
+import ee
+import os
+import time
+import pandas as pd
+import geopandas as gpd
+
+v_date = '2024-01-08'
+```
+
+## GEE Setup
+
+```{python}
+ee.Authenticate()
+```
+
+When your browser states 'You are now authenticated with the gcloud CLI', the
+authentication is complete. This authentication is valid for 7 days.
+
+Now, we need to initialize our GEE session. You may need to change the project 
+name to one you own if you do not have write access.
+
+```{python}
+ee.Initialize(project = 'ee-ross-superior')
+```
+
+# Import assets
+
+## Load the labels file into the environment
+
+Because of how the later function is written, it works best to read these into
+R. I couldn't tell you why other than my function doesn't work with pandas
+dataframes.
+
+```{r}
+labels_file <- list.files('data/labels/', full.names = T)
+label_file <- labels_file[grepl(label_version, labels_file)]
+label_file <- label_file[!grepl('filter', label_file)]
+labels <- read_csv(label_file)
+
+# subset for sen/ls
+sen_labels = labels %>% 
+  filter(mission == 'SEN2')
+ls_labels = labels %>% 
+  filter(mission != 'SEN2')
+
+# and for 5/7/8/9
+ls5_labels = labels %>% 
+  filter(mission == 'LS5')
+ls7_labels = labels %>% 
+  filter(mission == 'LS7')
+ls8_labels = labels %>% 
+  filter(mission == 'LS8')
+ls9_labels = labels %>% 
+  filter(mission == 'LS9')
+```
+
+### Quick QAQC of the labels
+
+We know there are some outliers in here. To create a good model, we'll want to
+remove any 'outliers' from each of the label sets. Because we're creating models
+for each mission, we'll perform these outlier clean ups for each mission. We'll
+define 'outliers' as the outer 0.02 and 0.98 percentiles.
+
+Make some helper lists
+
+```{r}
+class_list = c("cloud", "openWater", "lightNearShoreSediment",
+               "darkNearShoreSediment", "offShoreSediment")
+
+ls_band_list = c(expr(Red), expr(Green), expr(Blue), expr(B5), expr(B6), expr(B7))
+sen_band_list = c(expr(Red), expr(Green), expr(Blue), expr(B5), expr(B6), expr(B7), expr(B8), expr(B11), expr(B12))
+```
+
+We need to rescale B11 and B12 for the Sentinel data. While this will not change
+any downstream 'outlier' handling, it will [hopefully] help with the wonky
+application of Sentinel models since the range is so different for those bands.
+
+```{r}
+sen_labels <- sen_labels %>% 
+  mutate_at(vars(B11, B12),
+            ~ .*0.0001)
+```
+
+#### Landsat 5
+
+Maybe a tidyfail, maybe a me problem, but we're creating new, very similar
+functions for each dataset.
+
+```{r}
+qaqc_filter_ls5 <- function(band, cl) {
+  df <- ls5_labels %>% filter(class == cl)
+  values = df[{{ band }}] %>% as.vector(.)
+  df_sub = df %>% select(date, mission, lat, lon, class, vol_init, {{ band }})
+  cuts = quantile(values[[1]], c(0.02, 0.98), na.rm = T)
+  df_sub %>% 
+    filter(cuts[1] < {{ band }}, {{ band }} < cuts[2])
+}
+
+apply_qaqc_bands_ls5 <- function(bn) {
+  map2_dfr(c(bn, bn, bn, bn, bn),
+           class_list,
+           qaqc_filter_ls5)
+}
+ls_5_filtered <-  map(ls_band_list, apply_qaqc_bands_ls5)
+
+ls_5_filt <- ls_5_filtered %>% 
+  reduce(full_join) %>%
+  distinct()
+
+```
+
+#### Landsat 7
+
+```{r}
+qaqc_filter_ls7 <- function(band, cl) {
+  df <- ls7_labels %>% filter(class == cl)
+  values = df[{{ band }}] %>% as.vector(.)
+  df_sub = df %>% select(date, mission, lat, lon, class, vol_init, {{ band }})
+  cuts = quantile(values[[1]], c(0.02, 0.98), na.rm = T)
+  df_sub %>% 
+    filter(cuts[1] < {{ band }}, {{ band }} < cuts[2])
+}
+
+apply_qaqc_bands_ls7 <- function(bn) {
+  map2_dfr(c(bn, bn, bn, bn, bn),
+           class_list,
+           qaqc_filter_ls7)
+}
+ls_7_filtered <-  map(ls_band_list, apply_qaqc_bands_ls7)
+
+ls_7_filt <- ls_7_filtered %>% 
+  reduce(full_join) %>% 
+  distinct()
+```
+
+#### Landsat 8
+
+```{r}
+qaqc_filter_ls8 <- function(band, cl) {
+  df <- ls8_labels %>% filter(class == cl)
+  values = df[{{ band }}] %>% as.vector(.)
+  df_sub = df %>% select(date, mission, lat, lon, class, vol_init, {{ band }})
+  cuts = quantile(values[[1]], c(0.02, 0.98), na.rm = T)
+  df_sub %>% 
+    filter(cuts[1] < {{ band }}, {{ band }} < cuts[2])
+}
+
+apply_qaqc_bands_ls8 <- function(bn) {
+  map2_dfr(c(bn, bn, bn, bn, bn),
+           class_list,
+           qaqc_filter_ls8)
+}
+
+ls_8_filtered <-  map(ls_band_list, apply_qaqc_bands_ls8)
+
+ls_8_filt <- ls_8_filtered %>% 
+  reduce(full_join) %>% 
+  distinct()
+
+```
+
+#### Landsat 9
+
+```{r}
+qaqc_filter_ls9 <- function(band, cl) {
+  df <- ls9_labels %>% filter(class == cl)
+  values = df[{{ band }}] %>% as.vector(.)
+  df_sub = df %>% select(date, mission, lat, lon, class, vol_init, {{ band }})
+  cuts = quantile(values[[1]], c(0.02, 0.98), na.rm = T)
+  df_sub %>% 
+    filter(cuts[1] < {{ band }}, {{ band }} < cuts[2])
+}
+
+apply_qaqc_bands_ls9 <- function(bn) {
+  map2_dfr(c(bn, bn, bn, bn, bn),
+           class_list,
+           qaqc_filter_ls9)
+}
+
+ls_9_filtered <-  map(ls_band_list, apply_qaqc_bands_ls9)
+
+ls_9_filt <- ls_9_filtered %>% 
+  reduce(full_join) %>% 
+  distinct()
+
+```
+
+#### Sentinel 2
+
+```{r}
+qaqc_filter_sen <- function(band, cl) {
+  df <- sen_labels %>% filter(class == cl)
+  values = df[{{ band }}] %>% as.vector(.)
+  df_sub = df %>% select(date, mission, lat, lon, class, vol_init, {{ band }})
+  cuts = quantile(values[[1]], c(0.02, 0.98), na.rm = T)
+  df_sub %>% 
+    filter(cuts[1] < {{ band }}, {{ band }} < cuts[2])
+}
+
+apply_qaqc_bands_sen <- function(bn) {
+  map2_dfr(c(bn, bn, bn, bn, bn),
+           class_list,
+           qaqc_filter_sen)
+}
+
+sen_filtered <- map(sen_band_list, apply_qaqc_bands_sen)
+
+sen_filt <- sen_filtered %>% 
+  reduce(full_join) %>% 
+  distinct()
+
+```
+
+#### Check for complete obs
+
+```{r}
+ls_bands_text = c('Red', 'Green', 'Blue', 'B5', 'B6', 'B7')
+sen_bands_text = c('Red', 'Green', 'Blue', 'B5', 'B6', 'B7', 'B8', 'B11', 'B12')
+
+ls_5_filt <- ls_5_filt %>% 
+  filter_at(vars(all_of(ls_bands_text)), all_vars(!is.na(.)))
+ls_7_filt <- ls_7_filt %>% 
+  filter_at(vars(all_of(ls_bands_text)), all_vars(!is.na(.)))
+ls_8_filt <- ls_8_filt %>% 
+  filter_at(vars(all_of(ls_bands_text)), all_vars(!is.na(.)))
+ls_9_filt <- ls_9_filt %>% 
+  filter_at(vars(all_of(ls_bands_text)), all_vars(!is.na(.)))
+sen_filt <- sen_filt %>% 
+  filter_at(vars(all_of(sen_bands_text)), all_vars(!is.na(.)))
+```
+
+##### Export filtered labels for other uses
+
+```{r}
+labels_filtered <- full_join(ls_5_filt, ls_7_filt) %>% 
+  full_join(., ls_8_filt) %>% 
+  full_join(., ls_9_filt) %>% 
+  full_join(., sen_filt)
+
+write_csv(labels_filtered, paste0('data/labels/collated_label_data_filtered_v', label_version, '.csv'))
+```
+
+#### Make ee feature collections
+
+Transform each of the r dataframes to ee feature collections
+
+```{python}
+def ls_to_eeFeat(df):
+  features=[]
+  for i in range(df.shape[0]):
+    x,y = df.lon[i],df.lat[i]
+    latlong =[x,y]
+    loc_properties = ({'class': str(df['class'][i]), # note 'class' is a special word, must use different syntax
+      'mission': str(df.mission[i]), 
+      'Red': df.Red[i],
+      'Green': df.Green[i],
+      'Blue': df.Blue[i],
+      'B5': df.B5[i],
+      'B6': df.B6[i],
+      'B7': df.B7[i]
+      })
+    g = ee.Geometry.Point(latlong, 'EPSG:4326')
+    feature = ee.Feature(g, loc_properties)
+    features.append(feature)
+  ee_object = ee.FeatureCollection(features)
+  return ee_object
+
+ee_ls5_labels = ls_to_eeFeat(r.ls_5_filt)
+ee_ls7_labels = ls_to_eeFeat(r.ls_7_filt)
+ee_ls8_labels = ls_to_eeFeat(r.ls_8_filt)
+ee_ls9_labels = ls_to_eeFeat(r.ls_9_filt)
+
+def sen_to_eeFeat(df):
+  features=[]
+  for i in range(df.shape[0]):
+    x,y = df.lon[i],df.lat[i]
+    latlong =[x,y]
+    loc_properties = ({'class': str(df['class'][i]), # note 'class' is a special word, must use different syntax
+      'mission': str(df.mission[i]), 
+      'Red': df.Red[i],
+      'Green': df.Green[i],
+      'Blue': df.Blue[i],
+      'B5': df.B5[i],
+      'B6': df.B6[i],
+      'B7': df.B7[i],
+      'B8': df.B8[i],
+      'B11': df.B11[i],
+      'B12': df.B12[i]
+      })
+    g = ee.Geometry.Point(latlong, 'EPSG:4326')
+    feature = ee.Feature(g, loc_properties)
+    features.append(feature)
+  ee_object = ee.FeatureCollection(features)
+  return ee_object
+
+ee_sen_labels = sen_to_eeFeat(r.sen_filt)
+```
+
+Filter the label sets for the classes we're interested in labeling
+
+```{python}
+# point to class values we're interested in labeling
+class_values = (['cloud',
+  'openWater',
+  'lightNearShoreSediment',
+  'offShoreSediment',
+  'darkNearShoreSediment'])
+
+ee_ls5_labels_filt = ee_ls5_labels.filter(ee.Filter.inList('class', class_values))
+ee_ls7_labels_filt = ee_ls7_labels.filter(ee.Filter.inList('class', class_values))
+ee_ls8_labels_filt = ee_ls8_labels.filter(ee.Filter.inList('class', class_values))
+ee_ls9_labels_filt = ee_ls9_labels.filter(ee.Filter.inList('class', class_values))
+
+ee_sen_labels_filt = ee_sen_labels.filter(ee.Filter.inList('class', class_values))
+```
+
+## Create Gradient Boost Tree Model
+
+Define the input features and output labels
+
+```{python}
+ls_input_feat = ["Red", "Green", "Blue", "B5", "B6", "B7"]
+sen_input_feat = ["Red", "Green", "Blue", "B5", "B6", "B7", 'B8', 'B11', 'B12']
+output_label = "class"
+```
+
+Remap the label values to a 0-based sequential series.
+
+```{python}
+remap_values = ee.List.sequence(0, 4)
+labels_ls5_map = ee_ls5_labels_filt.remap(ee.List(class_values), remap_values, ee.String(output_label))
+labels_ls7_map = ee_ls7_labels_filt.remap(ee.List(class_values), remap_values, ee.String(output_label))
+labels_ls8_map = ee_ls8_labels_filt.remap(ee.List(class_values), remap_values, ee.String(output_label))
+labels_ls9_map = ee_ls9_labels_filt.remap(ee.List(class_values), remap_values, ee.String(output_label))
+labels_sen_map = ee_sen_labels_filt.remap(ee.List(class_values), remap_values, ee.String(output_label))
+
+def class_to_byte(feature):
+  byte_value = ee.Number(feature.get(output_label)).toByte()
+  return feature.set('byte_property', byte_value)
+
+labels_ls5_map = labels_ls5_map.map(class_to_byte)
+labels_ls7_map = labels_ls7_map.map(class_to_byte)
+labels_ls8_map = labels_ls8_map.map(class_to_byte)
+labels_ls9_map = labels_ls9_map.map(class_to_byte)
+labels_sen_map = labels_sen_map.map(class_to_byte)
+
+def add_class_by_remap(feature):
+  class_no = ee.Number(feature.get(output_label))
+  return feature.set('class', ee.List(class_values).get(class_no))
+
+labels_ls5_map = labels_ls5_map.map(add_class_by_remap)
+labels_ls7_map = labels_ls7_map.map(add_class_by_remap)
+labels_ls8_map = labels_ls8_map.map(add_class_by_remap)
+labels_ls9_map = labels_ls9_map.map(add_class_by_remap)
+labels_sen_map = labels_sen_map.map(add_class_by_remap)
+```
+
+## Split labels into train/test sets
+
+```{python}
+split = 0.7 # percentage of data to use for training
+labels_ls5_map = labels_ls5_map.randomColumn('random') #set up a random column
+labels_ls7_map = labels_ls7_map.randomColumn('random') #set up a random column
+labels_ls8_map = labels_ls8_map.randomColumn('random') #set up a random column
+labels_ls9_map = labels_ls9_map.randomColumn('random') #set up a random column
+labels_sen_map = labels_sen_map.randomColumn('random') #set up a random column
+
+training_ls5 = labels_ls5_map.filter(ee.Filter.lt("random", split))
+training_ls7 = labels_ls7_map.filter(ee.Filter.lt("random", split))
+training_ls8 = labels_ls8_map.filter(ee.Filter.lt("random", split))
+training_ls9 = labels_ls9_map.filter(ee.Filter.lt("random", split))
+training_sen = labels_sen_map.filter(ee.Filter.lt("random", split))
+print('Training:')
+print(training_ls5.aggregate_histogram('class').getInfo())
+print(training_ls7.aggregate_histogram('class').getInfo())
+print(training_ls8.aggregate_histogram('class').getInfo())
+print(training_ls9.aggregate_histogram('class').getInfo())
+print(training_sen.aggregate_histogram('class').getInfo())
+
+testing_ls5 = labels_ls5_map.filter(ee.Filter.gte("random", split))
+testing_ls7 = labels_ls7_map.filter(ee.Filter.gte("random", split))
+testing_ls8 = labels_ls8_map.filter(ee.Filter.gte("random", split))
+testing_ls9 = labels_ls9_map.filter(ee.Filter.gte("random", split))
+testing_sen = labels_sen_map.filter(ee.Filter.gte("random", split))
+print('Testing:')
+print(testing_ls5.aggregate_histogram('class').getInfo())
+print(testing_ls7.aggregate_histogram('class').getInfo())
+print(testing_ls8.aggregate_histogram('class').getInfo())
+print(testing_ls9.aggregate_histogram('class').getInfo())
+print(testing_sen.aggregate_histogram('class').getInfo())
+```
+
+## Save Train-Test to Assets
+
+And now we'll save the training and testing sets as ee objects for use later.
+
+```{python}
+task = ee.batch.Export.table.toAsset(training_ls5, 
+                            "LS5 Training", 
+                            "projects/ee-ross-superior/assets/train-test/training_ls5")
+task.start()
+
+task = ee.batch.Export.table.toAsset(training_ls7, 
+                            "LS7 Training", 
+                            "projects/ee-ross-superior/assets/train-test/training_ls7")
+task.start()
+
+task = ee.batch.Export.table.toAsset(training_ls8, 
+                            "LS8 Training", 
+                            "projects/ee-ross-superior/assets/train-test/training_ls8")
+task.start()
+
+task = ee.batch.Export.table.toAsset(training_ls9, 
+                            "LS9 Training", 
+                            "projects/ee-ross-superior/assets/train-test/training_ls9")
+task.start()
+
+task = ee.batch.Export.table.toAsset(training_sen, 
+                            "Sentinel Training", 
+                            "projects/ee-ross-superior/assets/train-test/training_sen")
+task.start()
+
+```
+
+```{python}
+task = ee.batch.Export.table.toAsset(testing_ls5, 
+                            "LS5 testing", 
+                            "projects/ee-ross-superior/assets/train-test/testing_ls5")
+task.start()
+
+task = ee.batch.Export.table.toAsset(testing_ls7, 
+                            "LS7 testing", 
+                            "projects/ee-ross-superior/assets/train-test/testing_ls7")
+task.start()
+
+task = ee.batch.Export.table.toAsset(testing_ls8, 
+                            "LS8 testing", 
+                            "projects/ee-ross-superior/assets/train-test/testing_ls8")
+task.start()
+
+task = ee.batch.Export.table.toAsset(testing_ls9, 
+                            "LS9 testing", 
+                            "projects/ee-ross-superior/assets/train-test/testing_ls9")
+task.start()
+
+task = ee.batch.Export.table.toAsset(testing_sen, 
+                            "Sentinel testing", 
+                            "projects/ee-ross-superior/assets/train-test/testing_sen")
+task.start()
+
+```
+
+
+
+

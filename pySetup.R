@@ -6,11 +6,11 @@ py_modules = c('earthengine-api', 'pandas', 'xarray', 'rasterio', 'rioxarray', '
 
 py_install(envname = 'env/', 
            packages = py_modules, 
-           python_version = 3.8)
+           python_version = "3.8")
 
 #create a conda environment named 'env' with the packages you need
 conda_create(envname = file.path(getwd(), 'env'),
-             python_version = 3.8,
+             python_version = "3.8",
              packages = py_modules)
 
 # Set correct python path based on OS
