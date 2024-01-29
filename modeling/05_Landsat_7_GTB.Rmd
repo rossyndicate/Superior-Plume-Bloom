@@ -125,7 +125,7 @@ print(training_conf_l7)
 #reformat and save
 training_conf_l7['mission'] = 'Landsat 7'
 training_conf_l7.reset_index(inplace = True)
-training_conf_l7 = training_conf_l5.rename(columns = {'level_0': 'class'})  
+training_conf_l7 = training_conf_l7.rename(columns = {'level_0': 'class'})  
 training_conf_l7.to_csv('data/output/GTB_'+v_date+'_l7_training_confusion.csv', index = False)
 
 confusionMatrixGTB_ls7 = (testing_ls7

@@ -114,7 +114,7 @@ trainingMatrixGTB_ls8 = (trainedGTB_ls8
   .confusionMatrix())
 
 #convert to pandas dataframe with class info
-training_conf_l7 = (pd.DataFrame(
+training_conf_l8 = (pd.DataFrame(
   trainingMatrixGTB_ls8.getInfo(),
   index=[class_values],
   columns =[class_values]
@@ -123,9 +123,9 @@ print('GTB Training Confusion Matrix for Landsat 8:')
 print(training_conf_l8)
 
 #reformat and save
-training_conf_l8['mission'] = 'Landsat 7'
+training_conf_l8['mission'] = 'Landsat 8'
 training_conf_l8.reset_index(inplace = True)
-training_conf_l8 = training_conf_l5.rename(columns = {'level_0': 'class'})  
+training_conf_l8 = training_conf_l8.rename(columns = {'level_0': 'class'})  
 training_conf_l8.to_csv('data/output/GTB_'+v_date+'_l8_training_confusion.csv', index = False)
 
 confusionMatrixGTB_ls8 = (testing_ls8

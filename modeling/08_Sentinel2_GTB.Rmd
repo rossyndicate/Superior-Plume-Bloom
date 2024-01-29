@@ -542,7 +542,7 @@ for d in range(date_length_sen):
     image = image_new_class,
     region = aoi_ee.geometry(),
     description = 'GTB_v' + v_date + '_' + str(md.getInfo()),
-    folder = 'GTB_v'+v_date,
+    folder = 'GTB_Sen2_v'+v_date,
     scale = 10,
     crs = img_crs_sen,
     maxPixels = 1e13)
