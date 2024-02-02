@@ -195,7 +195,7 @@ label_table_join <- full_join(label_table, filtered_label_table)
 ```
 
 The collated crowdsourced label dataset consisted of `r nrow(labels)` labels
-for across all classes. There were `r nrow(ml_labels)` labels that were part of
+across all classes. There were `r nrow(ml_labels)` labels that were part of
 the classes of interest (cloud, open water, sediment). After filtering for
 outliers from each subset of mission-specific labels, there were `r
 nrow(filtered_labels)` labels with complete band information. Table 1 presents
