@@ -74,7 +74,7 @@ ee.Initialize(project = 'ee-ross-superior')
 
 These assets were created in the 03_Train_Test_Split.Rmd file
 
-```{r}
+```{python}
 training_ls9 = ee.FeatureCollection("projects/ee-ross-superior/assets/train-test/training_ls9")
 testing_ls9 = ee.FeatureCollection("projects/ee-ross-superior/assets/train-test/testing_ls9")
 ```
@@ -165,8 +165,8 @@ the df.copy() function unlinks the original list from the new one. Silly python.
 ```{python}
 accuracy_heads = class_values.copy()
 accuracy_heads.extend(['GTB_accuracy', 'GTB_kappa'])
-landsat5_perf = fs_GTB_ls9.copy()
-landsat5_perf.extend([acc_values_GTB_ls9, k_GTB_ls9])
+landsat9_perf = fs_GTB_ls9.copy()
+landsat9_perf.extend([acc_values_GTB_ls9, k_GTB_ls9])
 
 performance_collation = pd.DataFrame(
   [landsat9_perf],
@@ -544,7 +544,7 @@ for d in range(date_length_9):
   #Check how many existing tasks are running and take a break of 5 mins if it's >10
   maximum_no_of_tasks(10, 5*60)
   #Send next task.
-    export_image.start()
+  export_image.start()
 
 ```
 

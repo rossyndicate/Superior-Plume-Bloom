@@ -1,5 +1,6 @@
 
-try(install_miniconda())
+options(timeout = 1000)
+try(install_miniconda(force = T))
 
 # list python modules
 py_modules = c('earthengine-api', 'pandas', 'xarray', 'rasterio', 'rioxarray', 'fiona', 'geopandas', 'geemap')
