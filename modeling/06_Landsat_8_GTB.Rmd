@@ -99,11 +99,16 @@ trainedGTB_ls8 = (ee.Classifier.smileGradientTreeBoost(10).train(
   classProperty = 'byte_property',
   inputProperties = ls_input_feat
 ))
+
+print(trainedGTB_ls8.getInfo())
 ```
 
-Unfortunately, there is no current mechanism to save the GTB object, so all models
-may be *slightly* different if re-created, but will likely have very similar
-outcomes. 
+Unfortunately, there is no current mechanism to save the GTB object. This is a
+bummer because you can't really set a seed for these either, however! GEE is a bit
+more rudimentary and recognizes the inputs and therefore creates the same output
+objects. I did a quick check of this by running the model here and then again 
+in the browser. Both have identical versions, so I feel confident that GEE is
+making the 'same' model. 
 
 ## Evaluate the models
 
@@ -544,6 +549,32 @@ for d in range(date_length_8):
   maximum_no_of_tasks(10, 5*60)
   #Send next task.
   export_image.start()
+  
+
+for d in range(date_length_8):
+  md = uniqueMissDate_l8.get(d)
+  print(md.getInfo())
+  print(str(d+1) + ' of ' + str(date_length_8))
+  image = (newStack_l8
+    .filter(ee.Filter.eq('missDate', md))
+    .first()
+    .clip(aoi_ee.geometry()))
+  image_new_class = (classifications_to_one_band(image)
+    .select('reclass'))
+  export_image = ee.batch.Export.image.toAsset(
+    image = image_new_class,
+    region = aoi_ee.geometry(),
+    description = 'GTB_v' + v_date + '_' + str(md.getInfo()),
+    assetId = 'projects/ee-ross-superior/assets/LS8/'+'GTB_LS8_'+str(md.getInfo())+'_v'+v_date,
+    scale = 30,
+    crs = img_crs,
+    maxPixels = 1e13)
+  
+  #Check how many existing tasks are running and take a break of 5 mins if it's >10
+  maximum_no_of_tasks(10, 5*60)
+  #Send next task.
+  export_image.start()
+
 
 ```
 
