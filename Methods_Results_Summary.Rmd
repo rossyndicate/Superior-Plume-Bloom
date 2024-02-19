@@ -81,7 +81,7 @@ western extent of Lake Superior, the Apostle Islands, and Chequamegon Bay."
 ## eePlumB
 
 Using the overarching architecture presented in the Global Rivers Obstruction
-Database (GROD) [@yang2022] to engage volunteer observers, we croudsourced
+Database (GROD) [@yang2022] to engage volunteer observers, we crowdsourced
 class labels for Landsat and Sentinel-2 images for the following classes:
 'cloud', 'open water', 'light near shore sediment', 'dark near shore sediment',
 'offshore sediment', 'shoreline contamination', 'other', and 'algae bloom'
@@ -190,7 +190,7 @@ label_table_join <- full_join(label_table, filtered_label_table)
 ```
 
 The collated crowdsourced label dataset consisted of `r nrow(labels)` labels
-for across all classes. There were `r nrow(ml_labels)` labels that were part of
+across all classes. There were `r nrow(ml_labels)` labels that were part of
 the classes of interest (cloud, open water, sediment). After filtering for
 outliers from each subset of mission-specific labels, there were `r
 nrow(filtered_labels)` labels with complete band information. Table 1 presents
