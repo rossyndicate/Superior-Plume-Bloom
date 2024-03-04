@@ -139,14 +139,9 @@ data types were output: a tabular data summary of the area classified and the
 total area of each class for all three AOIs, as well as a .tif raster at the
 resolution the GTB was applied (10m for Sentinel-2 and 30m for Landsat) for
 each classified mission-date image. The .tif rasters were labeled by pixel with
-the following values:
-
-| Pixel Value | Pixel Description |
-|-------------|-----------------------------------------| | 1 | cloud | | 2 |
-open water | | 3 | light, near-shore sediment | | 4 | dark, near-shore sediment
-| | 5 | offshore sediment | | 0 | out of area/masked for saturated pixels |
-
-: Pixel values and description for the GTB tif model output.
+the following values: 0 = out of area/masked for saturated pixels; 1 = cloud; 2
+= open water; 3 = light, near shore sediment; 4 = offshore sediment; 5 = dark,
+near shore sediment.
 
 ## Model evaluation metrics
 
@@ -195,9 +190,9 @@ label_table_join <- full_join(label_table, filtered_label_table)
 ```
 
 The collated crowdsourced label dataset consisted of `r nrow(labels)` labels
-across all classes. There were `r nrow(ml_labels)` labels that were part of
-the classes of interest (cloud, open water, sediment). After filtering for
-outliers from each subset of mission-specific labels, there were `r
+across all classes. There were `r nrow(ml_labels)` labels that were part of the
+classes of interest (cloud, open water, sediment). After filtering for outliers
+from each subset of mission-specific labels, there were `r
 nrow(filtered_labels)` labels with complete band information. Table 1 presents
 a break down of the labels.
 
@@ -417,9 +412,24 @@ or to classify ice. It is important to note that evaluation of the GTB model
 was only done on the available by-pixel labels and that accuracy at
 classification edges may not be precise.
 
-In some cases, hazy dispersed clouds are incorrectly classified as off-shore
-sediment. Caution should be used clouds characterize a large proportion of the
-AOI.
+In many cases, cirrus clouds are incorrectly classified as off-shore sediment.
+Caution should be used when clouds characterize a large proportion of the AOI.
+
+# Image Viewer Links
+
+The following links are Google Earth Engine scripts that allow for manual
+examination of the true color image, the eePlumB classification (version
+2024-01-08), and a measure of atmospheric opacity (Landsat 7) or cirrus cloud
+confidence level (Landsat 8 & 9).
+
+[Landsat
+7](https://code.earthengine.google.com/cd2fc7baeb0dcb2a1d30e065b419bb9e?hideCode=true)
+
+[Landsat
+8](https://code.earthengine.google.com/1c790dcabc46ff9f170a81223928df11?hideCode=true)
+
+[Landsat
+9](https://code.earthengine.google.com/4f8526227eeb88e67ee2e0db84ce77d1?hideCode=true)
 
 # References
 
