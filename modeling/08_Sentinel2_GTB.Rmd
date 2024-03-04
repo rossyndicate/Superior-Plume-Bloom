@@ -571,8 +571,8 @@ for d in range(date_length_sen):
     region = aoi_ee.geometry(),
     description = 'GTB_v' + v_date + '_' + str(md.getInfo()),
     assetId = 'projects/ee-ross-superior/assets/sen/'+'GTB_sen_'+str(md.getInfo())+'_v'+v_date,
-    scale = 30,
-    crs = img_crs,
+    scale = 10,
+    crs = img_crs_sen,
     maxPixels = 1e13)
   
   #Check how many existing tasks are running and take a break of 5 mins if it's >10
