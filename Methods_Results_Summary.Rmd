@@ -27,40 +27,13 @@ model_version = "2024-01-08"
 
 # Introduction
 
-Remote sensing image classification is common in terrestrial applications (in
-particular, land use and land cover), but has not been applied in aquatic
-environments beyond general presence and absence of water and wetlands. The
-primary exception to the use of image classification in aquatic environments is
-assessing the presence of submerged aquatic vegetation ("SAV") (e.g.,
-[@visser2018, @e.l.hestir2012]); however, these classification methods require
-high resolution imagery with high spectral resolution often from land-based
-high-resolution photography or unpersoned aerial vehicles ("UAVs").
+Remote sensing image classification is common in terrestrial applications (in particular, land use and land cover), but has not been applied in aquatic environments beyond general presence and absence of water and wetlands. The primary exception to the use of image classification in aquatic environments is assessing the presence of submerged aquatic vegetation ("SAV") (e.g., [@visser2018, @e.l.hestir2012]); however, these classification methods require high resolution imagery with high spectral resolution often from land-based high-resolution photography or unpersoned aerial vehicles ("UAVs").
 
-In the Great Lakes (GL) region, much of the use of image classification is
-completed using moderate resolution (e.g., Landsat, Sentinel, MODIS) satellite
-images, focusing on mapping the distribution and types of wetlands throughout
-the region ([@mohseni2023, @v.l.valenti2020]), as well as SAV distribution
-throughout the system [@wolter2005]. Most of these analyses focus on a
-relatively short temporal period (months to years), while a some span the
-entire Landsat archive from the mid '80s through the recent past (e.g.,
-[@amani2022]).
+In the Great Lakes (GL) region, much of the use of image classification is completed using moderate resolution (e.g., Landsat, Sentinel, MODIS) satellite images, focusing on mapping the distribution and types of wetlands throughout the region ([@mohseni2023, @v.l.valenti2020]), as well as SAV distribution throughout the system [@wolter2005]. Most of these analyses focus on a relatively short temporal period (months to years), while a some span the entire Landsat archive from the mid '80s through the recent past (e.g., [@amani2022]).
 
-In the recent past, much attention has been paid to the apparent proliferation
-of algal blooms in some of the clearest lakes, including Lake Superior (cite).
-While detecting algal blooms from moderate-resolution satellite imagery is
-difficult due to low temporal frequency, time of day of acquisition, pixel
-size, and spectral band metrics (cite), as well as the lack of observed,
-spatially-explicit bloom observations to validate presence and absence,
-detecting sediment plumes (which often precede algal blooms) is relatively easy
-with just the red, green, and blue bands common on nearly all
-moderate-resolution satellites.
+In the recent past, much attention has been paid to the apparent proliferation of algal blooms in some of the clearest lakes, including Lake Superior (cite). While detecting algal blooms from moderate-resolution satellite imagery is difficult due to low temporal frequency, time of day of acquisition, pixel size, and spectral band metrics (cite), as well as the lack of observed, spatially-explicit bloom observations to validate presence and absence, detecting sediment plumes (which often precede algal blooms) is relatively easy with just the red, green, and blue bands common on nearly all moderate-resolution satellites.
 
-In this analysis, we use the Landsat Collection 2 Surface Reflectance product
-archive (missions 5 through 9, [@vermote2016, @masek2006]) and the Sentinel 2
-Surface Reflectance product archive [@drusch2012], a novel crowd-sourced label
-data set (eePlumB), and Google Earth Engine to create image classification
-models to create a time series of rasters that enumerate sediment plumes across
-the western arm of Lake Superior.
+In this analysis, we use the Landsat Collection 2 Surface Reflectance product archive (missions 5 through 9, [@vermote2016, @masek2006]) and the Sentinel 2 Surface Reflectance product archive [@drusch2012], a novel crowd-sourced label data set (eePlumB), and Google Earth Engine to create image classification models to create a time series of rasters that enumerate sediment plumes across the western arm of Lake Superior.
 
 ```{r fig-aoi, fig.dpi = 300, fig.align="center", fig.width=2, fig.height=1}
 aoi <- read_sf("data/aoi/Superior_AOI_modeling.shp") %>%
@@ -73,87 +46,43 @@ tm_basemap("CartoDB.Positron") +
 
 ```
 
-:"Area of interest for this analysis in purple, consisting of a portion the
-western extent of Lake Superior, the Apostle Islands, and Chequamegon Bay."
+:"Area of interest for this analysis in purple, consisting of a portion the western extent of Lake Superior, the Apostle Islands, and Chequamegon Bay."
 
 # Methods
 
 ## eePlumB
 
-Using the overarching architecture presented in the Global Rivers Obstruction
-Database (GROD) [@yang2022] to engage volunteer observers, we crowdsourced
-class labels for Landsat and Sentinel-2 images for the following classes:
-'cloud', 'open water', 'light near shore sediment', 'dark near shore sediment',
-'offshore sediment', 'shoreline contamination', 'other', and 'algae bloom'
-using our Earth Engine Plume and Bloom labeling interface ("eePlumB"). Dates
-for labeling were limited to the months of April through November to avoid
-ice-on.
+Using the overarching architecture presented in the Global Rivers Obstruction Database (GROD) [@yang2022] to engage volunteer observers, we crowdsourced class labels for Landsat and Sentinel-2 images for the following classes: 'cloud', 'open water', 'light near shore sediment', 'dark near shore sediment', 'offshore sediment', 'shoreline contamination', 'other', and 'algae bloom' using our Earth Engine Plume and Bloom labeling interface ("eePlumB"). Dates for labeling were limited to the months of April through November to avoid ice-on.
 
-In order to eliminate outlier band information and reduce noise in the input
-for our models, the second and ninety-eighth percentiles were calculated for
-each mission-band combination and label data associated with values outside of
-those cutoffs were dropped from the analysis. [[Could add the
-`02_label_class_summaries.Rmd` as supplemental.]]
+In order to eliminate outlier band information and reduce noise in the input for our models, the second and ninety-eighth percentiles were calculated for each mission-band combination and label data associated with values outside of those cutoffs were dropped from the analysis. [[Could add the `02_label_class_summaries.Rmd` as supplemental.]]
 
 ## Model development
 
-We used the built-in gradient tree boost ("GTB") ee.Classifier() method within
-Google Earth Engine to create classification models from the crowd-sourced
-label data. Label data were randomly split into training (70%) and test (30%)
-data sets, with no special handling procedures for classes or satellite
-missions. Data were examined to assure that all classes and missions were
-present in both the training and testing data sets.
+We used the built-in gradient tree boost ("GTB") ee.Classifier() method within Google Earth Engine to create classification models from the crowd-sourced label data. Label data were randomly split into training (70%) and test (30%) data sets, with no special handling procedures for classes or satellite missions. Data were examined to assure that all classes and missions were present in both the training and testing data sets.
 
-GTB models for each mission were trained independently on the rescaled band
-data from red, green, blue, near infrared, and both shortwave infrared bands
-for Landsat missions to classify 5 categories: cloud, open water, light near
-shore sediment, dark near shore sediment, and offshore sediment. For
-Sentinel-2, the bands used to develop the classifier were red, green, blue, red
-edge 1-3, near infrared, and both short-wave infrared bands. We did not tune
-the hyperparameters for the GTB model, as performance was already acceptable
-for discerning open water from sediment plume using 10 trees.
+GTB models for each mission were trained independently on the rescaled band data from red, green, blue, near infrared, and both shortwave infrared bands for Landsat missions to classify 5 categories: cloud, open water, light near shore sediment, dark near shore sediment, and offshore sediment. For Sentinel-2, the bands used to develop the classifier were red, green, blue, red edge 1-3, near infrared, and both short-wave infrared bands. We did not tune the hyperparameters for the GTB model, as performance was already acceptable for discerning open water from sediment plume using 10 trees.
 
 ## Image classification
 
 ### Image Pre-processing
 
-Mosaic-ed images were made for each mission-date as mean band values where any
-two path row or tiles overlapped. All Landsat mission-date images were
-pre-processed to remove saturated pixels, and only images with an image quality
-greater than or equal to 7 were included. Sentinel-2 bands that had a pixel
-resoluiton greater than 10m x 10m were reprojected (downsampled) to 10m x 10m
-pixel sizes so that the GTB model could be applied to the composite images more
-efficiently. No further pre-processing was completed on the Sentinel-2 data.
+Mosaic-ed images were made for each mission-date as mean band values where any two path row or tiles overlapped. All Landsat mission-date images were pre-processed to remove saturated pixels, and only images with an image quality greater than or equal to 7 were included. Sentinel-2 bands that had a pixel resoluiton greater than 10m x 10m were reprojected (downsampled) to 10m x 10m pixel sizes so that the GTB model could be applied to the composite images more efficiently. No further pre-processing was completed on the Sentinel-2 data.
 
-Three areas of interest (AOIs) were used in this analysis: the complete AOI,
-the AOI without shoreline contamination, and the AOI with shoreline
-contamination. The area of shoreline contamination was defined as any area
-within 60 meters of a volunteer-identified pixel with shoreline contamination.
-We assumed that shoreline contamination was consistent throughout the analysis
-and was not specific to any particular satellite or time period.
+Three areas of interest (AOIs) were used in this analysis: the complete AOI, the AOI without shoreline contamination, and the AOI with shoreline contamination. The area of shoreline contamination was defined as any area within 60 meters of a volunteer-identified pixel with shoreline contamination. We assumed that shoreline contamination was consistent throughout the analysis and was not specific to any particular satellite or time period.
 
 ### Model application and summaries
 
-Each GTB model was applied to the corresponding satellite image stack and two
-data types were output: a tabular data summary of the area classified and the
-total area of each class for all three AOIs, as well as a .tif raster at the
-resolution the GTB was applied (10m for Sentinel-2 and 30m for Landsat) for
-each classified mission-date image. The .tif rasters were labeled by pixel with
-the following values: 0 = out of area/masked for saturated pixels; 1 = cloud; 2
-= open water; 3 = light, near shore sediment; 4 = offshore sediment; 5 = dark,
-near shore sediment.
+Each GTB model was applied to the corresponding satellite image stack and two data types were output: a tabular data summary of the area classified and the total area of each class for all three AOIs, as well as a .tif raster at the resolution the GTB was applied (10m for Sentinel-2 and 30m for Landsat) for each classified mission-date image. The .tif rasters were labeled by pixel with the following values: 0 = out of area/masked for saturated pixels; 1 = cloud; 2 = open water; 3 = light, near shore sediment; 4 = offshore sediment; 5 = dark, near shore sediment.
 
 ## Model evaluation metrics
 
-Models were evaluated through error matrices, kappa statistics, and F1
-statistics for each class.
+Models were evaluated through error matrices, kappa statistics, and F1 statistics for each class.
 
 -   error matrix - testing: given the test data, does the model assign the correct class? These are tibble-style summaries where the model-assigned class and label class are compared.
 -   kappa statistic: an indicator of how much better or worse a model performs than by random chance. score is -1 to 1, where 0 is the same as random chance, positive values are better than random chance and negative are poorer than random chance
 -   F1 score: the harmonic mean of precision and recall per class (beta = 1, hence F1 where precision and recall are evenly weighted). Scores of 0 means the model cannot predict the correct class, a score of 1 means the model perfectly predicts the correct class.
 
-Models were evaluated as 5-class categories and 3-class categories where all
-sediment categories were compiled into a single class.
+Models were evaluated as 5-class categories and 3-class categories where all sediment categories were compiled into a single class.
 
 # Results
 
@@ -189,12 +118,7 @@ filtered_label_table <- filtered_labels %>%
 label_table_join <- full_join(label_table, filtered_label_table)
 ```
 
-The collated crowdsourced label dataset consisted of `r nrow(labels)` labels
-across all classes. There were `r nrow(ml_labels)` labels that were part of the
-classes of interest (cloud, open water, sediment). After filtering for outliers
-from each subset of mission-specific labels, there were `r
-nrow(filtered_labels)` labels with complete band information. Table 1 presents
-a break down of the labels.
+The collated crowdsourced label dataset consisted of `r nrow(labels)` labels across all classes. There were `r nrow(ml_labels)` labels that were part of the classes of interest (cloud, open water, sediment). After filtering for outliers from each subset of mission-specific labels, there were `r nrow(filtered_labels)` labels with complete band information. Table 1 presents a break down of the labels.
 
 ```{r, echo = F}
 gt(label_table_join) %>%
@@ -227,13 +151,7 @@ md_summ_table_filt <- mission_date_summary_filtered  %>%
 summary_table_join <- full_join(md_summ_table, md_summ_table_filt)
 ```
 
-Labels were present from `r nrow(mission_date_summary)` individual mission-date
-combinations spanning the dates of `r min(mission_date_summary$date)` to `r
-max(mission_date_summary$date)`. Labels in the filtered dataset were present
-from `r nrow(mission_date_summary_filtered)` mission-date combinations spanning
-the dates `r min(mission_date_summary_filtered$date)` to `r
-max(mission_date_summary_filtered$date)`. See Table 2 for a complete breakdown
-of labels by mission-date combination.
+Labels were present from `r nrow(mission_date_summary)` individual mission-date combinations spanning the dates of `r min(mission_date_summary$date)` to `r max(mission_date_summary$date)`. Labels in the filtered dataset were present from `r nrow(mission_date_summary_filtered)` mission-date combinations spanning the dates `r min(mission_date_summary_filtered$date)` to `r max(mission_date_summary_filtered$date)`. See Table 2 for a complete breakdown of labels by mission-date combination.
 
 ```{r, echo = F}
 gt(summary_table_join) %>%
@@ -245,15 +163,7 @@ gt(summary_table_join) %>%
 
 ## Model evaluation
 
-Models performance was acceptable across open water, cloud, and discrete
-sediment categories. All statistics presented in this section represent summary
-statistics for classes from the testing set. Kappa statistic across all
-missions was always greater than 0.8, indicating much better performance than
-random assignment (Table 4). The F1 score, balanced equally between precision
-and recall, was reasonable across all categories and missions with the minimum
-F1 score being 0.62 for "dark near-shore sediment" for Landsat 7 (Table 4).
-Cloud and open water classification F1 scores were always greater than 0.86
-(Table 4).
+Models performance was acceptable across open water, cloud, and discrete sediment categories. All statistics presented in this section represent summary statistics for classes from the testing set. Kappa statistic across all missions was always greater than 0.8, indicating much better performance than random assignment (Table 4). The F1 score, balanced equally between precision and recall, was reasonable across all categories and missions with the minimum F1 score being 0.62 for "dark near-shore sediment" for Landsat 7 (Table 4). Cloud and open water classification F1 scores were always greater than 0.86 (Table 4).
 
 ```{r, echo = F}
 # get a list of the performance metrics list
@@ -283,8 +193,7 @@ gt(perf_metrics) %>%
   tab_footnote('Table 4. Summary of F1 scores per class and across-class kappa statisic for the GTB model.')
 ```
 
-When the sediment classes were aggregated to a single sediment class, F1 scores
-and the kappa statistic increased dramatically (Table 5).
+When the sediment classes were aggregated to a single sediment class, F1 scores and the kappa statistic increased dramatically (Table 5).
 
 ```{r echo = F}
 # load confusion files
@@ -405,31 +314,27 @@ gt(summary_simple) %>%
 
 # Discussion
 
-The GTB model was applied to all images in the Landsat and Sentinel 2 stacks,
-irregardless of time of year and presence/absence of ice. Classified images
-should only be used during ice-free periods, as no attempt was made to mask ice
-or to classify ice. It is important to note that evaluation of the GTB model
-was only done on the available by-pixel labels and that accuracy at
-classification edges may not be precise.
+The GTB model was applied to all images in the Landsat and Sentinel 2 stacks, irregardless of time of year and presence/absence of ice. Classified images should only be used during ice-free periods, as no attempt was made to mask ice or to classify ice. It is important to note that evaluation of the GTB model was only done on the available by-pixel labels and that accuracy at classification edges may not be precise.
 
-In many cases, cirrus clouds are incorrectly classified as off-shore sediment.
-Caution should be used when clouds characterize a large proportion of the AOI.
+In many cases, cirrus clouds are incorrectly classified as off-shore sediment. Caution should be used when clouds characterize a large proportion of the AOI.
 
 # Image Viewer Links
 
-The following links are Google Earth Engine scripts that allow for manual
-examination of the true color image, the eePlumB classification (version
-2024-01-08), and a measure of atmospheric opacity (Landsat 7) or cirrus cloud
-confidence level (Landsat 8 & 9).
+The following links are Google Earth Engine scripts that allow for manual examination of the true color image, the eePlumB classification (version 2024-01-08), and a measure of atmospheric opacity (Landsat 5/7) or cirrus cloud confidence level (Landsat 8 & 9). For Sentinel 2, the cirrus cloud indication is a 0 (no cirrus detected) 1 (cirrus detected) value.
 
-[Landsat
-7](https://code.earthengine.google.com/cd2fc7baeb0dcb2a1d30e065b419bb9e?hideCode=true)
+[Landsat 5](https://code.earthengine.google.com/3dc621a541fefa6db53e874646f93b13)
 
-[Landsat
-8](https://code.earthengine.google.com/1c790dcabc46ff9f170a81223928df11?hideCode=true)
+[Landsat 7](https://code.earthengine.google.com/83427128adac071d119edbd3a86f1127)
 
-[Landsat
-9](https://code.earthengine.google.com/4f8526227eeb88e67ee2e0db84ce77d1?hideCode=true)
+[Landsat 8](https://code.earthengine.google.com/f4aad47222c53d6cf7510ef3e3344119)
+
+[Landsat 9](https://code.earthengine.google.com/f2983f2a2196a2c033afacd22471e398)
+
+[Sentinel 2A](https://code.earthengine.google.com/c8ae30202ad9e2549f009babe736497c)
+
+[Sentinel 2B](https://code.earthengine.google.com/31d9b913a8421091447f213ef6d1db6d)
+
+Note, the Sentinel viewers may hang shortly before displaying the date list. Landsat 5 and 7 opacity measure does not seem robust for detecting cirrus clouds. More investigation is needed to determine cirrus cloud contamination in those instances.
 
 # References
 
