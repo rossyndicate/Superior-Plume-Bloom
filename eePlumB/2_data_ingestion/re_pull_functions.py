@@ -1,47 +1,101 @@
 import ee
 
-# add date as property to filter by
+# function to add date to properties
 def set_date(feature):
-  date = feature.get('date')
-  return feature.set({'system:time_start': ee.Date(date)})
+    """
+    Adds a date as a property to a feature for filtering purposes.
 
+    Args:
+        feature (ee.Feature): The earth engine feature to add the date property to.
 
-# function to apply scaling factors for 5/7
+    Returns:
+        ee.Feature: The earth engine feature with the added date property.
+    """
+    date = feature.get('date')
+    return feature.set({'system:time_start': ee.Date(date)})
+
+# function to apply scaling factors to LS5/7
 def applyScaleFactors(image):
-  opticalBands = image.select("SR_B.").multiply(0.0000275).add(-0.2)
-  thermalBands = image.select("ST_B.").multiply(0.00341802).add(149.0)
-  opac = image.select('SR_ATMOS_OPACITY').multiply(0.0001)
-  return (image
-    .addBands(opticalBands, None, True)
-    .addBands(thermalBands, None, True)
-    .addBands(opac, None, True))
+    """
+    Applies scaling factors to the optical and thermal bands of an image for Landsat 5/7.
 
+    Args:
+        image (ee.Image): The earth engine image to apply the scaling factors to.
 
-# function to apply scaling factors for 8/9
+    Returns:
+        ee.Image: The earth engine image with the re-scaled bands.
+    """
+    opticalBands = image.select("SR_B.").multiply(0.0000275).add(-0.2)
+    thermalBands = image.select("ST_B.").multiply(0.00341802).add(149.0)
+    opac = image.select('SR_ATMOS_OPACITY').multiply(0.0001)
+    return (image
+        .addBands(opticalBands, None, True)
+        .addBands(thermalBands, None, True)
+        .addBands(opac, None, True))
+
+# function to apply scaling factors to LS8/9
 def applyScaleFactors_89(image):
-  opticalBands = image.select("SR_B.").multiply(0.0000275).add(-0.2)
-  thermalBands = image.select("ST_B..").multiply(0.00341802).add(149.0)
-  return (image
-    .addBands(opticalBands, None, True)
-    .addBands(thermalBands, None, True))
+    """
+    Applies scaling factors to the optical and thermal bands of an image for Landsat 8/9.
 
+    Args:
+        image (ee.Image): The earth engine image to apply the scaling factors to.
+
+    Returns:
+        ee.Image: The earth engine image with the scaled bands.
+    """
+    opticalBands = image.select("SR_B.").multiply(0.0000275).add(-0.2)
+    thermalBands = image.select("ST_B..").multiply(0.00341802).add(149.0)
+    return (image
+        .addBands(opticalBands, None, True)
+        .addBands(thermalBands, None, True))
 
 # function to mask saturated pixels
 def apply_radsat_mask(image):
-  radsat = image.select('QA_RADSAT').eq(0)
-  return image.updateMask(radsat)
+    """
+    Masks saturated pixels in an image.
 
+    Args:
+        image (ee.Image): The earth engine image to mask.
 
-# function to add image date
+    Returns:
+        ee.Image: The earth engine masked image.
+    """
+    radsat = image.select('QA_RADSAT').eq(0)
+    return image.updateMask(radsat)
+
+# function to add image mission-date to properties of an image
 def addImageDate(image):
-  mission = image.get('SPACECRAFT_ID')
-  date = image.date().format('YYYY-MM-dd')
-  missDate = ee.String(mission).cat('_').cat(ee.String(date))
-  return image.set('missDate', missDate)
+    """
+    Adds the image date to the image properties.
+
+    Args:
+        image (ee.Image): The earth engine image to add the date to.
+
+    Returns:
+        ee.Image: The earth engine image with the added date.
+    """
+    mission = image.get('SPACECRAFT_ID')
+    date = image.date().format('YYYY-MM-dd')
+    missDate = ee.String(mission).cat('_').cat(ee.String(date))
+    return image.set('missDate', missDate)
 
 
 # function to split QA bits
 def extract_qa_bits(qa_band, start_bit, end_bit, band_name):
+  """
+  Extracts specified quality assurance (QA) bits from a QA band. This function originated
+  from https://calekochenour.github.io/remote-sensing-textbook/03-beginner/chapter13-data-quality-bitmasks.html
+
+  Args:
+      qa_band (ee.Image): The earth engine image QA band to extract the bits from.
+      start_bit (int): The start bit of the QA bits to extract.
+      end_bit (int): The end bit of the QA bits to extract (not inclusive)
+      band_name (str): The name to give to the output band.
+
+  Returns:
+      ee.Image: A single band image of the extracted QA bit values.
+  """
   # Initialize QA bit string/pattern to check QA band against
   qa_bits = 0
   # Add each specified QA bit flag value/string/pattern to the QA bits to check/extract
@@ -60,11 +114,18 @@ def extract_qa_bits(qa_band, start_bit, end_bit, band_name):
 
 # function to flag cirrus pixels
 def flag_cirrus_conf(image):
+  """
+  Flags pixels in an image where the cirrus confidence is high and provideds
+  the classified cirurs confidence for Landsat 8 and 9.
+
+  Args:
+      image (ee.Image): The earth engine image to flag the pixels in.
+
+  Returns:
+      ee.Image: The image with the added bands for high cirrus confidence and cirrus confidence.
+  """
   qa = image.select('QA_PIXEL')
   # where cirrus confidence is high
   cirrus_high = qa.bitwiseAnd(1 << 2).rename('high_conf_cirrus')
   cirrus_conf = extract_qa_bits(qa, 14, 16, 'cirrus_conf')
   return image.addBands(cirrus_high).addBands(cirrus_conf)
-
-
-
