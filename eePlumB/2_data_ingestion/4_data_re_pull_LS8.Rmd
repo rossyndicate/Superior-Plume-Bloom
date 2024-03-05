@@ -42,6 +42,9 @@ Load python modules and authenticate/initialize EE.
 
 ```{python}
 import ee
+import imp
+imp.load_source("re_pull", "eePlumB/2_data_ingestion/re_pull_functions.py")
+import re_pull as rp
 
 ee.Authenticate()
 ee.Initialize(project = "ee-ross-superior")
@@ -62,13 +65,7 @@ Get the unique dates of images from this list and assign the date to the `system
 ```{python}
 dates_8 = labels_8.aggregate_array("date").distinct()
 
-# add date as property to filter by
-def set_date(feature):
-  date = feature.get('date')
-  return feature.set({'system:time_start': ee.Date(date)})
-
-
-labels_8_dt = labels_8.map(set_date)
+labels_8_dt = labels_8.map(rp.set_date)
 ```
 
 ## Get feature collection ready
@@ -99,61 +96,11 @@ export_l8_meta.start()
 And then apply the scaling factors to the stack
 
 ```{python}
-# function to apply scaling factors
-def applyScaleFactors(image):
-  opticalBands = image.select("SR_B.").multiply(0.0000275).add(-0.2)
-  thermalBands = image.select("ST_B..").multiply(0.00341802).add(149.0)
-  return (image
-    .addBands(opticalBands, None, True)
-    .addBands(thermalBands, None, True))
-
-
-# function to mask saturated pixels
-def apply_radsat_mask(image):
-  radsat = image.select('QA_RADSAT').eq(0)
-  return image.updateMask(radsat)
-
-
-# function to split QA bits
-def extract_qa_bits(qa_band, start_bit, end_bit, band_name):
-  # Initialize QA bit string/pattern to check QA band against
-  qa_bits = 0
-  # Add each specified QA bit flag value/string/pattern to the QA bits to check/extract
-  for bit in range(end_bit):
-    qa_bits += (1 << bit)
-  # Return a single band image of the extracted QA bit values
-  return (qa_band
-    # Rename output band to specified name
-    .select([0], [band_name])
-    # Check QA band against specified QA bits to see what QA flag values are set
-    .bitwiseAnd(qa_bits)
-    # Get value that matches bitmask documentation
-    # (0 or 1 for single bit,  0-3 or 0-N for multiple bits)
-    .rightShift(start_bit))
-
-
-# function to flag cirrus pixels
-def flag_cirrus_conf(image):
-  qa = image.select('QA_PIXEL')
-  # where cirrus confidence is high
-  cirrus_high = qa.bitwiseAnd(1 << 2).rename('high_conf_cirrus')
-  cirrus_conf = extract_qa_bits(qa, 14, 16, 'cirrus_conf')
-  return image.addBands(cirrus_high).addBands(cirrus_conf)
-
-
-# function to add image date
-def addImageDate(image):
-  mission = image.get('SPACECRAFT_ID')
-  date = image.date().format('YYYY-MM-dd')
-  missDate = ee.String(mission).cat('_').cat(ee.String(date))
-  return image.set('missDate', missDate)
-
-
 l8 = (l8
-  .map(applyScaleFactors)
-  .map(apply_radsat_mask)
-  .map(addImageDate)
-  .map(flag_cirrus_conf))
+  .map(rp.applyScaleFactors89)
+  .map(rp.apply_radsat_mask)
+  .map(rp.addImageDate)
+  .map(rp.flag_cirrus_conf))
 
 ```
 
