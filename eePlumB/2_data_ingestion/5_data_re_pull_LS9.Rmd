@@ -73,7 +73,7 @@ labels_9_dt = labels_9.map(set_date)
 
 ## Get feature collection ready
 
-Filter the Landsat 9 stack, then export the metadata of the task
+Filter the Landsat 9 stack, then export the scene metadata
 
 ```{python}
 # filter stack for desired PRs

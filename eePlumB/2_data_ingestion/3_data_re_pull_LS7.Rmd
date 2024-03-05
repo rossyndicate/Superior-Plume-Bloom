@@ -73,7 +73,7 @@ labels_7_dt = labels_7.map(set_date)
 
 ## Get feature collection ready
 
-Filter the Landsat 7 stack, then export the metadata of the task
+Filter the Landsat 7 stack, then export the scene metadata
 
 ```{python}
 # define bands from LS7 that we care about
