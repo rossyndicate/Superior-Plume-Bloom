@@ -50,6 +50,23 @@ def applyScaleFactors_89(image):
         .addBands(opticalBands, None, True)
         .addBands(thermalBands, None, True))
 
+# function to apply scaling factors to Sentinel 2
+def applyScaleFactors_S2(image):
+    """
+    Applies scaling factors to the optical bands of Sentinel 2.
+
+    Args:
+        image (ee.Image): The earth engine image to apply the scaling factors to.
+
+    Returns:
+        ee.Image: The earth engine image with the scaled bands.
+    """
+    opticalBands = image.select("B.").multiply(0.0001)
+    opticalBands2 = image.select("B..").multiply(0.0001)
+    return (image
+        .addBands(opticalBands, None, True)
+        .addBands(opticalBands2, None, True))
+
 # function to mask saturated pixels
 def apply_radsat_mask(image):
     """
@@ -64,6 +81,22 @@ def apply_radsat_mask(image):
     radsat = image.select('QA_RADSAT').eq(0)
     return image.updateMask(radsat)
 
+
+# function to mask saturated/defective pixels in Sentinel images
+def apply_sat_defect_mask(image):
+    """
+    Masks saturated and defective pixels in an image according to the SCL band
+
+    Args:
+        image (ee.Image): The earth engine Sentinel image to mask.
+
+    Returns:
+        ee.Image: The earth engine Sentinel masked image.
+    """
+    sat_def = image.select('SCL').neq(1)
+    return image.updateMask(sat_def)
+
+
 # function to add image mission-date to properties of an image
 def addImageDate(image):
     """
@@ -76,6 +109,23 @@ def addImageDate(image):
         ee.Image: The earth engine image with the added date.
     """
     mission = image.get('SPACECRAFT_ID')
+    date = image.date().format('YYYY-MM-dd')
+    missDate = ee.String(mission).cat('_').cat(ee.String(date))
+    return image.set('missDate', missDate)
+
+
+# function to add image mission-date to properties of an image for Sentinel
+def addImageDate_S2(image):
+    """
+    Adds the image date to the image properties.
+
+    Args:
+        image (ee.Image): The earth engine image to add the date to.
+
+    Returns:
+        ee.Image: The earth engine image with the added date.
+    """
+    mission = image.get('SPACECRAFT_NAME')
     date = image.date().format('YYYY-MM-dd')
     missDate = ee.String(mission).cat('_').cat(ee.String(date))
     return image.set('missDate', missDate)
@@ -128,4 +178,21 @@ def flag_cirrus_conf(image):
   # where cirrus confidence is high
   cirrus_high = qa.bitwiseAnd(1 << 2).rename('high_conf_cirrus')
   cirrus_conf = extract_qa_bits(qa, 14, 16, 'cirrus_conf')
+  return image.addBands(cirrus_high).addBands(cirrus_conf)
+
+# function to flag cirrus and opaque cloud pixels in Sentinel 2
+def flag_cirrus_opaque(image):
+  """
+  Flags pixels in an image where the the QA60 band indicates cirrus or opaque cloud presence.
+
+  Args:
+      image (ee.Image): The earth engine image to flag the pixels in.
+
+  Returns:
+      ee.Image: The image with the to add a cirrus flag to.
+  """
+  qa = image.select('QA60')
+  # where cirrus confidence is high
+  cirrus_high = qa.bitwiseAnd(1 << 11).rename('cirrus')
+  cirrus_conf = qa.bitwiseAnd(1 << 10).rename('opaque_cloud')
   return image.addBands(cirrus_high).addBands(cirrus_conf)
