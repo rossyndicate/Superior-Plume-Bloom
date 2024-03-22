@@ -1,51 +1,43 @@
 ---
 title: "Move labels to repo"
 author: "ROSSyndicate"
-date: "2023-07-20"
+date: "2024-03-07"
 output: html_document
 ---
 
 ```{r setup, echo = F}
+# get all the functions from the src folder and load them
+source_files <- list.files("src", full.names = T)
+invisible(lapply(source_files, source))
+
+# list/load/download the packages needed for this script
 packages <- c('tidyverse',
               'googledrive')
-
-package_loader <- function(x) {
-    if (x %in% installed.packages()) {
-      library(x, character.only = TRUE)
-    } else {
-      install.packages(x)
-      library(x, character.only = TRUE)
-    }
-}
-
-lapply(packages, package_loader)
+invisible(lapply(packages, package_loader))
 ```
 
 # Purpose
 
-This script moves the collated labels dataset from the Drive folder to the local repository and deletes previous versions from the local repository.
+This script moves the collated labels datasets from the Drive folder to the local repository.
 
-First step is to identify the version date we're interested in:
+Authenticate Drive - these files are located in the ROSS account. Reach out for credentials.
 
 ```{r}
-v_date = '2023-07-20'
+drive_auth(email = "therossyndicate@gmail.com")
+```
+
+Also, identify the version date we're interested in:
+
+```{r}
+# date for original collation
+og_collation_date = "2023-07-20"
+# date for secondary collation
+add_data_date = "2024-03-07"
 ```
 
 ## Download collated files from eePlumB users
 
-Authenticate Drive
-
-```{r}
-drive_auth()
-```
-
-Some helper functions
-
-```{r}
-drive_downloader = function(driveid, drivename, dest) {
-  drive_download(as_id(driveid), path = file.path(dest, drivename), overwrite = T)
-}
-```
+This file was created in `eePlumB/2_data_ingestion/1_data_download.Rmd`.
 
 Find the collated labels data file for our version date
 
@@ -53,24 +45,26 @@ Find the collated labels data file for our version date
 # grab all the file info from the collated folder
 collated = drive_ls(path = 'eePlumB_collated_data')
 # get the right version date
-collated_version = collated[grepl(v_date, collated$name),]
+collated_version = collated[grepl(og_collation_date, collated$name),]
 # grab just the labels (not the validation data)
 labels = collated_version[grepl('label', collated_version$name),]
 ```
 
-Download the file to the data folder and then read into environment
+Retrieve the file from drive
 
 ```{r}
-# if the labels directory exists
-if (dir.exists('data/labels/')) {
-  # delete it and its contents
-  unlink('data/labels/', recursive = T)
-  # then recreate
-  dir.create('data/labels/')
-  # and download the labels file locally
-  drive_downloader(labels$id[1], labels$name[1], 'data/labels/')
-} else {
-  dir.create('data/labels/')
-  drive_downloader(labels$id[1], labels$name[1], 'data/labels/')
-}
+collated_file <- retrieve_drive_file(driveid = labels$id)
+```
+
+## Download the files created using 'data_re_pull' scripts in \`eePlumB/2_data_ingestion\`
+
+Make a list of the files in the drive and download them to a tmp folder
+
+```{r}
+add_data_list <- drive_ls(path = "eePlumB_additional_band_data")
+
+# and download the files to that folder
+labels_add_bands <- map_df(add_data_list$id,
+                           retrieve_drive_file) %>% 
+  bind_rows()
 ```
