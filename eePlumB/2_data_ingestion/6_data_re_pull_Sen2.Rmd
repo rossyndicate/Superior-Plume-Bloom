@@ -1,0 +1,130 @@
+---
+title: "Re-pull the Sentinel 2 band data using the volunteer points"
+author: "ROSSyndicate"
+date: "2024-03-04"
+output: html_document
+---
+
+# Purpose
+
+This script uses the volunteer point locations exported from `1_data_download.Rmd` which have been manually uploaded as a feature collection to the `ee-ross-superior` project in Earth Engine.
+
+## R/Python Setup
+
+Load (and install, if needed) the necessary packages for this script.
+
+```{r load-r-pkgs}
+# get all the functions from the src folder and load them
+source_files <- list.files("src", full.names = T)
+invisible(lapply(source_files, source))
+
+libs <- c("reticulate", "tidyverse")
+
+invisible(lapply(libs, package_loader))
+```
+
+Use the conda environment if the env folder is present, otherwise create the environment.
+
+```{r conda-env}
+if (!dir.exists("env")) {
+  source("pySetup.R")
+} else {
+  use_condaenv(file.path(getwd(), "env"))
+}
+```
+
+Load python modules and authenticate/initialize EE.
+
+```{python}
+import ee
+import imp
+imp.load_source("re_pull", "eePlumB/2_data_ingestion/re_pull_functions.py")
+import re_pull as rp
+
+ee.Authenticate()
+ee.Initialize(project = "ee-ross-superior")
+```
+
+## Sort labels
+
+Here, we'll load the entire label list, then filter for only the Sen2 labels
+
+```{python}
+labels = ee.FeatureCollection("projects/ee-ross-superior/assets/labels/collated_label_data_v2023-07-20")
+
+labels_sen = labels.filter(ee.Filter.eq("mission", "SEN2"))
+```
+
+Get the unique dates of images from this list and assign the date to the `system:time_start` parameter.
+
+```{python}
+dates_sen = labels_sen.aggregate_array("date").distinct()
+
+labels_sen_dt = labels_sen.map(rp.set_date)
+```
+
+## Get feature collection ready
+
+Filter the Sentinel 2 stack, then export the scene metadata
+
+```{python}
+# filter stack for desired tiles
+TILES = ee.List(['15TWN', '15TXN', '15TYN', '15TWM', '15TXM', '15TYM'])
+
+# sentinel stack, filtered
+s2 = (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+  .filter(ee.Filter.inList('MGRS_TILE', TILES)))
+
+export_sen_meta = (ee.batch.Export.table.toDrive(
+  collection = s2,
+  description = 'SEN2_image_metadata',
+  folder = 'EE_output',
+  fileNamePrefix = 'SEN2_image_metadata',
+  fileFormat = 'csv'))
+  
+export_sen_meta.start()
+
+```
+
+And then apply the scaling factors and QA bits to the stack
+
+```{python}
+s2 = (s2
+  .map(rp.applyScaleFactors_S2)
+  .map(rp.apply_sat_defect_mask)
+  .map(rp.addImageDate_S2)
+  .map(rp.flag_cirrus_opaque))
+
+```
+
+## Export location information by dates
+
+```{python}
+# loop and export additional data
+for i in range(dates_sen.length().getInfo()):
+  one_date = dates_sen.get(i)
+  print(one_date.getInfo())
+  one_dt = ee.Date(one_date)
+  dt_label = labels_sen_dt.filterDate(one_dt, one_dt.advance(1, 'day'))
+  one_image = s2.filterDate(one_dt, one_dt.advance(1, 'day')).mean()
+  
+  #define bands to extract and reduce regions
+  data = (one_image
+    .reduceRegions(
+      collection = dt_label,
+      reducer = ee.Reducer.median().forEachBand(one_image),
+      scale = 30, # for consistency, this was also the value in the eePlumB.js file
+      tileScale = 2,
+      crs = one_image.geometry().projection().crs()
+      ))
+  
+  image_date_export = (ee.batch.Export.table.toDrive(
+    collection = data,
+    description = 'SEN2_' + one_date.getInfo(),
+    folder = 'eePlumB_additional_band_data',
+    fileNamePrefix = 'SEN2_' + one_date.getInfo() + '_additional_vars',
+    fileFormat = 'csv'))
+    
+  image_date_export.start()
+
+```
