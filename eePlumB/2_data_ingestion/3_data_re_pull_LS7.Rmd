@@ -1,0 +1,136 @@
+---
+title: "Re-pull the LS7 band data using the volunteer points"
+author: "ROSSyndicate"
+date: "2024-03-04"
+output: html_document
+---
+
+# Purpose
+
+This script uses the volunteer point locations exported from `1_data_download.Rmd` which have been manually uploaded as a feature collection to the `ee-ross-superior` project in Earth Engine.
+
+## R/Python Setup
+
+Load (and install, if needed) the necessary packages for this script.
+
+```{r load-r-pkgs}
+libs <- c("reticulate", "tidyverse")
+
+package_loader <- function(x) {
+    if (x %in% installed.packages()) {
+      library(x, character.only = TRUE)
+    } else {
+      install.packages(x)
+      library(x, character.only = TRUE)
+    }
+}
+
+invisible(lapply(libs, package_loader))
+```
+
+Use the conda environment if the env folder is present, otherwise create the environment.
+
+```{r conda-env}
+if (!dir.exists("env")) {
+  source("pySetup.R")
+} else {
+  use_condaenv(file.path(getwd(), "env"))
+}
+```
+
+Load python modules and authenticate/initialize EE.
+
+```{python}
+import ee
+import imp
+imp.load_source("re_pull", "eePlumB/2_data_ingestion/re_pull_functions.py")
+import re_pull as rp
+
+ee.Authenticate()
+ee.Initialize(project = "ee-ross-superior")
+```
+
+## Sort labels
+
+Here, we'll load the entire label list, then filter for only the LS7 labels
+
+```{python}
+labels = ee.FeatureCollection("projects/ee-ross-superior/assets/labels/collated_label_data_v2023-07-20")
+
+labels_7 = labels.filter(ee.Filter.eq("mission", "LS7"))
+```
+
+Get the unique dates of images from this list and assign the date to the `system:time_start` parameter.
+
+```{python}
+dates_7 = labels_7.aggregate_array("date").distinct()
+
+labels_7_dt = labels_7.map(rp.set_date)
+```
+
+## Get feature collection ready
+
+Filter the Landsat 7 stack, then export the scene metadata
+
+```{python}
+# filter stack for desired PRs
+ROWS = ee.List([27, 28])
+
+# ls7 stack, filtered and with all functions applied
+l7 = (ee.ImageCollection('LANDSAT/LE07/C02/T1_L2')
+  .filter(ee.Filter.eq('WRS_PATH', 26))
+  .filter(ee.Filter.inList('WRS_ROW', ROWS))
+  .filter(ee.Filter.gte('IMAGE_QUALITY', 7)))
+
+export_l7_meta = (ee.batch.Export.table.toDrive(
+  collection = l7,
+  description = 'LS7_image_metadata',
+  folder = 'eePlumB_output',
+  fileNamePrefix = 'LS7_image_metadata',
+  fileFormat = 'csv'))
+  
+export_l7_meta.start()
+
+```
+
+And then apply the scaling factors to the stack
+
+```{python}
+l7 = (l7
+  .map(rp.applyScaleFactors)
+  .map(rp.apply_radsat_mask)
+  .map(rp.addImageDate))
+
+```
+
+## Export location information by dates
+
+```{python}
+# loop and export additional data
+for i in range(dates_7.length().getInfo()):
+  one_date = dates_7.get(i)
+  print(one_date.getInfo())
+  one_dt = ee.Date(one_date)
+  dt_label = labels_7_dt.filterDate(one_dt, one_dt.advance(1, 'day'))
+  one_image = l7.filterDate(one_dt, one_dt.advance(1, 'day')).mean()
+  
+  #define bands to extract and reduce regions
+  data = (one_image
+    .reduceRegions(
+      collection = dt_label,
+      reducer = ee.Reducer.median().forEachBand(one_image),
+      scale = 30,
+      tileScale = 2,
+      crs = one_image.geometry().projection().crs()
+      ))
+  
+  image_date_export = (ee.batch.Export.table.toDrive(
+    collection = data,
+    description = 'LS7_' + one_date.getInfo(),
+    folder = 'eePlumB_additional_band_data',
+    fileNamePrefix = 'LS7_' + one_date.getInfo() + '_additional_vars',
+    fileFormat = 'csv'))
+    
+  image_date_export.start()
+
+```
