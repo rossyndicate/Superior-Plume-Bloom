@@ -85,7 +85,7 @@ l7 = (ee.ImageCollection('LANDSAT/LE07/C02/T1_L2')
 export_l7_meta = (ee.batch.Export.table.toDrive(
   collection = l7,
   description = 'LS7_image_metadata',
-  folder = 'eePlumB_output',
+  folder = 'EE_output',
   fileNamePrefix = 'LS7_image_metadata',
   fileFormat = 'csv'))
   
