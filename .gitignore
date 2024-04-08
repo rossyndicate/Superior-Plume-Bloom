@@ -27,3 +27,6 @@ data_local/*
 
 # VS Code
 .vscode
+
+# imp artifacts
+**__pycache__
