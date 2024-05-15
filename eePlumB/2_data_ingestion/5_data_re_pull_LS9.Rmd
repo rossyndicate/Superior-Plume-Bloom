@@ -89,7 +89,7 @@ export_l9_meta = (ee.batch.Export.table.toDrive(
   fileNamePrefix = 'LS9_image_metadata',
   fileFormat = 'csv'))
   
-export_l9_meta.start()
+#export_l9_meta.start()
 
 ```
 
@@ -97,10 +97,11 @@ And then apply the scaling factors to the stack
 
 ```{python}
 l9 = (l9
-  .map(rp.applyScaleFactors89)
+  .map(rp.applyScaleFactors_89)
   .map(rp.apply_radsat_mask)
-  .map(rp.addImageDate)
-  .map(rp.flag_cirrus_conf))
+  .map(rp.flag_qa_conf)
+  .map(rp.flag_high_aerosol)
+  .map(rp.addImageDate))
 
 ```
 
@@ -113,23 +114,47 @@ for i in range(dates_9.length().getInfo()):
   print(one_date.getInfo())
   one_dt = ee.Date(one_date)
   dt_label = labels_9_dt.filterDate(one_dt, one_dt.advance(1, 'day'))
-  one_image = l9.filterDate(one_dt, one_dt.advance(1, 'day')).mean()
+  one_image_SR_band = (l9
+    .filterDate(one_dt, one_dt.advance(1, 'day'))
+    .select(['SR_B1', 'SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7'])
+    .mean())
+  one_image_bits = (l9
+    .filterDate(one_dt, one_dt.advance(1, 'day'))
+    .select(['cirrus_conf', 'snowice_conf', 'cloudshad_conf',
+                          'cloud_conf', 'dialated_cloud', 'aero_level'])
+    .max())
+  one_image_cdist = (l9
+    .filterDate(one_dt, one_dt.advance(1, 'day'))
+    .select('ST_CDIST')
+    .min())
+                        
   
   #define bands to extract and reduce regions
-  data = (one_image
+  bandsOut = one_image_SR_band.addBands(one_image_bits).addBands(one_image_cdist)
+
+  combinedReducer = (ee.Reducer.median().unweighted()
+                      .forEachBand(bandsOut.select(['SR_B1', 'SR_B2', 'SR_B3',
+                      'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7']))
+    .combine(ee.Reducer.max().unweighted()
+      .forEachBand(bandsOut.select(['cirrus_conf', 'snowice_conf', 'cloudshad_conf',
+                          'cloud_conf', 'dialated_cloud', 'aero_level'])), sharedInputs = False)
+    .combine(ee.Reducer.min().unweighted()
+      .forEachBand(bandsOut.select('ST_CDIST')), sharedInputs = False)
+    )
+  # Collect median reflectance and occurance values
+  # Make a cloud score, and get the water pixel count
+  data = (bandsOut
     .reduceRegions(
       collection = dt_label,
-      reducer = ee.Reducer.median().forEachBand(one_image),
+      reducer = combinedReducer,
       scale = 30,
-      tileScale = 2,
-      crs = one_image.geometry().projection().crs()
-      ))
-  
+      crs = one_image_SR_band.geometry().projection().crs()))
+      
   image_date_export = (ee.batch.Export.table.toDrive(
     collection = data,
     description = 'LS9_' + one_date.getInfo(),
     folder = 'eePlumB_additional_band_data',
-    fileNamePrefix = 'LS9_' + one_date.getInfo() + '_additional_vars',
+    fileNamePrefix = 'LS9_' + one_date.getInfo() + '_additional_vars_v2024-04-25',
     fileFormat = 'csv'))
     
   image_date_export.start()

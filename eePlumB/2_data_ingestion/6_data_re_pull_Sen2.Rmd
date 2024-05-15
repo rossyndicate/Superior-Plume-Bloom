@@ -7,7 +7,9 @@ output: html_document
 
 # Purpose
 
-This script uses the volunteer point locations exported from `1_data_download.Rmd` which have been manually uploaded as a feature collection to the `ee-ross-superior` project in Earth Engine.
+This script uses the volunteer point locations exported from
+`1_data_download.Rmd` which have been manually uploaded as a feature collection
+to the `ee-ross-superior` project in Earth Engine.
 
 ## R/Python Setup
 
@@ -23,7 +25,8 @@ libs <- c("reticulate", "tidyverse")
 invisible(lapply(libs, package_loader))
 ```
 
-Use the conda environment if the env folder is present, otherwise create the environment.
+Use the conda environment if the env folder is present, otherwise create the
+environment.
 
 ```{r conda-env}
 if (!dir.exists("env")) {
@@ -55,7 +58,8 @@ labels = ee.FeatureCollection("projects/ee-ross-superior/assets/labels/collated_
 labels_sen = labels.filter(ee.Filter.eq("mission", "SEN2"))
 ```
 
-Get the unique dates of images from this list and assign the date to the `system:time_start` parameter.
+Get the unique dates of images from this list and assign the date to the
+`system:time_start` parameter.
 
 ```{python}
 dates_sen = labels_sen.aggregate_array("date").distinct()
@@ -82,7 +86,7 @@ export_sen_meta = (ee.batch.Export.table.toDrive(
   fileNamePrefix = 'SEN2_image_metadata',
   fileFormat = 'csv'))
   
-export_sen_meta.start()
+#export_sen_meta.start()
 
 ```
 
@@ -92,8 +96,9 @@ And then apply the scaling factors and QA bits to the stack
 s2 = (s2
   .map(rp.applyScaleFactors_S2)
   .map(rp.apply_sat_defect_mask)
-  .map(rp.addImageDate_S2)
-  .map(rp.flag_cirrus_opaque))
+  .map(rp.add_qa_info_s2)
+  .map(rp.flag_cirrus_opaque)
+  .map(rp.addImageDate_S2))
 
 ```
 
@@ -106,23 +111,40 @@ for i in range(dates_sen.length().getInfo()):
   print(one_date.getInfo())
   one_dt = ee.Date(one_date)
   dt_label = labels_sen_dt.filterDate(one_dt, one_dt.advance(1, 'day'))
-  one_image = s2.filterDate(one_dt, one_dt.advance(1, 'day')).mean()
+  one_image_bands = (s2
+    .filterDate(one_dt, one_dt.advance(1, 'day'))
+    .select(["SR_.*"])
+    .mean())
+  one_image_qa = (s2
+    .filterDate(one_dt, one_dt.advance(1, 'day'))
+    .select(['MSK_CLDPRB', 'MSK_SNWPRB', 'cirrus', 'opaque', 'dark_pixel', 'cloud_shadow', 'water',
+    'low_prob_cloud', 'med_prob_cloud', 'hi_prob_cloud', 'cirrus_scl', 'snow_ice'])
+    .max())
   
   #define bands to extract and reduce regions
-  data = (one_image
+  bandsOut = one_image_bands.addBands(one_image_qa)
+
+  combinedReducer = (ee.Reducer.median().unweighted()
+                      .forEachBand(bandsOut.select("SR_.*"))
+    .combine(ee.Reducer.max().unweighted()
+      .forEachBand(bandsOut.select(['MSK_CLDPRB', 'MSK_SNWPRB', 'cirrus', 'opaque', 'dark_pixel', 'cloud_shadow', 'water',
+    'low_prob_cloud', 'med_prob_cloud', 'hi_prob_cloud', 'cirrus_scl', 'snow_ice'])), sharedInputs = False)
+    )
+    
+  # Collect median reflectance and occurance values
+  # Make a cloud score, and get the water pixel count
+  data = (bandsOut
     .reduceRegions(
       collection = dt_label,
-      reducer = ee.Reducer.median().forEachBand(one_image),
-      scale = 30, # for consistency, this was also the value in the eePlumB.js file
-      tileScale = 2,
-      crs = one_image.geometry().projection().crs()
-      ))
+      reducer = combinedReducer,
+      scale = 30,
+      crs = one_image_bands.geometry().projection().crs()))
   
   image_date_export = (ee.batch.Export.table.toDrive(
     collection = data,
     description = 'SEN2_' + one_date.getInfo(),
     folder = 'eePlumB_additional_band_data',
-    fileNamePrefix = 'SEN2_' + one_date.getInfo() + '_additional_vars',
+    fileNamePrefix = 'SEN2_' + one_date.getInfo() + '_additional_vars_v2024-04-25',
     fileFormat = 'csv'))
     
   image_date_export.start()
