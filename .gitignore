@@ -16,6 +16,9 @@ reports/images/*
 #all tmp folders
 */tmp/*
 
+# pptx files (too big!)
+*.pptx
+
 # Local only folders
 data_local/*
 
