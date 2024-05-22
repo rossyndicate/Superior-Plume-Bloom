@@ -1,76 +1,128 @@
 ---
 title: "Move labels to repo"
 author: "ROSSyndicate"
-date: "2023-07-20"
+date: "2024-03-07"
 output: html_document
 ---
 
 ```{r setup, echo = F}
+# get all the functions from the src folder and load them
+source_files <- list.files("src", full.names = T)
+invisible(lapply(source_files, source))
+
+# list/load/download the packages needed for this script
 packages <- c('tidyverse',
               'googledrive')
-
-package_loader <- function(x) {
-    if (x %in% installed.packages()) {
-      library(x, character.only = TRUE)
-    } else {
-      install.packages(x)
-      library(x, character.only = TRUE)
-    }
-}
-
-lapply(packages, package_loader)
+invisible(lapply(packages, package_loader))
 ```
 
 # Purpose
 
-This script moves the collated labels dataset from the Drive folder to the local repository and deletes previous versions from the local repository.
+This script moves the collated labels datasets from the Drive folder to the local repository.
 
-First step is to identify the version date we're interested in:
+Authenticate Drive - these files are located in the ROSS account. Reach out for credentials.
 
 ```{r}
-v_date = '2023-07-20'
+drive_auth(email = "therossyndicate@gmail.com")
+```
+
+Also, identify the version date we're interested in:
+
+```{r}
+# date for original collation
+og_collation_date = "2023-07-20"
+# date for secondary collation
+add_data_date = "2024-04-25"
 ```
 
 ## Download collated files from eePlumB users
 
-Authenticate Drive
+This file was created in `eePlumB/2_data_ingestion/1_data_download.Rmd`.
+
+Find the collated labels data file for our version date, download from drive if
+it is not in the repository
 
 ```{r}
-drive_auth()
-```
+# make the user-exported data collation file path
+collated_fp <- paste0("data/labels/collated_label_data_v",
+                      og_collation_date,
+                      ".csv")
 
-Some helper functions
-
-```{r}
-drive_downloader = function(driveid, drivename, dest) {
-  drive_download(as_id(driveid), path = file.path(dest, drivename), overwrite = T)
-}
-```
-
-Find the collated labels data file for our version date
-
-```{r}
-# grab all the file info from the collated folder
-collated = drive_ls(path = 'eePlumB_collated_data')
-# get the right version date
-collated_version = collated[grepl(v_date, collated$name),]
-# grab just the labels (not the validation data)
-labels = collated_version[grepl('label', collated_version$name),]
-```
-
-Download the file to the data folder and then read into environment
-
-```{r}
-# if the labels directory exists
-if (dir.exists('data/labels/')) {
-  # delete it and its contents
-  unlink('data/labels/', recursive = T)
-  # then recreate
-  dir.create('data/labels/')
-  # and download the labels file locally
-  drive_downloader(labels$id[1], labels$name[1], 'data/labels/')
+if (file.exists(collated_fp)) {
+  message("collated file with provided collation date is already stored locally")
 } else {
-  dir.create('data/labels/')
-  drive_downloader(labels$id[1], labels$name[1], 'data/labels/')
+  # grab all the file info from the collated folder
+  collated = drive_ls(path = 'eePlumB_collated_data')
+  # get the right version date
+  collated_version = collated[grepl(og_collation_date, collated$name),]
+  # grab just the labels (not the validation data)
+  labels = collated_version[grepl('label', collated_version$name),]
+  collated_file <- retrieve_drive_file(driveid = labels$id)
+  #save the file locally
+  write_csv(collated_file, collated_fp)
 }
+
 ```
+
+## Download the files created using 'data_re_pull' scripts in \`eePlumB/2_data_ingestion\`
+
+Make a list of the files in the drive and download them to a tmp folder, if the collated
+file of the additional data doesn't exist. In this case, we'll save each mission group
+as its own file, because the colnames are different and this will save us some
+munging later.
+
+
+```{r}
+# get a list of the added band data
+add_data_list <- drive_ls(path = "eePlumB_additional_band_data", pattern = "_v2024-04-25.csv")
+
+process_new_labels_by_mission <- function(mission_text) {
+  txt_for_grepl <- str_replace(mission_text, "_", "|")
+  mission_files <- add_data_list %>% 
+    filter(grepl(txt_for_grepl, name))
+  # collate labels per mission
+  labels <- map(mission_files$id,
+                retrieve_drive_file) %>% 
+    list_rbind()
+  add_data_collation_fp <- paste0("data/labels/collated_labels_with_additional_data_",
+                                  mission_text,
+                                  "_v",
+                                  add_data_date,
+                                  ".csv")
+  
+  # save the file locally
+  write_csv(labels, add_data_collation_fp)
+}
+
+walk(c("LS5_LS7", "LS8_LS9", "SEN2"),
+     process_new_labels_by_mission)
+```
+
+Also grab the scene metadata for the data
+
+```{r}
+# get a list of the metadata files from Drive
+metadata_list <- drive_ls(path = "EE_output", pattern = "image_meta")
+
+process_metadata_by_mission <- function(mission_text) {
+  txt_for_grepl <- str_replace(mission_text, "_", "|")
+  mission_files <- metadata_list %>% 
+    filter(grepl(txt_for_grepl, name))
+  # collate labels per mission
+  labels <- map(mission_files$id,
+                retrieve_drive_file) %>% 
+    list_rbind()
+  add_data_collation_fp <- paste0("data/labels/collated_scene_metadata_",
+                                  mission_text,
+                                  "_v",
+                                  add_data_date,
+                                  ".csv")
+  
+  # save the file locally
+  write_csv(labels, add_data_collation_fp)
+}
+
+walk(c("LS5_LS7", "LS8_LS9", "SEN2"),
+     process_metadata_by_mission)
+```
+

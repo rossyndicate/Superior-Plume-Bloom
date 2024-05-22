@@ -1,0 +1,386 @@
+---
+title: "Check eePlumB labels for consistency"
+author: "ROSSyndicate"
+date: "2024-04-15"
+output: html_document
+---
+
+```{r setup, echo = F, message = FALSE}
+# keep things quiet
+knitr::opts_chunk$set(message = FALSE, error = FALSE, warning = FALSE)
+
+# get all the functions from the src folder and load them
+source_files <- list.files("src", full.names = T)
+invisible(lapply(source_files, source))
+# and the funcs for this analysis
+analysis_funcs <- list.files("modeling/src", full.names = T)
+invisible(lapply(analysis_funcs, source))
+# list/load/download the packages needed for this script
+packages <- c('tidyverse',
+              'ggthemes',
+              'janitor',
+              'jsonlite')
+invisible(lapply(packages, package_loader))
+```
+
+# Background
+
+At this point in the workflow, we're prepping the label data from eePlumB
+volunteers for building our classification model. So far, we've created the
+eePlumB module and directions, volunteers have labeled scenes and exported their
+label data, and we have re-pulled data from those same locations and
+mission-dates - these steps were all completed in the eePlumB directory of this
+repository. Now we need to do some QAQC of the user data to make sure that we're feeding the model only the best/most reliable data.
+
+# Purpose
+
+This script collates LS57, LS89, and Sentinel 2 label data, looks through the
+user labels to check for inconsistencies between the user-exported data and the
+re-pull of data. The first pass for inconsistencies is to make sure that the
+user data doesn't have data from bands that don't exist in the particular
+satellite sensor. We know that the eePlumB process is not the most intuitive and
+(as we will see later) is prone to exporting data with incorrect mission-date
+attributions. There isn't anything we can do about this now except dismiss these
+data from the workflow and note that this is an imperfect process.
+
+## Load data
+
+```{r}
+add_data_date = "2024-04-25"
+harmonize_version = "2024-04-25"
+```
+
+### Label data
+
+Walk through the file paths and read in the label data:
+
+```{r}
+label_files <- list.files("data/labels", pattern = "labels_with", full.names = T)
+label_files <- label_files[grepl(add_data_date, label_files)]
+
+label_names <- map(label_files, 
+                   function(file) {
+                     str_sub(file,
+                             start = unlist(str_locate_all(file, "data_|_v"))[3]+1,
+                             end = unlist(str_locate_all(file, "data_|_v"))[2]-1)
+                     })
+
+
+labels <- map(label_files, read_csv) %>% 
+  set_names(label_names)
+```
+
+### Metadata
+
+Do the same for the scene-level metadata:
+
+```{r}
+metadata_files <- list.files("data/labels", pattern = "metadata", full.names = T)
+metadata_files <- metadata_files[grepl(add_data_date, metadata_files)]
+
+meta_names <- map(metadata_files, 
+                  function(file) {
+                    str_sub(file,
+                            start = unlist(str_locate_all(file, "data_|_v"))[3]+1,
+                            end = unlist(str_locate_all(file, "data_|_v"))[2]-1)
+                    })
+
+metadata <- map(metadata_files, read_csv) %>% 
+  set_names(meta_names)
+
+rm(metadata_files, meta_names)
+
+metadata <- map(metadata,
+                function(data) {
+                  if ("SPACECRAFT_ID" %in% names(data)) {
+                    data %>% 
+                    mutate(mission = SPACECRAFT_ID,
+                           date = ymd(str_sub(`system:id`, -8, nchar(`system:id`))))
+                  } else {
+                    data %>% 
+                    mutate(mission = SPACECRAFT_NAME,
+                           date = ymd(str_sub(`system:index`, 1, 8)))
+                  }
+                })
+```
+
+Here, we filter for "less" metadata, since not all the columns are things we
+care about.
+
+```{r}
+LS57_metadata <- metadata$LS5_LS7 %>% 
+  select(mission, date,
+         CLOUD_COVER, 
+         DATA_SOURCE_AIR_TEMPERATURE:DATA_SOURCE_WATER_VAPOR,
+         IMAGE_QUALITY, SENSOR_MODE_SLC) %>% 
+  group_by(mission, date) %>% 
+  summarise(across(where(is.character),
+                   ~ paste(unique(na.omit(.)), collapse = "; ")),
+            across(where(is.numeric),
+                   ~ paste(unique(na.omit(.)), collapse = "; "),
+                   .names = "{.col}_list"),
+            mean_cloud_cover = mean(CLOUD_COVER),
+            max_cloud_cover = max(CLOUD_COVER))
+
+LS89_metadata <- metadata$LS8_LS9 %>% 
+  select(mission, date,
+         CLOUD_COVER, 
+         DATA_SOURCE_AIR_TEMPERATURE:DATA_SOURCE_WATER_VAPOR,
+         IMAGE_QUALITY_OLI, IMAGE_QUALITY_TIRS, NADIR_OFFNADIR) %>% 
+  group_by(mission, date) %>% 
+  summarise(across(where(is.character),
+                   ~ paste(unique(na.omit(.)), collapse = "; ")),
+            across(where(is.numeric),
+                   ~ paste(unique(na.omit(.)), collapse = "; "),
+                   .names = "{.col}_list"),
+            mean_cloud_cover = mean(CLOUD_COVER),
+            max_cloud_cover = max(CLOUD_COVER))
+
+# list all the numeric cols that we care about for S2
+numeric_cols <- c("AOT_RETRIEVAL_ACCURACY", "CLOUDY_PIXEL_PERCENTAGE",
+                  "CLOUD_COVERAGE_ASSESSMENT", "CLOUD_SHADOW_PERCENTAGE",
+                  "DARK_FEATURES_PERCENTAGE", "HIGH_PROBA_CLOUDS_PERCENTAGE",
+                  "MEDIUM_PROBA_CLOUDS_PERCENTAGE", "NODATA_PIXEL_PERCENTAGE",
+                  "SATURATED_DEFECTIVE_PIXEL_PERCENTAGE", "SNOW_ICE_PERCENTAGE",
+                  "THIN_CIRRUS_PERCENTAGE", "WATER_VAPOUR_RETRIEVAL_ACCURACY" )
+S2_metadata <- metadata$SEN2 %>% 
+  select(mission, date,
+         AOT_RETRIEVAL_ACCURACY,
+         CLOUDY_PIXEL_PERCENTAGE:DARK_FEATURES_PERCENTAGE,
+         GENERAL_QUALITY, GEOMETRIC_QUALITY,
+         HIGH_PROBA_CLOUDS_PERCENTAGE, MEDIUM_PROBA_CLOUDS_PERCENTAGE,
+         NODATA_PIXEL_PERCENTAGE, RADIOMETRIC_QUALITY,
+         SATURATED_DEFECTIVE_PIXEL_PERCENTAGE, SNOW_ICE_PERCENTAGE,
+         THIN_CIRRUS_PERCENTAGE, WATER_VAPOUR_RETRIEVAL_ACCURACY) %>% 
+  group_by(mission, date) %>% 
+  summarise(across(where(is.character),
+                   ~ paste(unique(na.omit(.)), collapse = "; ")),
+            across(all_of(numeric_cols),
+                   ~ mean(.), 
+                   .names = "{.col}_mean"),
+            across(all_of(numeric_cols),
+                   ~ max(.), 
+                   .names = "{.col}_max"),
+            across(all_of(numeric_cols),
+                   ~ min(.),
+                   .names = "{.col}_min"),
+            n_tiles = n()) %>% 
+  relocate(mission, date, n_tiles)
+
+```
+
+## Process and filter user labels
+
+This section:
+
+1)  drops any point labels if they contain data from bands that are not present
+    in a given satellite mission sensor
+2)  re-orgs the data to a more sensical format
+3)  pulls the lat/lon from the .geo column
+4)  removes any false precision based on the upstream radiometric bit depth of
+    the sensor
+5)  adds metadata to the label data
+
+### Landsat 5/7
+
+```{r}
+LS57 <- labels$LS5_LS7 %>% 
+  # provide a unique id for the labels here
+  rowid_to_column("user_label_id") %>% 
+  # B11 is not a real band for Landsat - these are obviously mis-labeled data
+  # points and need to be removed from the dataset
+  filter(is.na(B11)) %>% 
+  # repopulate mission column to match metadata
+  mutate(mission = if_else(mission == "LS5",
+                           "LANDSAT_5",
+                           "LANDSAT_7")) %>% 
+  remove_empty(which = "cols") %>% 
+  relocate(date, mission, class, vol_init, user_label_id,
+           # rename these for comparison's sake, these were re-named in the 
+           # javascript code for between-satellite ease, but we want them back
+           # to the og labels.
+           B1 = Blue, 
+           B2 = Green, 
+           B3 = Red, 
+           B4 = B5, 
+           B5 = B6, 
+           B7, 
+           # re-pull columns
+           starts_with("SR"), starts_with("ST"), contains("_conf"), contains("cloud")) %>% 
+  # anything beyond 3 digits is false precision, thanks 8 bit depth.
+  mutate(across(c(B1:B7, SR_B1:SR_B7),
+                ~ round(., digits = 3))) %>% 
+  rowwise() %>% 
+  mutate(lon = fromJSON(.geo)$coordinates[1],
+         lat = fromJSON(.geo)$coordinates[2]) %>% 
+  left_join(., LS57_metadata)
+
+# and pull aside those points where there was B11 data... for now, just dumping 
+# these labels
+mislabeled_LS57 <- labels$LS5_LS7 %>% 
+  # provide a unique id for the labels here
+  rowid_to_column("user_label_id") %>% 
+  filter(!is.na(B11))
+
+# drop the non-LS5/7 columns
+LS57 <- LS57 %>% 
+  select(-c(".geo", "system:time_start", "system:index"))
+
+```
+
+There are `r nrow(mislabeled_LS57)` mis-attributed rows in the Landsat 5/7
+dataset. That's
+`r round(nrow(mislabeled_LS57)*100/(nrow(LS57)+nrow(mislabeled_LS57)), 2)`
+percent of the dataset.
+
+Let's do a quick scan of the users here:
+
+```{r}
+LS57_totals <- labels$LS5_LS7 %>% 
+  group_by(vol_init) %>% 
+  summarise(n_tot_labs = n(),
+            n_dates = length(unique(date)))
+LS57_mis_totals <- mislabeled_LS57 %>% 
+  group_by(vol_init) %>% 
+  summarise(n_mis_labs = n(),
+            n_mis_dates = length(unique(date)))
+full_join(LS57_totals, LS57_mis_totals) %>% 
+  arrange(-n_mis_labs)
+```
+
+All mislabeled data are from a single user.
+
+### Landsat 8/9
+
+High-level formatting and setting precision.
+
+```{r, echo=FALSE}
+LS89 <- labels$LS8_LS9 %>% 
+  # provide a unique id for the labels here
+  rowid_to_column("user_label_id") %>% 
+  # drop the rows where folks have mislabeled data (again, no B11 in Landsat)
+  filter(is.na(B11)) %>% 
+  # repopulate mission column to match metadata
+  mutate(mission = if_else(mission == "LS8",
+                           "LANDSAT_8",
+                           "LANDSAT_9")) %>% 
+  remove_empty(which = "cols") %>% 
+  relocate(date, mission, class, vol_init, user_label_id,
+         # rename these for comparison's sake, these were re-named in the js code
+         B2 = Blue, 
+         B3 = Green, 
+         B4 = Red, 
+         B5, 
+         B6, 
+         B7,
+         # re-pull columns
+         starts_with("SR"), starts_with("ST"), contains("conf")) %>% 
+  # round to 5 digits here, 16 bits available in LS8&9
+  mutate(across(c(B2:B7, SR_B1:SR_B7),
+                ~ round(., digits = 5))) %>% 
+  rowwise() %>% 
+  mutate(lon = fromJSON(.geo)$coordinates[1],
+         lat = fromJSON(.geo)$coordinates[2]) %>% 
+  left_join(., LS89_metadata)
+
+# and again, pull out the mislabeled data that we may not do anything with...
+mislabeled_LS89 <- labels$LS8_LS9 %>% 
+  # provide a unique id for the labels here
+  rowid_to_column("user_label_id") %>% 
+  filter(!is.na(B11))
+
+LS89 <- LS89 %>% 
+  select(-c("system:index", "system:time_start", ".geo"))
+
+```
+
+There are `r nrow(mislabeled_LS89)` mis-attributed rows in the Landsat 8/9
+dataset. That's
+`r round(nrow(mislabeled_LS89)*100/(nrow(LS89)+nrow(mislabeled_LS89)), 1)`
+percent of the dataset, which is a loooot.
+
+Let's do a quick scan of the users here:
+
+```{r, echo=FALSE}
+LS89_totals <- labels$LS8_LS9 %>% 
+  group_by(vol_init) %>% 
+  summarise(n_tot_labs = n(),
+            n_dates = length(unique(date)))
+LS89_mis_totals <- mislabeled_LS89 %>% 
+  group_by(vol_init) %>% 
+  summarise(n_mis_labs = n(),
+            n_mis_dates = length(unique(date)))
+full_join(LS89_totals, LS89_mis_totals) %>% 
+  arrange(-n_mis_labs)
+```
+
+Okay, all of these come from two contributors, with overlap with the LS57 labels
+mislabels volunteer
+
+### Sentinel 2
+
+```{r}
+S2 <- labels$SEN2 %>% 
+  rowid_to_column("user_label_id") %>% 
+  # filter out data that doesn't have cloud probability (unique to S2)
+  filter(!is.na(MSK_CLDPRB)) %>% 
+  relocate(date, mission, class, vol_init, user_label_id,
+           # rename these for comparison's sake, these were re-named in the js code
+         B2 = Blue, 
+         B3 = Green, 
+         B4 = Red, 
+         B5, B6, B7, B8, B11, B12,
+         # re-pull columns
+         starts_with("SR")) %>% 
+  # need to do a quick unit conversion for B11 and B12, which weren't converted
+  # in the user pull to Rrs units.
+  mutate(across(c(B11, B12),
+                ~ .*0.0001)) %>% 
+  # drop mission column for proper joining (there is no way to distinguish Sentinel
+  # a and b missions, and the dates are unique)
+  select(-mission) %>% 
+  remove_empty(which = "cols") %>% 
+  # round to 4 digits here - 12 bit depth
+  mutate(across(c(B2:B12, SR_B1:SR_B9),
+                ~ round(., digits = 4))) %>% 
+  rowwise() %>% 
+  mutate(lon = fromJSON(.geo)$coordinates[1],
+         lat = fromJSON(.geo)$coordinates[2]) %>% 
+  left_join(., S2_metadata) %>% 
+  # pull that mission column back to the front
+  relocate(date, mission) %>% 
+  select(-c("system:index", "system:time_start", ".geo"))
+```
+
+There are no mis-attributed rows in the Sentinel-2 dataset:
+
+```{r}
+# MSK_CLDPRB is unique to Sentinel 2.
+labels$SEN2 %>% 
+  filter(is.na(MSK_CLDPRB)) %>% 
+  nrow()
+```
+
+Let's look at some contributions here:
+
+```{r, echo=FALSE}
+labels$SEN2 %>% 
+  group_by(vol_init) %>% 
+  summarise(n_tot_labs = n(),
+            n_dates = length(unique(date))) %>% 
+  arrange(-n_dates)
+```
+
+Well, hopefully the data from the mis-matched contributors in Landsat have valid
+data here.
+
+
+## Export files for downstream uses
+
+These need to be saved as .RDS since some columns contain lists.
+
+```{r}
+write_rds(LS57, paste0("data/labels/harmonized_LS57_labels_", harmonize_version, ".RDS"))
+write_rds(LS89, paste0("data/labels/harmonized_LS89_labels_", harmonize_version, ".RDS"))
+write_rds(S2, paste0("data/labels/harmonized_SEN2_labels_", harmonize_version, ".RDS"))
+```
