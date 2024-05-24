@@ -1,7 +1,7 @@
 ---
 title: "Shoreline Contamination Workflow"
 author: "ROSSyndicate"
-date: "2023-07-18"
+date: "2024-05-24"
 output: html_document
 editor_options:
   markdown:
@@ -32,20 +32,25 @@ package_loader <- function(x) {
 lapply(packages, package_loader)
 ```
 
-## Load the labels file into the environment
+## Pull in necessary files
+ 
+Load the labels file into the environment
 
 ```{r}
-labels_file <- list.files('data/labels/', full.names = T)
-labels <- read_csv(labels_file)
+labels <- read_csv("data/labels/collated_label_data_v2023-07-20.csv")
 ```
 
-## Load the aoi into the environment
+Load the aoi into the environment
 
 ```{r}
 aoi <- st_read('data/aoi/Superior_AOI_modeling.shp')
 ```
 
-## Grab the shoreline contamination labels and plot on ma Filter for 'shorelineContamination'
+Grab the shoreline contamination labels. In this case we don't acutally care if 
+there is any per-mission mis match (like we did in 00 and 01 scripts), since we
+are just using the location identity (not the band data) to create a mask of 
+uncertainty near the shore where there may be shoreline contamination within the 
+AOI. 
 
 ```{r}
 sc_labels <- labels %>%
@@ -62,6 +67,8 @@ aoi_crs <- st_crs(aoi)
 
 sc <- st_transform(sc, aoi_crs)
 ```
+
+## View the data and clip the AOI
 
 And plot to see where they are in conjunction with the shapefile
 
@@ -100,8 +107,8 @@ aoi_no_sc <- st_difference(aoi, sc_buff_1)
 mapview(aoi_no_sc)
 ```
 
-And let's remove the tiny areas that are created that are not part of the large
-polygon.
+And let's remove the tiny areas that are created near the shore that are not 
+connected to the large polygon.
 
 ```{r}
 # get indiv polygons
@@ -127,13 +134,11 @@ sc_buff_export <- sc_buff_1 %>%
 mapview(sc_buff_export)
 ```
 
+## Save the files 
+
 And finally, write the shapefiles
 
 ```{r}
 st_write(sc_buff_export, 'data/aoi/Superior_shoreline_contamination.shp', append = F)
 st_write(aoi_no_sc, 'data/aoi/Superior_AOI_minus_shoreline_contamination.shp', append = F)
-```
-
-```{r, echo = F}
-knitr::wrap_rmd('modeling/01_Shoreline_Contamination.Rmd', width = 80, backup = NULL)
 ```
