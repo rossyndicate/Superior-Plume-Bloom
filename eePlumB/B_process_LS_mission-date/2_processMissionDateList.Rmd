@@ -16,7 +16,9 @@ drive_auth()
 
 # Purpose
 
-This script processes the file created in GEE using the script `1_createMissionDateList.js` to create a list of unique mission-date pairs for eePlumB users.
+This script processes the file created in GEE using the script
+`1_createMissionDateList.js` to create a list of unique mission-date pairs for
+eePlumB users.
 
 ## Download and load raw mission-date list
 
@@ -35,7 +37,8 @@ miss_date = read.csv(file.path(temp_dir, file$name))
 
 ## Summarize mission-date list
 
-The mission-date list includes multiple scenes per mission-date pair, so we want to summarize by mission and date.
+The mission-date list includes multiple scenes per mission-date pair, so we want
+to summarize by mission and date.
 
 ```{r}
 miss_date_unique = miss_date %>% 
