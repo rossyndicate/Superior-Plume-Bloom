@@ -79,8 +79,8 @@ ggplot() +
   theme_minimal()
 ```
 
-As expected, this has pretty good coverage, especially since there are `r
-nrow(sc)` labels.
+As expected, this has pretty good coverage, especially since there are `r nrow(sc)` 
+labels.
 
 Let's buffer these points by 60m and snip the polygon to account for these
 areas of contamination.
