@@ -368,7 +368,7 @@ mean cloud cover was \> 50%. Welp, this is unhelpful!
 ### QA Pixels
 
 Do any of the labels have QA pixel indications of contamination? Let's see if 
-the medium certainty classification in the QA band is useful here:
+the high certainty classification in the QA band is useful here:
 
 ```{r}
 LS8_for_class_analysis %>% 
