@@ -381,19 +381,21 @@ Kruskal-Wallis assumptions:
 ANOVA assumptions:
 
 1)  data are distributed normally
-2)  data are independent
-3)  variance across groups is similar
+2)  data have equal variances, if not equal variance perform Kruskal-Wallis
+3)  data are independent
+4)  variance across groups is similar
 
 We can't entirely assert sample independence and we know that variance and
 distribution is different for "cloud" labels, but those data also are visibly
 different from the other classes.
 
 In order to systematically test for differences between classes and be able to
-intepret the data, we will need to know some things about our data:
+interpret the data, we will need to know some things about our data:
 
 1)  Are the data normally distributed (Shapiro-Wilkes)?
 2)  Are there outliers that may impact interpretation?
-3)  If data is non-normal, perform Kruskal-Walis test; otherwise ANOVA
+3)  If data is non-normal, perform Kruskal-Wallis test; otherwise ANOVA if equal
+variances, otherwise, back to Kruskal-Wallis
 4)  if the null is rejected (and there is a difference in at least one class),
     perform post-hoc test for pairwise comparison (Dunn test for both)
 
@@ -404,7 +406,7 @@ cases where the pairwise comparison were not deemed statistically significant:
 LS89_band_sym = syms(LS89_ee)
 
 LS9_class_analysis <- pmap(.l = list(dataset = list(LS9_training_labels),
-                                     band = LS89_band_sym,
+                                     bnd = LS89_band_sym,
                                      class_col = list(sym("class"))),
                            .f = test_class_sig)
 names(LS9_class_analysis) <- LS89_ee
@@ -466,6 +468,56 @@ ggpairs(., columns = LS89_ee, aes(color = class_short)) +
 
 Arguably not as scatter shot bad as LS8, but still might be tough to distinguish 
 between classes.
+
+### Aggregating sediment classes and performing statistical tests
+
+As a back up, we should consider using aggregated sediment classes, where any 
+label of sediment is treated as a general class of "sediment". Let's do the same 
+process here to test for class significance.
+
+```{r, echo = FALSE}
+LS9_training_labels <- LS9_training_labels %>% 
+  mutate(agg_class = if_else(grepl("Sediment", class),
+                             "sediment",
+                             class))
+
+LS9_class_analysis_aggregated <- pmap(.l = list(dataset = list(LS9_training_labels),
+                                     bnd = LS89_band_sym,
+                                     class_col = list(sym("agg_class"))),
+                           .f = test_class_sig)
+names(LS9_class_analysis_aggregated) <- LS89_ee
+
+map(LS9_class_analysis_aggregated,
+    function(band) {
+      band$pairwise_difference %>% 
+        filter(p.adj.signif == "ns")
+    }
+  ) %>% 
+  list_rbind() %>% 
+  rename(band = .y.)
+```
+
+And let's look at the scatter plots here:
+
+```{r, echo=FALSE, fig.dim=c(10,10)}
+LS9_training_labels %>% 
+ggpairs(., columns = LS89_ee, aes(color = agg_class)) + 
+  scale_color_colorblind() +
+  scale_fill_colorblind() +
+  theme_few()
+```
+
+And if we drop the cloud:
+
+```{r}
+LS9_training_labels %>% 
+  filter(agg_class != "cloud") %>% 
+ggpairs(., columns = LS89_ee, aes(color = agg_class)) + 
+  scale_color_colorblind() +
+  scale_fill_colorblind() +
+  theme_few()
+```
+
 
 ## Export the training labels
 

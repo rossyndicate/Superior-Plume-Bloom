@@ -495,19 +495,21 @@ Kruskal-Wallis assumptions:
 ANOVA assumptions:
 
 1)  data are distributed normally
-2)  data are independent
-3)  variance across groups is similar
+2)  data have equal variances, if not equal variance perform Kruskal-Wallis
+3)  data are independent
+4)  variance across groups is similar
 
 We can't entirely assert sample independence and we know that variance and
 distribution is different for "cloud" labels, but those data also are visibly
 different from the other classes.
 
 In order to systematically test for differences between classes and be able to
-intepret the data, we will need to know some things about our data:
+interpret the data, we will need to know some things about our data:
 
 1)  Are the data normally distributed (Shapiro-Wilkes)?
 2)  Are there outliers that may impact interpretation?
-3)  If data is non-normal, perform Kruskal-Walis test; otherwise ANOVA
+3)  If data is non-normal, perform Kruskal-Wallis test; otherwise ANOVA if equal
+variances, otherwise, back to Kruskal-Wallis
 4)  if the null is rejected (and there is a difference in at least one class),
     perform post-hoc test for pairwise comparison (Dunn test for both)
 
@@ -518,7 +520,7 @@ cases where the pairwise comparison were not deemed statistically significant:
 LS89_band_sym = syms(LS89_ee)
 
 LS8_class_analysis <- pmap(.l = list(dataset = list(LS8_training_labels),
-                                     band = LS89_band_sym,
+                                     bnd = LS89_band_sym,
                                      class_col = list(sym("class"))),
                            .f = test_class_sig)
 names(LS8_class_analysis) <- LS89_ee
@@ -595,7 +597,7 @@ LS8_training_labels <- LS8_training_labels %>%
                              class))
 
 LS8_class_analysis_aggregated <- pmap(.l = list(dataset = list(LS8_training_labels),
-                                     band = LS89_band_sym,
+                                     bnd = LS89_band_sym,
                                      class_col = list(sym("agg_class"))),
                            .f = test_class_sig)
 names(LS8_class_analysis_aggregated) <- LS89_ee
