@@ -1,0 +1,144 @@
+---
+title: "Shoreline Contamination Workflow"
+author: "ROSSyndicate"
+date: "2024-05-24"
+output: html_document
+editor_options:
+  markdown:
+    wrap: 80
+---
+
+# Purpose
+
+This script creates a quick visualization of user-labeled shoreline
+contamination (SC) and creates a new shapefile that has been edited to remove
+areas where SC has been detected so that we can add some uncertainty measures
+later in the model.
+
+```{r setup, echo = FALSE}
+packages <- c('tidyverse',
+              'sf',
+              'mapview')
+
+package_loader <- function(x) {
+    if (x %in% installed.packages()) {
+      library(x, character.only = TRUE)
+    } else {
+      install.packages(x)
+      library(x, character.only = TRUE)
+    }
+}
+
+lapply(packages, package_loader)
+```
+
+## Pull in necessary files
+ 
+Load the labels file into the environment
+
+```{r}
+labels <- read_csv("data/labels/collated_label_data_v2023-07-20.csv")
+```
+
+Load the aoi into the environment
+
+```{r}
+aoi <- st_read('data/aoi/Superior_AOI_modeling.shp')
+```
+
+Grab the shoreline contamination labels. In this case we don't acutally care if 
+there is any per-mission mis match (like we did in 00 and 01 scripts), since we
+are just using the location identity (not the band data) to create a mask of 
+uncertainty near the shore where there may be shoreline contamination within the 
+AOI. 
+
+```{r}
+sc_labels <- labels %>%
+  filter(class == 'shorelineContamination')
+```
+
+The crs is WGS 84, so let's save these as a sf
+
+```{r}
+sc <- st_as_sf(sc_labels, coords = c('lon', 'lat'), crs = 'EPSG:4326')
+
+#and then convert to the crs of the aoi
+aoi_crs <- st_crs(aoi)
+
+sc <- st_transform(sc, aoi_crs)
+```
+
+## View the data and clip the AOI
+
+And plot to see where they are in conjunction with the shapefile
+
+```{r}
+ggplot() +
+  geom_sf(data = aoi) +
+  geom_sf(data = sc, color = 'red') +
+  theme_minimal()
+```
+
+As expected, this has pretty good coverage, especially since there are `r nrow(sc)` 
+labels.
+
+Let's buffer these points by 60m and snip the polygon to account for these
+areas of contamination.
+
+```{r}
+sc_buff <- st_buffer(sc, dist = 60)
+# then perform a union so that there's only one feature
+sc_buff_1 <- st_union(sc_buff)
+# check to make sure
+mapview(aoi) +
+  mapview(sc_buff_1)
+```
+
+And now remove those areas from the polygon
+
+```{r}
+# make geometries valid
+aoi <- st_make_valid(aoi)
+sc_buff_1 <- st_make_valid(sc_buff_1)
+
+# remove areas of sc_buff from original aoi
+aoi_no_sc <- st_difference(aoi, sc_buff_1)
+
+mapview(aoi_no_sc)
+```
+
+And let's remove the tiny areas that are created near the shore that are not 
+connected to the large polygon.
+
+```{r}
+# get indiv polygons
+aoi_no_sc_all <- st_cast(aoi_no_sc, 'POLYGON')
+# calculate the area for each
+aoi_no_sc_all$area <- st_area(aoi_no_sc_all)
+# sort them by size and only grab the largest one
+aoi_no_sc_one <- aoi_no_sc_all %>%
+  arrange(-area) %>%
+  slice(1) %>%
+  st_make_valid(.)
+
+mapview(aoi_no_sc_one)
+```
+
+And now trim the SC layer to the modeling AOI.
+
+```{r}
+sc_buff_export <- sc_buff_1 %>%
+  st_intersection(., aoi) %>%
+  st_make_valid(.)
+
+mapview(sc_buff_export)
+```
+
+## Save the files 
+
+And finally, write the shapefiles
+
+```{r}
+st_write(sc_buff_export, 'data/aoi/Superior_shoreline_contamination.shp', append = F)
+st_write(aoi_no_sc, 'data/aoi/Superior_AOI_minus_shoreline_contamination.shp', append = F)
+```

@@ -3,11 +3,19 @@ options(timeout = 1000)
 try(install_miniconda(force = T))
 
 # list python modules
-py_modules = c('earthengine-api', 'pandas', 'xarray', 'rasterio', 'rioxarray', 'fiona', 'geopandas', 'geemap')
+py_modules = c('earthengine-api', 'pandas', 'xarray', 'rasterio', 
+               'rioxarray', 'fiona', 'geopandas', 'geemap', 'spatialindex')
 
 py_install(envname = 'env/', 
            packages = py_modules, 
            python_version = "3.8")
+
+# you may need to install geopandas and spatialindex via conda_install:
+# conda_install(envname = 'env/',
+#               packages = c('geopandas', 'spatialindex'),
+#               python_version = '3.8')
+
+
 
 #create a conda environment named 'env' with the packages you need
 conda_create(envname = file.path(getwd(), 'env'),
