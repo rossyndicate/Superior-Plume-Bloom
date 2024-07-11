@@ -1,0 +1,365 @@
+ ---
+title: "eePlumB Develop and Apply GTB for Landsat 8"
+author: "ROSSyndicate"
+date: "2024-04-26"
+output: html_document
+editor_options:
+  markdown:
+    wrap: 80
+---
+
+```{r setup, echo = F}
+libs = c('reticulate', 'tidyverse')
+
+package_loader <- function(x) {
+    if (x %in% installed.packages()) {
+      library(x, character.only = TRUE)
+    } else {
+      install.packages(x)
+      library(x, character.only = TRUE)
+    }
+}
+
+lapply(libs, package_loader)
+```
+
+# Purpose
+
+This script develops and applies Gradient Tree Boost Models to the Landsat 8
+image stack.
+
+## Activate conda environment
+
+Check for virtual environment and activate, otherwise, set up virtual
+environment.
+
+```{r, conda env}
+if (!dir.exists("env")) {
+  source("pySetup.R")
+} else {
+  use_condaenv(file.path(getwd(), "env"))
+}
+```
+
+### Settings/modules
+
+Import the needed modules and set model version date
+
+```{python}
+import ee
+import os
+import time
+import pandas as pd
+
+v_date = '2024-04-26'
+```
+
+## GEE Setup
+
+```{python}
+ee.Authenticate()
+```
+
+When your browser states 'Google Earth Engine authentication successful!' or the
+console reads "TRUE", the
+authentication is complete. 
+
+Now, we need to initialize our GEE session. You may need to change the project 
+name to one you own if you do not have write access.
+
+```{python}
+ee.Initialize(project = 'ee-ross-superior')
+```
+
+
+Import custom functions (these require ee.Authenticate())
+```{python}
+import imp
+imp.load_source("gee_funx", "modeling/gee_functions.py")
+import gee_funx as gf
+```
+
+# Import assets
+
+These assets were created in the 03_Train_Test_Split.Rmd file
+
+```{python}
+training_ls8 = ee.FeatureCollection("projects/ee-ross-superior/assets/train-test/training_ls8_3class_v2024")
+testing_ls8 = ee.FeatureCollection("projects/ee-ross-superior/assets/train-test/validation_ls8_3class_v2024")
+```
+
+## Train the GTB model
+
+```{python}
+ls_input_feat = ["SR_B1", "SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", "SR_B7"]
+output_label = "class"
+class_values = (['cloud',
+  'openWater',
+  'sediment'])
+```
+
+### Landsat 8
+
+```{python}
+trainedGTB_ls8 = (ee.Classifier.smileGradientTreeBoost(10).train(
+  features = training_ls8,
+  classProperty = 'byte_property',
+  inputProperties = ls_input_feat
+))
+
+print(trainedGTB_ls8.getInfo())
+```
+
+Unfortunately, there is no current mechanism to save the GTB object. This is a
+bummer because you can't really set a seed for these either, however! GEE is a bit
+more rudimentary and recognizes the inputs and therefore creates the same output
+objects. I did a quick check of this by running the model here and then again 
+in the browser. Both have identical versions, so I feel confident that GEE is
+making the 'same' model. 
+
+## Evaluate the models
+
+### Landsat 8
+
+```{python}
+trainingMatrixGTB_ls8 = (trainedGTB_ls8
+  .confusionMatrix())
+
+#convert to pandas dataframe with class info
+training_conf_l8 = (pd.DataFrame(
+  trainingMatrixGTB_ls8.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
+print('GTB Training Confusion Matrix for Landsat 8:')
+print(training_conf_l8)
+
+#reformat and save
+training_conf_l8['mission'] = 'Landsat 8'
+training_conf_l8.reset_index(inplace = True)
+training_conf_l8 = training_conf_l8.rename(columns = {'level_0': 'class'})  
+training_conf_l8.to_csv('data/output/GTB_3class_'+v_date+'_l8_training_confusion.csv', index = False)
+
+confusionMatrixGTB_ls8 = (testing_ls8
+  .classify(trainedGTB_ls8)
+  .errorMatrix('byte_property', "classification"))
+
+#convert to pandas dataframe with class info
+confusion_l8 = (pd.DataFrame(
+  confusionMatrixGTB_ls8.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
+print('GTB Confusion Matrix for Landsat 8:')
+print(confusion_l8)
+
+#reformat and save
+confusion_l8['mission'] = 'Landsat 8'
+confusion_l8.reset_index(inplace = True)
+confusion_l8 = confusion_l8.rename(columns = {'level_0': 'class'})  
+confusion_l8.to_csv('data/output/GTB_3class_'+v_date+'_L8_confusion.csv', index = False)
+
+acc_values_GTB_ls8 = (confusionMatrixGTB_ls8.accuracy().getInfo())
+print("GTB Confusion Overall Accuracy for Landsat 8: ", acc_values_GTB_ls8)
+k_GTB_ls8 = (confusionMatrixGTB_ls8.kappa().getInfo())
+print("GTB kappa for LS8: ", k_GTB_ls8)
+fs_GTB_ls8 = (confusionMatrixGTB_ls8.fscore().getInfo())
+print('GTB fScore for each class: ', fs_GTB_ls8)
+```
+
+
+### Collate model stats, save to data folder
+
+First, we'll copy over some values and make a big pandas dataframe. Note that
+the df.copy() function unlinks the original list from the new one. Silly python.
+
+```{python}
+accuracy_heads = class_values.copy()
+accuracy_heads.extend(['GTB_accuracy', 'GTB_kappa'])
+landsat8_perf = fs_GTB_ls8.copy()
+landsat8_perf.extend([acc_values_GTB_ls8, k_GTB_ls8])
+
+performance_collation = pd.DataFrame(
+  [landsat8_perf],
+  index = [
+    'Landsat 8'
+    ],
+  columns = [accuracy_heads]
+  )
+
+# reset the index
+performance_collation.reset_index(inplace = True)
+performance_collation.rename(columns = {'index':'satellite'}).to_csv('data/output/GTB_LS8_3class_'+v_date+'_performance_stats.csv', index = False)
+```
+
+## Apply model to image stack for Landsat
+
+### Load the image collection
+
+```{python}
+# filter stack for desired PRs
+ROWS = ee.List([27, 28])
+
+l8 = (ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
+  .filter(ee.Filter.lt('CLOUD_COVER', 80))
+  .filter(ee.Filter.eq('WRS_PATH', 26))
+  .filter(ee.Filter.inList('WRS_ROW', ROWS))
+  .filter(ee.Filter.gte('IMAGE_QUALITY_OLI', 7))
+  .filter(ee.Filter.calendarRange(4, 11, 'month'))
+  # mask high aerosol
+  .map(gf.mask_high_aerosol)
+  # mask pixels with any qa flags
+  .map(gf.mask_qa_flags)
+  # mask saturated pixels
+  .map(gf.apply_radsat_mask)
+  # apply scaling factors
+  .map(gf.applyScaleFactors))
+
+```
+
+### Load modeling AOIs and clip stack
+
+Note, some AOIs are too big to load in here and use as 'virtual' ee Feature
+Collections. Given that, we have manually uploaded the shapefiles as an Earth
+Engine Feature Collection.
+
+And then clip each image by that aoi
+
+```{python}
+l8_aoi = l8.map(gf.clip)
+```
+
+#### Helper functions
+
+```{python}
+# get CRS info
+img_crs = l8.first().projection()
+img_crsTrans = img_crs.getInfo().get('transform')
+```
+
+### consolidate stack by image date
+
+```{python}
+l8_aoi = l8_aoi.map(gf.addImageDate)
+
+# summarize by missionDate field
+uniqueMissDate_l8 = l8_aoi.aggregate_array('missDate').distinct()
+
+```
+
+### Create mosaics
+
+```{python}
+
+#function to apply the GTB model
+def applyGTB_ls8(image):
+  # Select the bands that correspond to the input features of the GTB model
+  imageFeatures = image.select(ls_input_feat)
+  missDate = image.get('missDate')
+  # Classify the image using the trained GTB model
+  classifiedImage = (imageFeatures
+    .classify(trainedGTB_ls8)
+    .set('missDate', missDate))
+  return image.addBands(classifiedImage)
+
+def applyPerMissionDate_ls8(missDate):
+  mission = ee.String(missDate).slice(0,9)
+  date = ee.String(missDate).slice(10,20)
+  short_stack = (l8
+    .filter(ee.Filter.eq('SPACECRAFT_ID', mission))
+    .filter(ee.Filter.eq('DATE_ACQUIRED', date)))
+  oneMissDate = short_stack.mean()
+  ls_miss_date_GTB = applyGTB_ls8(oneMissDate)
+  ls_GTB_class = gf.extract_3classes(ls_miss_date_GTB)
+  return (ls_GTB_class.set('missDate', missDate))
+
+def mosaicStack_l8(missDate):
+  md_GTB = applyPerMissionDate_ls8(missDate)
+  return md_GTB
+
+newStack_list_l8 = uniqueMissDate_l8.map(mosaicStack_l8)
+newStack_l8 = ee.ImageCollection(newStack_list_l8)
+
+```
+
+### Lighten up each of the stacks to only the bands we care about
+
+```{python}
+lightStack_l8 = newStack_l8.select([
+    'classified',
+    'cloud',
+    'openWater',
+    'sediment'
+    ])
+
+```
+
+
+## Export GeoTiffs to drive
+
+### GTB images for Landsat 8
+
+```{python}
+aoi_ee = ee.FeatureCollection('projects/ee-ross-superior/assets/aoi/Superior_AOI_modeling')
+
+def clip(image):
+  return image.clip(aoi_ee.geometry())
+
+
+date_length_8 = len(uniqueMissDate_l8.getInfo())
+
+# export tif to drive
+for d in range(63, date_length_8):
+  md = uniqueMissDate_l8.get(d)
+  print(md.getInfo())
+  print(str(d+1) + ' of ' + str(date_length_8))
+  image = (newStack_l8
+    .filter(ee.Filter.eq('missDate', md))
+    .first()
+    .clip(aoi_ee.geometry()))
+  image_new_class = (gf.classifications_to_one_band(image)
+    .select('reclass'))
+  export_image = ee.batch.Export.image.toDrive(
+    image = image_new_class,
+    region = aoi_ee.geometry(),
+    description = 'GTB_v' + v_date + '_' + str(md.getInfo()),
+    folder = 'GTB_3class_LS8_v'+v_date,
+    scale = 30,
+    crs = img_crs,
+    maxPixels = 1e13)
+  
+  #Check how many existing tasks are running and take a break of 5 mins if it's >10
+  gf.maximum_no_of_tasks(10, 5*60)
+  #Send next task.
+  export_image.start()
+
+
+# # export as gee asset
+# for d in range(date_length_8):
+#   md = uniqueMissDate_l8.get(d)
+#   print(md.getInfo())
+#   print(str(d+1) + ' of ' + str(date_length_8))
+#   image = (newStack_l8
+#     .filter(ee.Filter.eq('missDate', md))
+#     .first()
+#     .clip(aoi_ee.geometry()))
+#   image_new_class = (gf.classifications_to_one_band(image)
+#     .select('reclass'))
+#   export_image = ee.batch.Export.image.toAsset(
+#     image = image_new_class,
+#     region = aoi_ee.geometry(),
+#     description = 'GTB_v' + v_date + '_' + str(md.getInfo()),
+#     assetId = 'projects/ee-ross-superior/assets/LS8_3class/GTB_LS8_'+str(md.getInfo())+'_v'+v_date,
+#     scale = 30,
+#     crs = img_crs,
+#     maxPixels = 1e13)
+#   
+#   #Check how many existing tasks are running and take a break of 5 mins if it's >10
+#   gf.maximum_no_of_tasks(10, 5*60)
+#   #Send next task.
+#   export_image.start()
+
+
+```
+
+

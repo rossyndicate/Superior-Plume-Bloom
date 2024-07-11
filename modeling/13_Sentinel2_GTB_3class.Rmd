@@ -1,0 +1,391 @@
+---
+title: "eePlumB Develop and Apply GTB for Sentinel 2 with 3 classes"
+author: "ROSSyndicate"
+date: "2023-04-26"
+output: html_document
+editor_options:
+  markdown:
+    wrap: 80
+---
+
+```{r setup, echo = F}
+libs = c('reticulate', 'tidyverse')
+
+package_loader <- function(x) {
+    if (x %in% installed.packages()) {
+      library(x, character.only = TRUE)
+    } else {
+      install.packages(x)
+      library(x, character.only = TRUE)
+    }
+}
+
+lapply(libs, package_loader)
+```
+
+# Purpose
+
+This script develops and applies Gradient Tree Boost Models to the Sentinel 2
+image stack.
+
+## Activate conda environment
+
+Check for virtual environment and activate, otherwise, set up virtual
+environment.
+
+```{r, conda env}
+if (!dir.exists("env")) {
+  source("pySetup.R")
+} else {
+  use_condaenv(file.path(getwd(), "env"))
+}
+```
+
+### Settings/modules
+
+Import the needed modules and set model version date
+
+```{python}
+import ee
+import os
+import time
+import pandas as pd
+
+v_date = '2024-04-26'
+```
+
+## GEE Setup
+
+```{python}
+ee.Authenticate()
+```
+
+When your browser states 'Google Earth Engine authentication successful!' or the
+console reads "TRUE", the
+authentication is complete. 
+
+Now, we need to initialize our GEE session. You may need to change the project 
+name to one you own if you do not have write access.
+
+```{python}
+ee.Initialize(project = 'ee-ross-superior')
+```
+
+
+Import custom functions (these require ee.Authenticate())
+```{python}
+import imp
+imp.load_source("gee_funx", "modeling/gee_functions.py")
+import gee_funx as gf
+```
+
+# Import assets
+
+These assets were created in the 03_Train_Test_Split.Rmd file
+
+```{python}
+training_sen = ee.FeatureCollection("projects/ee-ross-superior/assets/train-test/training_sen_3class_v2024")
+testing_sen = ee.FeatureCollection("projects/ee-ross-superior/assets/train-test/validation_sen_3class_v2024")
+```
+
+
+## Train the GTB model
+
+```{python}
+sen_input_feat = ["SR_B1", "SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", "SR_B7", 'SR_B8', "SR_B8A", 'SR_B11', 'SR_B12']
+output_label = "class"
+class_values = (['cloud',
+  'openWater',
+  'sediment'])
+```
+
+### Sentinel 2
+
+```{python}
+trainedGTB_sen = (ee.Classifier.smileGradientTreeBoost(10).train(
+  features = training_sen,
+  classProperty = 'byte_property',
+  inputProperties = sen_input_feat
+))
+
+print(trainedGTB_sen.getInfo())
+```
+
+Unfortunately, there is no current mechanism to save the GTB object. This is a
+bummer because you can't really set a seed for these either, however! GEE is a bit
+more rudimentary and recognizes the inputs and therefore creates the same output
+objects. I did a quick check of this by running the model here and then again 
+in the browser. Both have identical versions, so I feel confident that GEE is
+making the 'same' model. 
+
+## Evaluate the models
+
+### Sentinel 2
+
+```{python}
+trainingMatrixGTB_sen = (trainedGTB_sen
+  .confusionMatrix())
+
+#convert to pandas dataframe with class info
+training_conf_sen = (pd.DataFrame(
+  trainingMatrixGTB_sen.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
+print('GTB Training Confusion Matrix for Sentinel 2:')
+print(training_conf_sen)
+
+#reformat and save
+training_conf_sen['mission'] = 'Sentinel 2'
+training_conf_sen.reset_index(inplace = True)
+training_conf_sen = training_conf_sen.rename(columns = {'level_0': 'class'})  
+training_conf_sen.to_csv('data/output/GTB_3class_'+v_date+'_sen2_training_confusion.csv', index = False)
+
+confusionMatrixGTB_sen = (testing_sen
+  .classify(trainedGTB_sen)
+  .errorMatrix('byte_property', "classification"))
+#convert to pandas dataframe with class info
+confusion_sen = (pd.DataFrame(
+  confusionMatrixGTB_sen.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
+print('GTB Confusion Matrix for Sentinel 2:')
+print(confusion_sen)
+
+#reformat and save
+confusion_sen['mission'] = 'Sentinel 2'
+confusion_sen.reset_index(inplace = True)
+confusion_sen = confusion_sen.rename(columns = {'level_0': 'class'})  
+confusion_sen.to_csv('data/output/GTB_3class_'+v_date+'_Sen2_confusion.csv', index = False)
+
+acc_values_GTB_sen = (confusionMatrixGTB_sen.accuracy().getInfo())
+print("GTB Confusion Overall Accuracy for Sentinel 2: ", acc_values_GTB_sen)
+k_GTB_sen = (confusionMatrixGTB_sen.kappa().getInfo())
+print("GTB kappa for S2: ", k_GTB_sen)
+fs_GTB_sen = (confusionMatrixGTB_sen.fscore().getInfo())
+print('GTB fScore for each class: ', fs_GTB_sen)
+
+```
+
+This looks pretty good.
+
+### Collate model stats, save to data folder
+
+First, we'll copy over some values and make a big pandas dataframe. Note that the df.copy() function unlinks the original list from the new one. Silly python.
+
+```{python}
+accuracy_heads = class_values.copy()
+accuracy_heads.extend(['GTB_accuracy', 'GTB_kappa'])
+sentinel2_perf = fs_GTB_sen.copy()
+sentinel2_perf.extend([acc_values_GTB_sen, k_GTB_sen])
+
+performance_collation = pd.DataFrame(
+  [sentinel2_perf],
+  index = [
+    'Sentinel 2'
+    ],
+  columns = [accuracy_heads]
+  )
+
+# reset the index
+performance_collation.reset_index(inplace = True)
+performance_collation.rename(columns = {'index':'satellite'}).to_csv('data/output/GTB_Sen2_3_class'+v_date+'_performance_stats.csv', index = False)
+```
+
+
+## Apply model to image stack for Sentinel
+
+### Load the image collection
+
+```{python}
+# filter stack for desired tiles
+TILES = ee.List(['15TWN', '15TXN', '15TYN', '15TWM', '15TXM', '15TYM'])
+sen = (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+  # initial filter of stack to AOI and time of interest
+  .filter(ee.Filter.inList('MGRS_TILE', TILES))
+  .filter(ee.Filter.calendarRange(4, 11, 'month'))
+  # scene-level qa
+  .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 80))
+  .filter(ee.Filter.eq('GENERAL_QUALITY', 'PASSED'))
+  .filter(ee.Filter.eq('GEOMETRIC_QUALITY', 'PASSED'))
+  .filter(ee.Filter.eq('SENSOR_QUALITY', 'PASSED'))
+  .filter(ee.Filter.eq('DEGRADED_MSI_DATA_PERCENTAGE', 0))
+  .filter(ee.Filter.eq('SNOW_ICE_PERCENTAGE', 0))
+  # masks
+  .map(gf.apply_sat_defect_mask)
+  .map(gf.mask_SCL_qa)
+  .map(gf.mask_cirrus_opaque)
+  # apply scaling factor
+  .map(gf.applyScaleFactors_S2))
+
+```
+
+```{python}
+# get CRS info (before resampling to make this quicker)
+img_crs_sen = sen.first().select('SR_B2').projection()
+img_crsTrans_sen = img_crs_sen.getInfo().get('transform')
+
+targetCRS = 'EPSG:32615'  # UTM Zone 15N
+targetScale = 10  # 10m resolution
+
+# and now resample the 20m pixels to 10m
+def resampleBands2010(image):
+  bands = ['SR_B5', 'SR_B6', 'SR_B7', 'SR_B8A', 'SR_B11', 'SR_B12']
+  resampledBands = [image.select(band).resample('bilinear').reproject(
+    crs = targetCRS,
+    scale = targetScale
+  ).rename(band) for band in bands]
+  return image.addBands(resampledBands, None, True)
+
+
+# 60 to 10
+def resampleBands6010(image):
+  bands = ['SR_B1', 'SR_B9']
+  resampledBands = [image.select(band).resample('bilinear').reproject(
+    crs = targetCRS,
+    scale = targetScale
+  ).rename(band) for band in bands]
+  return image.addBands(resampledBands, None, True)
+
+
+# Apply the resample function to the image collection
+sen = sen.map(resampleBands2010).map(resampleBands6010)
+
+```
+
+
+### Load modeling AOIs and clip stack
+
+
+And then clip each image by the aoi
+
+```{python}
+sen_aoi = sen.map(gf.clip)
+
+```
+
+
+#### Helper functions
+
+
+### Consolidate stack by image date
+
+```{python}
+sen_aoi = sen_aoi.map(gf.addImageDateSen)
+
+# summarize by missionDate field
+uniqueMissDate_sen = sen_aoi.aggregate_array('missDate').distinct()
+
+```
+
+### Create mosaics
+
+```{python}
+
+#function to apply the GTB model
+def applyGTB_sen(image):
+  # Select the bands that correspond to the input features of the GTB model
+  imageFeatures = image.select(sen_input_feat)
+  missDate = image.get('missDate')
+  # Classify the image using the trained GTB model
+  classifiedImage = (imageFeatures
+    .classify(trainedGTB_sen)
+    .set('missDate', missDate))
+  return image.addBands(classifiedImage)
+
+
+def applyPerMissionDate_sen(missDate):
+  mission = ee.String(missDate).slice(0,11)
+  date = ee.String(missDate).slice(12,22)
+  short_stack = (sen
+    .filter(ee.Filter.eq('SPACECRAFT_NAME', mission))
+    .filterDate(date, ee.Date(date).advance(1,'day')))
+  oneMissDate = short_stack.mean()
+  sen_miss_date_GTB = applyGTB_sen(oneMissDate)
+  sen_GTB_class = gf.extract_classes(sen_miss_date_GTB)
+  return (sen_GTB_class.set('missDate', missDate))
+
+
+def mosaicStack_sen(missDate):
+  md_GTB = applyPerMissionDate_sen(missDate)
+  return md_GTB
+
+
+newStack_list_sen = uniqueMissDate_sen.map(mosaicStack_sen)
+newStack_sen = ee.ImageCollection(newStack_list_sen)
+```
+
+### Lighten up each of the stacks to only the bands we care about
+
+```{python}
+sen_stack_light = newStack_sen.select([
+    'classified',
+    'cloud',
+    'openWater',
+    'sediment'
+    ])
+
+```
+
+## Export GeoTiffs to drive
+### GTB images for Sentinel 2
+
+```{python}
+aoi_ee = ee.FeatureCollection('projects/ee-ross-superior/assets/aoi/Superior_AOI_modeling')
+
+def clip(image):
+  return image.clip(aoi_ee.geometry())
+
+date_length_sen = len(uniqueMissDate_sen.getInfo())
+
+# export as tif to Drive
+for d in range(date_length_sen):
+  md = uniqueMissDate_sen.get(d)
+  print(md.getInfo())
+  print(str(d+1) + ' of ' + str(date_length_sen))
+  image = (newStack_sen
+    .filter(ee.Filter.eq('missDate', md))
+    .first()
+    .clip(aoi_ee.geometry()))
+  image_new_class = (gf.classifications_to_one_band(image)
+    .select('reclass'))
+  export_image = ee.batch.Export.image.toDrive(
+    image = image_new_class,
+    region = aoi_ee.geometry(),
+    description = 'GTB_v' + v_date + '_' + str(md.getInfo()),
+    folder = 'GTB_3class_Sen2_v'+v_date,
+    scale = 10,
+    crs = img_crs_sen,
+    maxPixels = 1e13)
+  #Check how many existing tasks are running and take a break of 30 mins if it's >25
+  gf.maximum_no_of_tasks(10, 5*60)
+  #Send next task.
+  export_image.start()
+
+# # export GTB as GEE assets
+# for d in range(date_length_sen):
+#   md = uniqueMissDate_sen.get(d)
+#   print(md.getInfo())
+#   print(str(d+1) + ' of ' + str(date_length_sen))
+#   image = (newStack_sen
+#     .filter(ee.Filter.eq('missDate', md))
+#     .first()
+#     .clip(aoi_ee.geometry()))
+#   image_new_class = (gf.classifications_to_one_band(image)
+#     .select('reclass'))
+#   export_image = ee.batch.Export.image.toAsset(
+#     image = image_new_class,
+#     region = aoi_ee.geometry(),
+#     description = 'GTB_v' + v_date + '_' + str(md.getInfo()),
+#     assetId = 'projects/ee-ross-superior/assets/sen/GTB_3class_sen_'+str(md.getInfo())+'_v'+v_date,
+#     scale = 10,
+#     crs = img_crs_sen,
+#     maxPixels = 1e13)
+# 
+#   #Check how many existing tasks are running and take a break of 5 mins if it's >10
+#   gf.maximum_no_of_tasks(10, 5*60)
+#   #Send next task.
+#   export_image.start()
+
+```

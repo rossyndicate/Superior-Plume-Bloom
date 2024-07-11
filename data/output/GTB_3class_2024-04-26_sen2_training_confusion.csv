@@ -1,0 +1,4 @@
+class,cloud,openWater,sediment,mission
+cloud,309,0,3,Sentinel 2
+openWater,0,94,2,Sentinel 2
+sediment,2,1,183,Sentinel 2

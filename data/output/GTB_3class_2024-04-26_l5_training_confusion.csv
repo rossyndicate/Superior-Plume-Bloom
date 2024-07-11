@@ -1,0 +1,4 @@
+class,cloud,openWater,sediment,mission
+cloud,241,0,1,Landsat 5
+openWater,0,298,5,Landsat 5
+sediment,2,6,498,Landsat 5
