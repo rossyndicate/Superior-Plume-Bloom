@@ -172,7 +172,7 @@ ls5_tv_dates <- ls5_filt %>%
   pluck("date") %>% 
   unique()
 
-# sample 70% of the dates remaining
+# sample 70% of the dates
 train_dates <- sample(ls5_tv_dates, ls5_seventyperc)
 
 # and split the t-v dataset
@@ -192,7 +192,7 @@ ls7_tv_dates <- ls7_filt %>%
   pluck("date") %>% 
   unique()
 
-# sample 70% of the dates remaining
+# sample 70% of the dates
 train_dates <- sample(ls7_tv_dates, ls7_seventyperc)
 
 # and split the t-v dataset
@@ -214,7 +214,7 @@ ls8_tv_dates <- ls8_filt %>%
   pluck("date") %>% 
   unique()
 
-# sample 70% of the dates remaining
+# sample 70% of the dates
 train_dates <- sample(ls8_tv_dates, ls8_seventyperc)
 
 # and split the t-v dataset
@@ -288,7 +288,7 @@ sen_tv_dates <- sen_filt %>%
   pluck("date") %>% 
   unique()
 
-# sample 70% of the dates remaining
+# sample 70% of the dates
 train_dates <- sample(sen_tv_dates, sen_seventyperc)
 
 # and split the t-v dataset
