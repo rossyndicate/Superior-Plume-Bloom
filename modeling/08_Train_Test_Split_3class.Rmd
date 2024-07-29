@@ -401,7 +401,7 @@ Define the input features and output labels
 
 ```{python}
 ls57_input_feat = ["SR_B1", "SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B7"]
-ls89_input_feat = ["SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B8", "SR_B7"]
+ls89_input_feat = ["SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", "SR_B7"]
 sen_input_feat = (["SR_B1", "SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", 
   "SR_B7", "SR_B8", "SR_B8A","SR_B9", 'SR_B11', 'SR_B12'])
 output_label = "class"
