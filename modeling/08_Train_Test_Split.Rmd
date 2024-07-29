@@ -1,0 +1,516 @@
+---
+title: "eePlumB Train-Test Set"
+author: "ROSSyndicate"
+date: "2024-04-26"
+output: html_document
+editor_options:
+  markdown:
+    wrap: 80
+---
+
+```{r setup, echo = F}
+libs = c('reticulate', 'tidyverse')
+
+package_loader <- function(x) {
+    if (x %in% installed.packages()) {
+      library(x, character.only = TRUE)
+    } else {
+      install.packages(x)
+      library(x, character.only = TRUE)
+    }
+}
+
+lapply(libs, package_loader)
+```
+
+# Purpose
+
+This script processes the filtered eePlumB labels from the outlier and class analysis
+and creates a train-test-split for model development. 
+
+# Activate conda environment
+
+Check for virtual environment and activate, otherwise, set up virtual
+environment.
+
+```{r, conda env}
+if (!dir.exists("env")) {
+  source("pySetup.R")
+} else {
+  use_condaenv(file.path(getwd(), "env"))
+}
+```
+
+## Settings/modules
+
+Indicate the label version and set the seed for random processes
+
+```{r}
+training_set_version = "2024-04-25"
+
+set.seed(12)
+```
+
+And then import the needed modules
+
+```{python}
+import ee
+import os
+import time
+import pandas as pd
+
+v_date = '2024-04-26'
+```
+
+## GEE Setup
+
+```{python}
+ee.Authenticate()
+```
+
+When your browser states 'You are now authenticated with the gcloud CLI', the
+authentication is complete. This authentication is valid for 7 days.
+
+Now, we need to initialize our GEE session. You may need to change the project 
+name to one you own if you do not have write access.
+
+```{python}
+ee.Initialize(project = 'ee-ross-superior')
+```
+
+# Import assets
+
+## Load the labels file into the environment
+
+Read these into R since I saved them as RDS files
+
+```{r}
+ls5_labels = read_rds("data/labels/LS5_labels_for_tvt_2024-04-25.RDS")
+ls7_labels = read_rds("data/labels/LS7_labels_for_tvt_2024-04-25.RDS")
+ls8_labels = read_rds("data/labels/LS8_labels_for_tvt_2024-04-25.RDS")
+ls9_labels = read_rds("data/labels/LS9_labels_for_tvt_2024-04-25.RDS")
+sen2_labels = read_rds("data/labels/S2_labels_for_tvt_2024-04-25.RDS")
+```
+
+Make some helper lists
+
+```{r}
+class_list = c("cloud", "openWater", "lightNearShoreSediment",
+               "darkNearShoreSediment", "offShoreSediment")
+
+ls57_band_list = c(expr(SR_B1), expr(SR_B2), expr(SR_B3), expr(SR_B4), expr(SR_B5), expr(SR_B7))
+ls89_band_list = c(expr(SR_B2), expr(SR_B3), expr(SR_B4), expr(SR_B5), expr(SR_B6), expr(SR_B7))
+sen_band_list = c(expr(SR_B1), expr(SR_B2), expr(SR_B3), expr(SR_B4), expr(SR_B5), expr(SR_B6), 
+                  expr(SR_B7), expr(SR_B8), expr(SR_B8A), expr(SR_B11), expr(SR_B12))
+```
+
+### Check for complete obs
+
+```{r}
+ls57_bands_text = c("SR_B1", "SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B7")
+ls89_bands_text = c("SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", "SR_B7")
+sen_bands_text = c("SR_B1", "SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", 
+                  "SR_B7", "SR_B8", "SR_B8A", "SR_B9", "SR_B11", "SR_B12")
+
+ls5_filt <- ls5_labels %>%  
+  drop_na(SR_B1:SR_B7)
+ls7_filt <- ls7_labels %>% 
+  drop_na(SR_B1:SR_B7)
+ls8_filt <- ls8_labels %>% 
+  drop_na(SR_B1:SR_B7)
+ls9_filt <- ls9_labels %>% 
+  drop_na(SR_B1:SR_B7)
+sen_filt <- sen2_labels %>% 
+  drop_na(SR_B1:SR_B9)
+```
+
+These are all the same, so good-to-go!
+
+## Devise train-val-test splits
+
+First we need to see how many unique scenes are in each of these datsets, as
+we will want to split the train-val-tests by image-date, not randomly:
+
+```{r}
+length(unique(ls5_filt$date))
+length(unique(ls7_filt$date))
+length(unique(ls8_filt$date))
+length(unique(ls9_filt$date))
+length(unique(sen_filt$date))
+```
+
+Oof on the LS9 images - for the time being, we'll just try to split by scene
+with the acknowledgement that the val/train is going to be a single scene each.
+We are likely going to have to come back and label more data for LS9 to be viable.
+
+Because GEE's GTB doesn't use the validation set for training (it uses cross-fold
+validation), we only need train-validate.
+
+### Landsat 5
+
+```{r}
+# define the number of scenes that is ~ 70% of scenes
+ls5_seventyperc <- round((length(unique(ls5_filt$date)))*0.7, 0)
+
+# get unique train-val dates
+ls5_tv_dates <- ls5_filt %>% 
+  pluck("date") %>% 
+  unique()
+
+# sample 60% of the dates remaining
+train_dates <- sample(ls5_tv_dates, ls5_seventyperc)
+
+# and split the t-v dataset
+ls5_train <- ls5_filt %>% 
+  filter(date %in% train_dates)
+ls5_validate <- anti_join(ls5_filt, ls5_train)
+```
+
+### Landsat 7 
+
+```{r}
+# define the number of scenes that is ~ 70% of scenes
+ls7_seventyperc <- round((length(unique(ls7_filt$date)))*0.7, 0)
+
+# get unique train-val dates
+ls7_tv_dates <- ls7_filt %>% 
+  pluck("date") %>% 
+  unique()
+
+# sample 60% of the dates remaining
+train_dates <- sample(ls7_tv_dates, ls7_seventyperc)
+
+# and split the t-v dataset
+ls7_train <- ls7_filt %>% 
+  filter(date %in% train_dates)
+ls7_validate <- anti_join(ls7_filt, ls7_train)
+
+```
+
+
+### Landsat 8
+
+```{r}
+# define the number of scenes that is ~ 70% of scenes
+ls8_seventyperc <- round((length(unique(ls8_filt$date)))*0.7, 0)
+
+# get unique train-val dates
+ls8_tv_dates <- ls8_filt %>% 
+  pluck("date") %>% 
+  unique()
+
+# sample 60% of the dates remaining
+train_dates <- sample(ls8_tv_dates, ls8_seventyperc)
+
+# and split the t-v dataset
+ls8_train <- ls8_filt %>% 
+  filter(date %in% train_dates)
+ls8_validate <- anti_join(ls8_filt, ls8_train)
+
+```
+
+
+### Landsat 9
+
+Before we do a random split, let's see what classes are represetned across the dates:
+
+```{r}
+ls9_filt %>% 
+  group_by(date) %>%
+  summarise(n = length(unique(class)))
+```
+
+  date           n
+  <date>     <int>
+1 2021-11-06     4
+2 2022-05-05     4
+3 2022-05-21     5
+4 2022-06-06     3
+5 2022-07-24     2
+
+Eeep. only one image has all classes. 
+
+```{r}
+ls9_filt %>% 
+  group_by(date, class) %>% 
+  summarise(n = n()) %>% 
+  arrange(class)
+```
+
+  date       class                      n
+   <date>     <chr>                  <int>
+ 1 2021-11-06 cloud                     37
+ 2 2022-05-21 cloud                     44
+ 3 2022-06-06 cloud                     39
+ 4 2022-07-24 cloud                     72
+ 5 2021-11-06 darkNearShoreSediment      2
+ 6 2022-05-05 darkNearShoreSediment     12
+ 7 2022-05-21 darkNearShoreSediment     15
+ 8 2021-11-06 lightNearShoreSediment     7
+ 9 2022-05-05 lightNearShoreSediment    16
+10 2022-05-21 lightNearShoreSediment    29
+11 2022-06-06 lightNearShoreSediment     8
+12 2022-07-24 lightNearShoreSediment     4
+13 2021-11-06 offShoreSediment          19
+14 2022-05-05 offShoreSediment           4
+15 2022-05-21 offShoreSediment          33
+16 2022-06-06 offShoreSediment           9
+17 2022-05-05 openWater                 14
+18 2022-05-21 openWater                  5
+
+Good news, all classes are represented in more than one image. This is not ideal, 
+but I think we can just run with it. Because there is only one image with all
+classes represented, and there are only 5 image-dates, our test will have that 
+single image date with all classes represented.
+
+```{r}
+ls9_validate <- ls9_filt %>% 
+  filter(date == "2022-05-21")
+# and split the t-v dataset
+ls9_train <- anti_join(ls9_filt, ls9_validate)
+```
+
+### Sentinel 2
+
+```{r}
+# define the number of scenes that is ~ 70% of scenes
+sen_seventyperc <- round((length(unique(sen_filt$date)))*0.7, 0)
+
+# get unique train-val dates
+sen_tv_dates <- sen_filt %>% 
+  pluck("date") %>% 
+  unique()
+
+# sample 60% of the dates remaining
+train_dates <- sample(sen_tv_dates, sen_seventyperc)
+
+# and split the t-v dataset
+sen_train <- sen_filt %>% 
+  filter(date %in% train_dates)
+sen_validate <- anti_join(sen_filt, sen_train)
+
+```
+
+
+### Make ee feature collections
+
+Transform each of the r dataframes to ee feature collections.
+
+First, define the functions:
+
+```{python}
+def ls57_to_eeFeat(df):
+  features=[]
+  for i in range(df.shape[0]):
+    x,y = df.lon[i],df.lat[i]
+    latlong =[x,y]
+    loc_properties = ({'class': str(df['class'][i]), # note 'class' is a special word, must use different syntax
+      'mission': str(df.mission[i]), 
+      'SR_B1': df.SR_B1[i],
+      'SR_B2': df.SR_B2[i],
+      'SR_B3': df.SR_B3[i],
+      'SR_B4': df.SR_B4[i],
+      'SR_B5': df.SR_B5[i],
+      'SR_B7': df.SR_B7[i]
+      })
+    g = ee.Geometry.Point(latlong, 'EPSG:4326')
+    feature = ee.Feature(g, loc_properties)
+    features.append(feature)
+  ee_object = ee.FeatureCollection(features)
+  return ee_object
+
+
+def ls89_to_eeFeat(df):
+  features=[]
+  for i in range(df.shape[0]):
+    x,y = df.lon[i],df.lat[i]
+    latlong =[x,y]
+    loc_properties = ({'class': str(df['class'][i]), # note 'class' is a special word, must use different syntax
+      'mission': str(df.mission[i]), 
+      'SR_B1': df.SR_B1[i],
+      'SR_B2': df.SR_B2[i],
+      'SR_B3': df.SR_B3[i],
+      'SR_B4': df.SR_B4[i],
+      'SR_B5': df.SR_B5[i],
+      'SR_B6': df.SR_B6[i],
+      'SR_B7': df.SR_B7[i]
+      })
+    g = ee.Geometry.Point(latlong, 'EPSG:4326')
+    feature = ee.Feature(g, loc_properties)
+    features.append(feature)
+  ee_object = ee.FeatureCollection(features)
+  return ee_object
+
+
+def sen_to_eeFeat(df):
+  features=[]
+  for i in range(df.shape[0]):
+    x,y = df.lon[i],df.lat[i]
+    latlong =[x,y]
+    loc_properties = ({'class': str(df['class'][i]), # note 'class' is a special word, must use different syntax
+      'mission': str(df.mission[i]), 
+      'SR_B1': df.SR_B1[i],
+      'SR_B2': df.SR_B2[i],
+      'SR_B3': df.SR_B3[i],
+      'SR_B4': df.SR_B4[i],
+      'SR_B5': df.SR_B5[i],
+      'SR_B6': df.SR_B6[i],
+      'SR_B7': df.SR_B7[i],
+      'SR_B8': df.SR_B8[i],
+      'SR_B8A': df.SR_B8A[i],
+      'SR_B11': df.SR_B11[i],
+      'SR_B12': df.SR_B12[i]
+      })
+    g = ee.Geometry.Point(latlong, 'EPSG:4326')
+    feature = ee.Feature(g, loc_properties)
+    features.append(feature)
+  ee_object = ee.FeatureCollection(features)
+  return ee_object
+
+```
+
+```{python}
+ee_ls5_train = ls57_to_eeFeat(r.ls5_train)
+ee_ls5_validate = ls57_to_eeFeat(r.ls5_validate)
+
+ee_ls7_train = ls57_to_eeFeat(r.ls7_train)
+ee_ls7_validate = ls57_to_eeFeat(r.ls7_validate)
+
+ee_ls8_train = ls89_to_eeFeat(r.ls8_train)
+ee_ls8_validate = ls89_to_eeFeat(r.ls8_validate)
+
+ee_ls9_train = ls89_to_eeFeat(r.ls9_train)
+ee_ls9_validate = ls89_to_eeFeat(r.ls9_validate)
+
+ee_s2_train = sen_to_eeFeat(r.sen_train)
+ee_s2_validate = sen_to_eeFeat(r.sen_validate)
+
+```
+
+
+## Build the train/validate sets
+
+Define the input features and output labels
+
+```{python}
+ls57_input_feat = ["SR_B1", "SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B7"]
+ls89_input_feat = ["SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B8", "SR_B7"]
+sen_input_feat = (["SR_B1", "SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", 
+  "SR_B7", "SR_B8", "SR_B8A","SR_B9", 'SR_B11', 'SR_B12'])
+output_label = "class"
+class_values = r.class_list
+```
+
+Remap the label values to a 0-based sequential series.
+
+First for training.
+
+```{python}
+remap_values = ee.List.sequence(0, 4)
+labels_ls5_train = ee_ls5_train.remap(ee.List(class_values), remap_values, ee.String(output_label))
+labels_ls7_train = ee_ls7_train.remap(ee.List(class_values), remap_values, ee.String(output_label))
+labels_ls8_train = ee_ls8_train.remap(ee.List(class_values), remap_values, ee.String(output_label))
+labels_ls9_train = ee_ls9_train.remap(ee.List(class_values), remap_values, ee.String(output_label))
+labels_sen_train = ee_s2_train.remap(ee.List(class_values), remap_values, ee.String(output_label))
+
+def class_to_byte(feature):
+  byte_value = ee.Number(feature.get(output_label)).toByte()
+  return feature.set('byte_property', byte_value)
+
+labels_ls5_train = labels_ls5_train.map(class_to_byte)
+labels_ls7_train = labels_ls7_train.map(class_to_byte)
+labels_ls8_train = labels_ls8_train.map(class_to_byte)
+labels_ls9_train = labels_ls9_train.map(class_to_byte)
+labels_sen_train = labels_sen_train.map(class_to_byte)
+
+def add_class_by_remap(feature):
+  class_no = ee.Number(feature.get(output_label))
+  return feature.set('class', ee.List(class_values).get(class_no))
+
+labels_ls5_train = labels_ls5_train.map(add_class_by_remap)
+labels_ls7_train = labels_ls7_train.map(add_class_by_remap)
+labels_ls8_train = labels_ls8_train.map(add_class_by_remap)
+labels_ls9_train = labels_ls9_train.map(add_class_by_remap)
+labels_sen_train = labels_sen_train.map(add_class_by_remap)
+```
+
+
+For validation:
+
+```{python}
+labels_ls5_validate = ee_ls5_validate.remap(ee.List(class_values), remap_values, ee.String(output_label))
+labels_ls7_validate = ee_ls7_validate.remap(ee.List(class_values), remap_values, ee.String(output_label))
+labels_ls8_validate = ee_ls8_validate.remap(ee.List(class_values), remap_values, ee.String(output_label))
+labels_ls9_validate = ee_ls9_validate.remap(ee.List(class_values), remap_values, ee.String(output_label))
+labels_sen_validate = ee_s2_validate.remap(ee.List(class_values), remap_values, ee.String(output_label))
+
+labels_ls5_validate = labels_ls5_validate.map(class_to_byte)
+labels_ls7_validate = labels_ls7_validate.map(class_to_byte)
+labels_ls8_validate = labels_ls8_validate.map(class_to_byte)
+labels_ls9_validate = labels_ls9_validate.map(class_to_byte)
+labels_sen_validate = labels_sen_validate.map(class_to_byte)
+
+labels_ls5_validate = labels_ls5_validate.map(add_class_by_remap)
+labels_ls7_validate = labels_ls7_validate.map(add_class_by_remap)
+labels_ls8_validate = labels_ls8_validate.map(add_class_by_remap)
+labels_ls9_validate = labels_ls9_validate.map(add_class_by_remap)
+labels_sen_validate = labels_sen_validate.map(add_class_by_remap)
+```
+
+## Save Train-Validate to Assets
+
+And now we'll save the training and testing sets as ee objects for use later.
+
+Training:
+
+```{python}
+ee.batch.Export.table.toAsset(labels_ls5_train, 
+                            "LS5 Training", 
+                            "projects/ee-ross-superior/assets/train-test/training_ls5_v2024").start()
+
+ee.batch.Export.table.toAsset(labels_ls7_train, 
+                            "LS7 Training", 
+                            "projects/ee-ross-superior/assets/train-test/training_ls7_v2024").start()
+
+ee.batch.Export.table.toAsset(labels_ls8_train, 
+                            "LS8 Training", 
+                            "projects/ee-ross-superior/assets/train-test/training_ls8_v2024").start()
+
+ee.batch.Export.table.toAsset(labels_ls9_train, 
+                            "LS9 Training", 
+                            "projects/ee-ross-superior/assets/train-test/training_ls9_v2024").start()
+
+ee.batch.Export.table.toAsset(labels_sen_train, 
+                            "Sen Training", 
+                            "projects/ee-ross-superior/assets/train-test/training_sen_v2024").start()
+```
+
+Validation:
+
+```{python}
+ee.batch.Export.table.toAsset(labels_ls5_validate, 
+                            "LS5 Validation", 
+                            "projects/ee-ross-superior/assets/train-test/validation_ls5_v2024").start()
+
+ee.batch.Export.table.toAsset(labels_ls7_validate, 
+                            "LS7 Validation", 
+                            "projects/ee-ross-superior/assets/train-test/validation_ls7_v2024").start()
+
+ee.batch.Export.table.toAsset(labels_ls8_validate, 
+                            "LS8 Validation", 
+                            "projects/ee-ross-superior/assets/train-test/validation_ls8_v2024").start()
+
+ee.batch.Export.table.toAsset(labels_ls9_validate, 
+                            "LS9 Validation", 
+                            "projects/ee-ross-superior/assets/train-test/validation_ls9_v2024").start()
+
+ee.batch.Export.table.toAsset(labels_sen_validate, 
+                            "Sen Validation", 
+                            "projects/ee-ross-superior/assets/train-test/validation_sen_v2024").start()
+
+```
+
+
+
+
+
