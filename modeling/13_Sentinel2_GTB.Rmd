@@ -1,0 +1,590 @@
+---
+title: "eePlumB Develop and Apply GTB for Sentinel 2"
+author: "ROSSyndicate"
+date: "2023-04-26"
+output: html_document
+editor_options:
+  markdown:
+    wrap: 80
+---
+
+```{r setup, echo = F}
+libs = c('reticulate', 'tidyverse')
+
+package_loader <- function(x) {
+    if (x %in% installed.packages()) {
+      library(x, character.only = TRUE)
+    } else {
+      install.packages(x)
+      library(x, character.only = TRUE)
+    }
+}
+
+lapply(libs, package_loader)
+```
+
+# Purpose
+
+This script develops and applies Gradient Tree Boost Models to the Sentinel 2
+image stack.
+
+## Activate conda environment
+
+Check for virtual environment and activate, otherwise, set up virtual
+environment.
+
+```{r, conda env}
+if (!dir.exists("env")) {
+  source("pySetup.R")
+} else {
+  use_condaenv(file.path(getwd(), "env"))
+}
+```
+
+### Settings/modules
+
+Import the needed modules and set model version date
+
+```{python}
+import ee
+import os
+import time
+import pandas as pd
+
+v_date = '2024-04-26'
+```
+
+## GEE Setup
+
+```{python}
+ee.Authenticate()
+```
+
+When your browser states 'Google Earth Engine authentication successful!' or the
+console reads "TRUE", the
+authentication is complete. 
+
+Now, we need to initialize our GEE session. You may need to change the project 
+name to one you own if you do not have write access.
+
+```{python}
+ee.Initialize(project = 'ee-ross-superior')
+```
+
+
+Import custom functions (these require ee.Authenticate())
+```{python}
+import imp
+imp.load_source("gee_funx", "modeling/gee_functions.py")
+import gee_funx as gf
+```
+
+# Import assets
+
+These assets were created in the 03_Train_Test_Split.Rmd file
+
+```{python}
+training_sen = ee.FeatureCollection("projects/ee-ross-superior/assets/train-test/training_sen_v2024")
+testing_sen = ee.FeatureCollection("projects/ee-ross-superior/assets/train-test/validation_sen_v2024")
+```
+
+
+## Train the GTB model
+
+```{python}
+sen_input_feat = ["SR_B1", "SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", "SR_B7", 'SR_B8', "SR_B8A", 'SR_B11', 'SR_B12']
+output_label = "class"
+class_values = (['cloud',
+  'openWater',
+  'lightNearShoreSediment',
+  'offShoreSediment',
+  'darkNearShoreSediment'])
+```
+
+### Sentinel 2
+
+```{python}
+trainedGTB_sen = (ee.Classifier.smileGradientTreeBoost(10).train(
+  features = training_sen,
+  classProperty = 'byte_property',
+  inputProperties = sen_input_feat
+))
+
+print(trainedGTB_sen.getInfo())
+```
+
+Unfortunately, there is no current mechanism to save the GTB object. This is a
+bummer because you can't really set a seed for these either, however! GEE is a bit
+more rudimentary and recognizes the inputs and therefore creates the same output
+objects. I did a quick check of this by running the model here and then again 
+in the browser. Both have identical versions, so I feel confident that GEE is
+making the 'same' model. 
+
+## Evaluate the models
+
+### Sentinel 2
+
+```{python}
+trainingMatrixGTB_sen = (trainedGTB_sen
+  .confusionMatrix())
+
+#convert to pandas dataframe with class info
+training_conf_sen = (pd.DataFrame(
+  trainingMatrixGTB_sen.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
+print('GTB Training Confusion Matrix for Sentinel 2:')
+print(training_conf_sen)
+
+#reformat and save
+training_conf_sen['mission'] = 'Sentinel 2'
+training_conf_sen.reset_index(inplace = True)
+training_conf_sen = training_conf_sen.rename(columns = {'level_0': 'class'})  
+training_conf_sen.to_csv('data/output/GTB_'+v_date+'_sen2_training_confusion.csv', index = False)
+
+confusionMatrixGTB_sen = (testing_sen
+  .classify(trainedGTB_sen)
+  .errorMatrix('byte_property', "classification"))
+#convert to pandas dataframe with class info
+confusion_sen = (pd.DataFrame(
+  confusionMatrixGTB_sen.getInfo(),
+  index=[class_values],
+  columns =[class_values]
+  ))
+print('GTB Confusion Matrix for Sentinel 2:')
+print(confusion_sen)
+
+#reformat and save
+confusion_sen['mission'] = 'Sentinel 2'
+confusion_sen.reset_index(inplace = True)
+confusion_sen = confusion_sen.rename(columns = {'level_0': 'class'})  
+confusion_sen.to_csv('data/output/GTB_'+v_date+'_Sen2_confusion.csv', index = False)
+
+acc_values_GTB_sen = (confusionMatrixGTB_sen.accuracy().getInfo())
+print("GTB Confusion Overall Accuracy for Sentinel 2: ", acc_values_GTB_sen)
+k_GTB_sen = (confusionMatrixGTB_sen.kappa().getInfo())
+print("GTB kappa for S2: ", k_GTB_sen)
+fs_GTB_sen = (confusionMatrixGTB_sen.fscore().getInfo())
+print('GTB fScore for each class: ', fs_GTB_sen)
+
+```
+
+Not great, let's save the stats, and run the 3-class model.
+
+### Collate model stats, save to data folder
+
+First, we'll copy over some values and make a big pandas dataframe. Note that the df.copy() function unlinks the original list from the new one. Silly python.
+
+```{python}
+accuracy_heads = class_values.copy()
+accuracy_heads.extend(['GTB_accuracy', 'GTB_kappa'])
+sentinel2_perf = fs_GTB_sen.copy()
+sentinel2_perf.extend([acc_values_GTB_sen, k_GTB_sen])
+
+performance_collation = pd.DataFrame(
+  [sentinel2_perf],
+  index = [
+    'Sentinel 2'
+    ],
+  columns = [accuracy_heads]
+  )
+
+# reset the index
+performance_collation.reset_index(inplace = True)
+performance_collation.rename(columns = {'index':'satellite'}).to_csv('data/output/GTB_Sen2_'+v_date+'_performance_stats.csv', index = False)
+```
+
+
+<!-- ## Apply model to image stack for Sentinel -->
+
+<!-- ### Load the image collection -->
+
+<!-- ```{python} -->
+<!-- # filter stack for desired tiles -->
+<!-- TILES = ee.List(['15TWN', '15TXN', '15TYN', '15TWM', '15TXM', '15TYM']) -->
+
+<!-- s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED') -->
+
+<!-- # apply scaling factor -->
+<!-- def applySenScale(image): -->
+<!--   optical = image.select('B.').multiply(0.0001) -->
+<!--   optical2 = image.select('B..').multiply(0.0001) -->
+<!--   return image.addBands(optical, None, True).addBands(optical2, None, True) -->
+
+<!-- sen = (s2 -->
+<!--   .filter(ee.Filter.inList('MGRS_TILE', TILES)) -->
+<!--   .map(applySenScale) -->
+<!--   .select(bnsen, bn)) -->
+
+<!-- resample_crs_transform = sen.first().select('Red').projection().getInfo().get('transform') -->
+
+<!-- targetCRS = 'EPSG:32615'  # UTM Zone 15N -->
+<!-- targetScale = 10  # 10m resolution -->
+
+<!-- # and now resample the 20m pixels to 10m -->
+<!-- def reprojectBands(image): -->
+<!--   bands = ['B5', 'B6', 'B7', 'B11', 'B12'] -->
+<!--   reprojectedBands = [image.select(band).resample('bilinear').reproject( -->
+<!--     crs = targetCRS, -->
+<!--     scale = targetScale -->
+<!--   ).rename(band) for band in bands] -->
+<!--   return image.addBands(reprojectedBands, None, True) -->
+
+<!-- # Apply the resample function to the image collection -->
+<!-- sen = sen.map(reprojectBands) -->
+
+<!-- ``` -->
+
+
+<!-- ### Load modeling AOIs and clip stack -->
+
+<!-- Note, some AOIs are too big to load in here and uses as 'virtual' ee Feature -->
+<!-- Collections -->
+
+<!-- ```{python} -->
+<!-- aoi_ee = ee.FeatureCollection('projects/ee-ross-superior/assets/aoi/Superior_AOI_modeling') -->
+
+<!-- #Calculate total area of AOI -->
+<!-- def calc_area(feat): -->
+<!--   feat_area = feat.geometry().area() -->
+<!--   feat_area_ha = ee.Number(feat_area).divide(1e5) -->
+<!--   return feat.set('area_ha', feat_area_ha) -->
+
+<!-- aoi_area = aoi_ee.map(calc_area).aggregate_sum('area_ha') -->
+<!-- aoi_area_ha = aoi_area.getInfo() -->
+<!-- print('total AOI area: ', aoi_area_ha) -->
+<!-- ``` -->
+
+<!-- And then clip each image by the aoi -->
+
+<!-- ```{python} -->
+<!-- # clip images to aoi -->
+<!-- def clip(image): -->
+<!--   return image.clip(aoi_ee.geometry()) -->
+
+<!-- sen_aoi = sen.map(clip) -->
+
+<!-- ``` -->
+
+<!-- Load other AOIs to summarize over -->
+
+<!-- ```{python} -->
+<!-- aoi_no_sc_ee = ee.FeatureCollection('projects/ee-ross-superior/assets/aoi/Superior_AOI_minus_shoreline_contamination') -->
+
+<!-- aoi_no_sc_area = aoi_no_sc_ee.map(calc_area).aggregate_sum('area_ha') -->
+<!-- aoi_no_sc_area_ha = aoi_no_sc_area.getInfo() -->
+<!-- print('total AOI area without shoreline contamination: ', aoi_no_sc_area_ha) -->
+
+<!-- aoi_sc_ee = ee.FeatureCollection('projects/ee-ross-superior/assets/aoi/Superior_shoreline_contamination') -->
+
+<!-- aoi_sc_area = aoi_sc_ee.map(calc_area).aggregate_sum('area_ha') -->
+<!-- aoi_sc_area_ha = aoi_sc_area.getInfo() -->
+<!-- print('total AOI area identified as shoreline contamination: ', aoi_sc_area_ha) -->
+<!-- ``` -->
+
+<!-- #### Helper functions -->
+
+<!-- ```{python} -->
+<!-- # get CRS info -->
+<!-- img_crs_sen = sen_aoi.first().select('Red').projection() -->
+<!-- img_crsTrans_sen = img_crs_sen.getInfo().get('transform') -->
+
+<!-- #function to apply the GTB model -->
+<!-- def applyGTB_sen(image): -->
+<!--   # Select the bands that correspond to the input features of the GTB model -->
+<!--   imageFeatures = image.select(sen_input_feat) -->
+<!--   missDate = image.get('missDate') -->
+<!--   # Classify the image using the trained GTB model -->
+<!--   classifiedImage = (imageFeatures -->
+<!--     .classify(trainedGTB_sen) -->
+<!--     .set('missDate', missDate)) -->
+<!--   return image.addBands(classifiedImage) -->
+
+
+<!-- # save each value as its own band and mask -->
+<!-- def extract_classes(image): -->
+<!--   cl = image.select('classification') -->
+<!--   cloud = cl.eq(0).rename('cloud').selfMask() -->
+<!--   openWater = cl.eq(1).rename('openWater').selfMask() -->
+<!--   lightNSSed = cl.eq(2).rename('lightNSSed').selfMask() -->
+<!--   OSSed = cl.eq(3).rename('OSSed').selfMask() -->
+<!--   dNSSed = cl.eq(4).rename('dNSSed').selfMask() -->
+<!--   classified = cl.gte(0).rename('classified').selfMask() -->
+<!--   img_addBand = (image.addBands(cloud) -->
+<!--     .addBands(openWater) -->
+<!--     .addBands(lightNSSed) -->
+<!--     .addBands(OSSed) -->
+<!--     .addBands(dNSSed) -->
+<!--     .addBands(classified)) -->
+<!--   return img_addBand -->
+
+
+<!-- def applyPerMissionDate_sen(missDate): -->
+<!--   mission = ee.String(missDate).slice(0,11) -->
+<!--   date = ee.String(missDate).slice(12,22) -->
+<!--   short_stack = (sen -->
+<!--     .filter(ee.Filter.eq('SPACECRAFT_NAME', mission)) -->
+<!--     .filterDate(date, ee.Date(date).advance(1,'day'))) -->
+<!--   oneMissDate = short_stack.mean() -->
+<!--   sen_miss_date_GTB = applyGTB_sen(oneMissDate) -->
+<!--   sen_GTB_class = extract_classes(sen_miss_date_GTB) -->
+<!--   return (sen_GTB_class.set('missDate', missDate)) -->
+
+<!-- ``` -->
+
+<!-- ### Consolidate stack by image date -->
+
+<!-- ```{python} -->
+<!-- def addImageDate(image): -->
+<!--   mission = image.get('SPACECRAFT_NAME') -->
+<!--   date = image.date().format('YYYY-MM-dd') -->
+<!--   missDate = ee.String(mission).cat('_').cat(ee.String(date)) -->
+<!--   return image.set('missDate', missDate) -->
+
+<!-- sen_aoi = sen_aoi.map(addImageDate) -->
+
+<!-- # summarize by missionDate field -->
+<!-- uniqueMissDate_sen = sen_aoi.aggregate_array('missDate').distinct() -->
+
+<!-- ``` -->
+
+<!-- ### Create mosaics -->
+
+<!-- ```{python} -->
+<!-- def mosaicStack_sen(missDate): -->
+<!--   md_GTB = applyPerMissionDate_sen(missDate) -->
+<!--   return md_GTB -->
+
+<!-- newStack_list_sen = uniqueMissDate_sen.map(mosaicStack_sen) -->
+<!-- newStack_sen = ee.ImageCollection(newStack_list_sen) -->
+<!-- ``` -->
+
+<!-- ### Lighten up each of the stacks to only the bands we care about -->
+
+<!-- ```{python} -->
+<!-- sen_stack_light = newStack_sen.select([ -->
+<!--     'classified', -->
+<!--     'cloud', -->
+<!--     'openWater', -->
+<!--     'lightNSSed', -->
+<!--     'OSSed', -->
+<!--     'dNSSed' -->
+<!--     ]) -->
+
+<!-- ``` -->
+
+<!-- ### Calculate area per image and export -->
+
+<!-- ```{python} -->
+
+<!-- def calcArea_sen_aoi(image): -->
+<!--   areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5) -->
+
+<!--   area = areaImage.reduceRegions( -->
+<!--     collection = aoi_ee, -->
+<!--     reducer = ee.Reducer.sum().forEachBand(areaImage), -->
+<!--     crs = img_crs_sen, -->
+<!--     crsTransform = img_crsTrans_sen -->
+<!--   ) -->
+
+<!--   missDate = image.get('missDate') -->
+
+<!--   # Create a feature with the calculated area and properties -->
+<!--   a = area.first().set({'missDate': missDate,  -->
+<!--                         'area_ha': aoi_area_ha, -->
+<!--                         'extent': 'aoi'}) -->
+
+<!--   return ee.FeatureCollection(a) -->
+
+
+<!-- def calcArea_sen_nosc(image): -->
+<!--   areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5) -->
+
+<!--   area = areaImage.reduceRegions( -->
+<!--     collection = aoi_no_sc_ee, -->
+<!--     reducer = ee.Reducer.sum().forEachBand(areaImage), -->
+<!--     crs = img_crs_sen, -->
+<!--     crsTransform = img_crsTrans_sen -->
+<!--   ) -->
+
+<!--   missDate = image.get('missDate') -->
+
+<!--   # Create a feature with the calculated area and properties -->
+<!--   a = area.first().set({'missDate': missDate,  -->
+<!--                         'area_ha': aoi_no_sc_area_ha, -->
+<!--                         'extent': 'aoi no sc'}) -->
+
+<!--   return ee.FeatureCollection(a) -->
+
+
+<!-- def calcArea_sen_sc(image): -->
+<!--   areaImage =  image.multiply(ee.Image.pixelArea()).divide(1e5) -->
+
+<!--   area = areaImage.reduceRegions( -->
+<!--     collection = aoi_sc_ee, -->
+<!--     reducer = ee.Reducer.sum().forEachBand(areaImage), -->
+<!--     crs = img_crs_sen, -->
+<!--     crsTransform = img_crsTrans_sen -->
+<!--   ) -->
+
+<!--   missDate = image.get('missDate') -->
+
+<!--   # Create a feature with the calculated area and properties -->
+<!--   a = area.first().set({'missDate': missDate,  -->
+<!--                         'area_ha': aoi_sc_area_ha, -->
+<!--                         'extent': 'shoreline contamination'}) -->
+
+<!--   return ee.FeatureCollection(a) -->
+
+<!-- ``` -->
+
+<!-- And then map over the stacks -->
+
+<!-- ```{python} -->
+<!-- allAreas_sen_aoi = sen_stack_light.map(calcArea_sen_aoi) -->
+
+<!-- allAreas_sen_nosc = sen_stack_light.map(calcArea_sen_nosc) -->
+
+<!-- allAreas_sen_sc = sen_stack_light.map(calcArea_sen_sc) -->
+
+<!-- ``` -->
+
+
+<!-- ### Export summaries to drive -->
+
+<!-- ```{python} -->
+
+<!-- ## export to drive -->
+<!-- export_summary_sen_aoi = (ee.batch.Export.table.toDrive( -->
+<!--   collection = allAreas_sen_aoi, -->
+<!--   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'], -->
+<!--   description = 'gradientTreeBoost_sen2_stack_v' + v_date, -->
+<!--   folder = 'eePlumB_classification', -->
+<!--   fileFormat = 'csv')) -->
+
+<!-- export_summary_sen_aoi.start() -->
+
+
+<!-- ## export to drive -->
+<!-- export_summary_sen_nosc = (ee.batch.Export.table.toDrive( -->
+<!--   collection = allAreas_sen_nosc, -->
+<!--   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'], -->
+<!--   description = 'gradientTreeBoost_sen2_nosc_stack_v' + v_date, -->
+<!--   folder = 'eePlumB_classification', -->
+<!--   fileFormat = 'csv')) -->
+
+<!-- export_summary_sen_nosc.start() -->
+
+
+<!-- ## export to drive -->
+<!-- export_summary_sen_sc = (ee.batch.Export.table.toDrive( -->
+<!--   collection = allAreas_sen_sc, -->
+<!--   selectors = ['missDate', 'classified', 'cloud', 'openWater', 'lightNSSed','OSSed', 'dNSSed', 'area_ha', 'extent'], -->
+<!--   description = 'gradientTreeBoost_sen2_sc_stack_v' + v_date, -->
+<!--   folder = 'eePlumB_classification', -->
+<!--   fileFormat = 'csv')) -->
+
+<!-- export_summary_sen_sc.start() -->
+
+<!-- ``` -->
+
+<!-- ## Export GeoTiffs to drive -->
+
+<!-- Load task checker! -->
+
+<!-- ```{python} -->
+<!-- ##Function for limiting the max number of tasks sent to -->
+<!-- #earth engine at one time to avoid time out errors -->
+<!-- def maximum_no_of_tasks(MaxNActive, waitingPeriod): -->
+<!--   ##maintain a maximum number of active tasks -->
+<!--   ## initialize submitting jobs -->
+<!--   ts = list(ee.batch.Task.list()) -->
+<!--   NActive = 0 -->
+<!--   for task in ts: -->
+<!--      if ('RUNNING' in str(task) or 'READY' in str(task)): -->
+<!--          NActive += 1 -->
+<!--   ## wait if the number of current active tasks reach the maximum number -->
+<!--   ## defined in MaxNActive -->
+<!--   while (NActive >= MaxNActive): -->
+<!--     time.sleep(waitingPeriod) # if reach or over maximum no. of active tasks, wait for 2min and check again -->
+<!--     ts = list(ee.batch.Task.list()) -->
+<!--     NActive = 0 -->
+<!--     for task in ts: -->
+<!--       if ('RUNNING' in str(task) or 'READY' in str(task)): -->
+<!--         NActive += 1 -->
+<!--   return() -->
+
+<!-- ``` -->
+
+<!-- ### Raster Export -->
+
+<!-- First, we need to define a function to use the data from the multiple classified -->
+<!-- bands to populate a single band. -->
+
+<!-- ```{python} -->
+<!-- fromlist = [0,1,2,3,4] -->
+<!-- tolist = [1,2,3,4,5] -->
+<!-- def classifications_to_one_band(image): -->
+<!--   cl = image.select('classification').clip(aoi_ee.geometry()) -->
+<!--   img_classified = (cl -->
+<!--     .remap(fromlist, tolist, defaultValue = -99) -->
+<!--     .rename('reclass')) -->
+<!--   return image.addBands(img_classified) -->
+
+<!-- ``` -->
+
+<!-- ### GTB images for Sentinel 2 -->
+
+<!-- ```{python} -->
+<!-- date_length_sen = len(uniqueMissDate_sen.getInfo()) -->
+
+<!-- for d in range(date_length_sen): -->
+<!--   md = uniqueMissDate_sen.get(d) -->
+<!--   print(md.getInfo()) -->
+<!--   print(str(d+1) + ' of ' + str(date_length_sen)) -->
+<!--   image = (newStack_sen -->
+<!--     .filter(ee.Filter.eq('missDate', md)) -->
+<!--     .first() -->
+<!--     .clip(aoi_ee.geometry())) -->
+<!--   image_new_class = (classifications_to_one_band(image) -->
+<!--     .select('reclass')) -->
+<!--   export_image = ee.batch.Export.image.toDrive( -->
+<!--     image = image_new_class, -->
+<!--     region = aoi_ee.geometry(), -->
+<!--     description = 'GTB_v' + v_date + '_' + str(md.getInfo()), -->
+<!--     folder = 'GTB_Sen2_v'+v_date, -->
+<!--     scale = 10, -->
+<!--     crs = img_crs_sen, -->
+<!--     maxPixels = 1e13) -->
+<!--   #Check how many existing tasks are running and take a break of 30 mins if it's >25 -->
+<!--   maximum_no_of_tasks(10, 5*60) -->
+<!--   #Send next task. -->
+<!--   export_image.start() -->
+
+
+<!-- for d in range(date_length_sen): -->
+<!--   md = uniqueMissDate_sen.get(d) -->
+<!--   print(md.getInfo()) -->
+<!--   print(str(d+1) + ' of ' + str(date_length_sen)) -->
+<!--   image = (newStack_sen -->
+<!--     .filter(ee.Filter.eq('missDate', md)) -->
+<!--     .first() -->
+<!--     .clip(aoi_ee.geometry())) -->
+<!--   image_new_class = (classifications_to_one_band(image) -->
+<!--     .select('reclass')) -->
+<!--   export_image = ee.batch.Export.image.toAsset( -->
+<!--     image = image_new_class, -->
+<!--     region = aoi_ee.geometry(), -->
+<!--     description = 'GTB_v' + v_date + '_' + str(md.getInfo()), -->
+<!--     assetId = 'projects/ee-ross-superior/assets/sen/'+'GTB_sen_'+str(md.getInfo())+'_v'+v_date, -->
+<!--     scale = 10, -->
+<!--     crs = img_crs_sen, -->
+<!--     maxPixels = 1e13) -->
+
+<!--   #Check how many existing tasks are running and take a break of 5 mins if it's >10 -->
+<!--   maximum_no_of_tasks(10, 5*60) -->
+<!--   #Send next task. -->
+<!--   export_image.start() -->
+
+<!-- ``` -->
