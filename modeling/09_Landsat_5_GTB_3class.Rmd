@@ -148,8 +148,10 @@ plt.tight_layout()
 # Display the plot
 plt.show()
 
+df = pd.DataFrame(list(sorted_importance.items()), columns=['Band', 'Feature_Importance'])
+
 # And save the variable importance for later use.
-variable_importance.to_csv('data/output/GTB_3class_LS5_variable_importance'+v_date+'.csv', index = False)
+df.to_csv('data/output/GTB_3class_LS5_variable_importance_'+v_date+'.csv', index = False)
 
 ```
 
