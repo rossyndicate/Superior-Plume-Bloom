@@ -136,8 +136,8 @@ plt.figure(figsize=(10, 6))
 plt.barh(keys, values, color='skyblue')
 
 # Adding titles and labels
-plt.xlabel('Band')
-plt.ylabel('Feature Importance')
+plt.xlabel('Feature Importance')
+plt.ylabel('Band')
 plt.title('Feature importance for 3-class GTB model for Landsat 5')
 
 # Reverse the y-axis to show highest value at the top
@@ -228,7 +228,7 @@ performance_collation = pd.DataFrame(
 
 # reset the index
 performance_collation.reset_index(inplace = True)
-performance_collation.rename(columns = {'index':'satellite'}).to_csv('data/output/GTB_LS5_3class_'+v_date+'_performance_stats.csv', index = False)
+performance_collation.rename(columns = {'index':'satellite'}).to_csv('data/output/GTB_3class_LS5_'+v_date+'_performance_stats.csv', index = False)
 ```
 
 ## Apply model to image stack for Landsat

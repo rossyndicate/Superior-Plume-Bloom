@@ -1,4 +1,4 @@
 class,cloud,openWater,sediment,mission
 cloud,240,0,1,Landsat 8
 openWater,0,25,0,Landsat 8
-sediment,0,0,236,Landsat 8
+sediment,0,1,235,Landsat 8
