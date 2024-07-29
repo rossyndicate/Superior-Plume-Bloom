@@ -49,6 +49,7 @@ Import the needed modules and set model version date
 import ee
 import os
 import time
+import matplotlib.pyplot as plt
 import pandas as pd
 
 v_date = '2024-04-26'
@@ -91,7 +92,7 @@ testing_ls9 = ee.FeatureCollection("projects/ee-ross-superior/assets/train-test/
 ## Train the GTB model
 
 ```{python}
-ls_input_feat = ["SR_B1", "SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", "SR_B7"]
+ls_input_feat = ["SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", "SR_B7"]
 output_label = "class"
 class_values = (['cloud',
   'openWater',
@@ -103,7 +104,7 @@ class_values = (['cloud',
 ### Landsat 9
 
 ```{python}
-trainedGTB_ls9 = (ee.Classifier.smileGradientTreeBoost(10).train(
+trainedGTB_ls9 = (ee.Classifier.smileGradientTreeBoost(numberOfTrees = 10, seed = 47).train(
   features = training_ls9,
   classProperty = 'byte_property',
   inputProperties = ls_input_feat
@@ -112,12 +113,49 @@ trainedGTB_ls9 = (ee.Classifier.smileGradientTreeBoost(10).train(
 print(trainedGTB_ls9.getInfo())
 ```
 
-Unfortunately, there is no current mechanism to save the GTB object. This is a
-bummer because you can't really set a seed for these either, however! GEE is a bit
-more rudimentary and recognizes the inputs and therefore creates the same output
-objects. I did a quick check of this by running the model here and then again 
-in the browser. Both have identical versions, so I feel confident that GEE is
-making the 'same' model. 
+Unfortunately, there is no current mechanism to save the GTB object as an asset, 
+so we are relying on setting the seed here to take care of reproducibility. Let's
+also take a look at the variable importance to make sure that this all makes sense.
+
+
+```{python}
+# Variable Importance - Graph  
+GTB_ls9_dict = trainedGTB_ls9.explain()
+
+variable_importance = (ee.Dictionary(GTB_ls9_dict)
+  .get('importance')
+  .getInfo())
+
+# Sort the dictionary by values in descending order
+sorted_importance = dict(sorted(variable_importance.items(), key=lambda item: item[1], reverse=True))
+
+# Extract keys and values
+keys = list(sorted_importance.keys())
+values = list(sorted_importance.values())
+
+# Plot the bar graph
+plt.figure(figsize=(10, 6))
+plt.barh(keys, values, color='skyblue')
+
+# Adding titles and labels
+plt.xlabel('Feature Importance')
+plt.ylabel('Band')
+plt.title('Feature importance for 5-class GTB model for Landsat 9')
+
+# Reverse the y-axis to show highest value at the top
+plt.gca().invert_yaxis()
+
+# Display the plot
+plt.tight_layout()
+# Display the plot
+plt.show()
+
+df = pd.DataFrame(list(sorted_importance.items()), columns=['Band', 'Feature_Importance'])
+
+# And save the variable importance for later use.
+df.to_csv('data/output/GTB_LS9_variable_importance_'+v_date+'.csv', index = False)
+
+```
 
 ## Evaluate the models
 

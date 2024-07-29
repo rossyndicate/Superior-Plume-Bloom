@@ -116,7 +116,6 @@ Unfortunately, there is no current mechanism to save the GTB object as an asset,
 so we are relying on setting the seed here to take care of reproducibility. Let's
 also take a look at the variable importance to make sure that this all makes sense.
 
-
 ```{python}
 # Variable Importance - Graph  
 GTB_ls7_dict = trainedGTB_ls7.explain()
