@@ -49,6 +49,7 @@ Import the needed modules and set model version date
 import ee
 import os
 import time
+import matplotlib.pyplot as plt
 import pandas as pd
 
 v_date = '2024-04-26'
