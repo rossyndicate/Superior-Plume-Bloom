@@ -309,7 +309,7 @@ def clip(image):
 date_length_8 = len(uniqueMissDate_l8.getInfo())
 
 # export tif to drive
-for d in range(63, date_length_8):
+for d in range(date_length_8):
   md = uniqueMissDate_l8.get(d)
   print(md.getInfo())
   print(str(d+1) + ' of ' + str(date_length_8))
