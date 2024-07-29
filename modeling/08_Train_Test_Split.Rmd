@@ -92,26 +92,17 @@ ls9_labels = read_rds("data/labels/LS9_labels_for_tvt_2024-04-25.RDS")
 sen2_labels = read_rds("data/labels/S2_labels_for_tvt_2024-04-25.RDS")
 ```
 
-Make some helper lists
+List the classes we care about:
 
 ```{r}
 class_list = c("cloud", "openWater", "lightNearShoreSediment",
                "darkNearShoreSediment", "offShoreSediment")
 
-ls57_band_list = c(expr(SR_B1), expr(SR_B2), expr(SR_B3), expr(SR_B4), expr(SR_B5), expr(SR_B7))
-ls89_band_list = c(expr(SR_B2), expr(SR_B3), expr(SR_B4), expr(SR_B5), expr(SR_B6), expr(SR_B7))
-sen_band_list = c(expr(SR_B1), expr(SR_B2), expr(SR_B3), expr(SR_B4), expr(SR_B5), expr(SR_B6), 
-                  expr(SR_B7), expr(SR_B8), expr(SR_B8A), expr(SR_B11), expr(SR_B12))
 ```
 
 ### Check for complete obs
 
 ```{r}
-ls57_bands_text = c("SR_B1", "SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B7")
-ls89_bands_text = c("SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", "SR_B7")
-sen_bands_text = c("SR_B1", "SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", 
-                  "SR_B7", "SR_B8", "SR_B8A", "SR_B9", "SR_B11", "SR_B12")
-
 ls5_filt <- ls5_labels %>%  
   drop_na(SR_B1:SR_B7)
 ls7_filt <- ls7_labels %>% 
@@ -393,10 +384,6 @@ ee_s2_validate = sen_to_eeFeat(r.sen_validate)
 Define the input features and output labels
 
 ```{python}
-ls57_input_feat = ["SR_B1", "SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B7"]
-ls89_input_feat = ["SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B8", "SR_B7"]
-sen_input_feat = (["SR_B1", "SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", 
-  "SR_B7", "SR_B8", "SR_B8A","SR_B9", 'SR_B11', 'SR_B12'])
 output_label = "class"
 class_values = r.class_list
 ```
