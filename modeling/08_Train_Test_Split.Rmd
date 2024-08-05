@@ -1,5 +1,5 @@
 ---
-title: "eePlumB Train-Test Set as 3-class dataset"
+title: "eePlumB Train-Test Set"
 author: "ROSSyndicate"
 date: "2024-04-26"
 output: html_document
@@ -46,7 +46,7 @@ if (!dir.exists("env")) {
 Indicate the label version and set the seed for random processes
 
 ```{r}
-training_set_version = "2024-04-24"
+training_set_version = "2024-04-25"
 
 set.seed(12)
 ```
@@ -58,9 +58,8 @@ import ee
 import os
 import time
 import pandas as pd
-#import geopandas as gpd
 
-v_date = '2024-04-30'
+v_date = '2024-04-26'
 ```
 
 ## GEE Setup
@@ -86,32 +85,19 @@ ee.Initialize(project = 'ee-ross-superior')
 Read these into R since I saved them as RDS files
 
 ```{r}
-ls5_labels = read_rds("data/labels/LS5_labels_for_tvt_2024-04-25.RDS") %>% 
-  mutate(class = if_else(grepl("sediment", class, ignore.case = T),
-                         "sediment",
-                         class))
-ls7_labels = read_rds("data/labels/LS7_labels_for_tvt_2024-04-25.RDS") %>% 
-  mutate(class = if_else(grepl("sediment", class, ignore.case = T),
-                         "sediment",
-                         class))
-ls8_labels = read_rds("data/labels/LS8_labels_for_tvt_2024-04-25.RDS") %>% 
-  mutate(class = if_else(grepl("sediment", class, ignore.case = T),
-                         "sediment",
-                         class))
-ls9_labels = read_rds("data/labels/LS9_labels_for_tvt_2024-04-25.RDS") %>% 
-  mutate(class = if_else(grepl("sediment", class, ignore.case = T),
-                         "sediment",
-                         class))
-sen2_labels = read_rds("data/labels/S2_labels_for_tvt_2024-04-25.RDS") %>% 
-  mutate(class = if_else(grepl("sediment", class, ignore.case = T),
-                         "sediment",
-                         class))
+ls5_labels = read_rds("data/labels/LS5_labels_for_tvt_2024-04-25.RDS")
+ls7_labels = read_rds("data/labels/LS7_labels_for_tvt_2024-04-25.RDS")
+ls8_labels = read_rds("data/labels/LS8_labels_for_tvt_2024-04-25.RDS")
+ls9_labels = read_rds("data/labels/LS9_labels_for_tvt_2024-04-25.RDS")
+sen2_labels = read_rds("data/labels/S2_labels_for_tvt_2024-04-25.RDS")
 ```
 
-List the classes we care about here:
+List the classes we care about:
 
 ```{r}
-class_list = c("cloud", "openWater", "sediment")
+class_list = c("cloud", "openWater", "lightNearShoreSediment",
+               "darkNearShoreSediment", "offShoreSediment")
+
 ```
 
 ### Check for complete obs
@@ -162,7 +148,7 @@ ls5_tv_dates <- ls5_filt %>%
   pluck("date") %>% 
   unique()
 
-# sample 70% of the dates
+# sample 60% of the dates remaining
 train_dates <- sample(ls5_tv_dates, ls5_seventyperc)
 
 # and split the t-v dataset
@@ -182,7 +168,7 @@ ls7_tv_dates <- ls7_filt %>%
   pluck("date") %>% 
   unique()
 
-# sample 70% of the dates
+# sample 60% of the dates remaining
 train_dates <- sample(ls7_tv_dates, ls7_seventyperc)
 
 # and split the t-v dataset
@@ -204,7 +190,7 @@ ls8_tv_dates <- ls8_filt %>%
   pluck("date") %>% 
   unique()
 
-# sample 70% of the dates
+# sample 60% of the dates remaining
 train_dates <- sample(ls8_tv_dates, ls8_seventyperc)
 
 # and split the t-v dataset
@@ -216,6 +202,7 @@ ls8_validate <- anti_join(ls8_filt, ls8_train)
 
 
 ### Landsat 9
+
 Before we do a random split, let's see what classes are represetned across the dates:
 
 ```{r}
@@ -226,10 +213,10 @@ ls9_filt %>%
 
   date           n
   <date>     <int>
-1 2021-11-06     2
-2 2022-05-05     2
-3 2022-05-21     3
-4 2022-06-06     2
+1 2021-11-06     4
+2 2022-05-05     4
+3 2022-05-21     5
+4 2022-06-06     3
 5 2022-07-24     2
 
 Eeep. only one image has all classes. 
@@ -241,19 +228,26 @@ ls9_filt %>%
   arrange(class)
 ```
 
-  date       class         n
-   <date>     <chr>     <int>
- 1 2021-11-06 cloud        37
- 2 2022-05-21 cloud        44
- 3 2022-06-06 cloud        39
- 4 2022-07-24 cloud        72
- 5 2022-05-05 openWater    14
- 6 2022-05-21 openWater     5
- 7 2021-11-06 sediment     28
- 8 2022-05-05 sediment     32
- 9 2022-05-21 sediment     77
-10 2022-06-06 sediment     17
-11 2022-07-24 sediment      4
+  date       class                      n
+   <date>     <chr>                  <int>
+ 1 2021-11-06 cloud                     37
+ 2 2022-05-21 cloud                     44
+ 3 2022-06-06 cloud                     39
+ 4 2022-07-24 cloud                     72
+ 5 2021-11-06 darkNearShoreSediment      2
+ 6 2022-05-05 darkNearShoreSediment     12
+ 7 2022-05-21 darkNearShoreSediment     15
+ 8 2021-11-06 lightNearShoreSediment     7
+ 9 2022-05-05 lightNearShoreSediment    16
+10 2022-05-21 lightNearShoreSediment    29
+11 2022-06-06 lightNearShoreSediment     8
+12 2022-07-24 lightNearShoreSediment     4
+13 2021-11-06 offShoreSediment          19
+14 2022-05-05 offShoreSediment           4
+15 2022-05-21 offShoreSediment          33
+16 2022-06-06 offShoreSediment           9
+17 2022-05-05 openWater                 14
+18 2022-05-21 openWater                  5
 
 Good news, all classes are represented in more than one image. This is not ideal, 
 but I think we can just run with it. Because there is only one image with all
@@ -278,7 +272,7 @@ sen_tv_dates <- sen_filt %>%
   pluck("date") %>% 
   unique()
 
-# sample 70% of the dates
+# sample 60% of the dates remaining
 train_dates <- sample(sen_tv_dates, sen_seventyperc)
 
 # and split the t-v dataset
@@ -399,7 +393,7 @@ Remap the label values to a 0-based sequential series.
 First for training.
 
 ```{python}
-remap_values = ee.List.sequence(0, 2)
+remap_values = ee.List.sequence(0, 4)
 labels_ls5_train = ee_ls5_train.remap(ee.List(class_values), remap_values, ee.String(output_label))
 labels_ls7_train = ee_ls7_train.remap(ee.List(class_values), remap_values, ee.String(output_label))
 labels_ls8_train = ee_ls8_train.remap(ee.List(class_values), remap_values, ee.String(output_label))
@@ -459,23 +453,23 @@ Training:
 ```{python}
 ee.batch.Export.table.toAsset(labels_ls5_train, 
                             "LS5 Training", 
-                            "projects/ee-ross-superior/assets/train-test/training_ls5_3class_v2024").start()
+                            "projects/ee-ross-superior/assets/train-test/training_ls5_v2024").start()
 
 ee.batch.Export.table.toAsset(labels_ls7_train, 
                             "LS7 Training", 
-                            "projects/ee-ross-superior/assets/train-test/training_ls7_3class_v2024").start()
+                            "projects/ee-ross-superior/assets/train-test/training_ls7_v2024").start()
 
 ee.batch.Export.table.toAsset(labels_ls8_train, 
                             "LS8 Training", 
-                            "projects/ee-ross-superior/assets/train-test/training_ls8_3class_v2024").start()
+                            "projects/ee-ross-superior/assets/train-test/training_ls8_v2024").start()
 
 ee.batch.Export.table.toAsset(labels_ls9_train, 
                             "LS9 Training", 
-                            "projects/ee-ross-superior/assets/train-test/training_ls9_3class_v2024").start()
+                            "projects/ee-ross-superior/assets/train-test/training_ls9_v2024").start()
 
 ee.batch.Export.table.toAsset(labels_sen_train, 
                             "Sen Training", 
-                            "projects/ee-ross-superior/assets/train-test/training_sen_3class_v2024").start()
+                            "projects/ee-ross-superior/assets/train-test/training_sen_v2024").start()
 ```
 
 Validation:
@@ -483,23 +477,24 @@ Validation:
 ```{python}
 ee.batch.Export.table.toAsset(labels_ls5_validate, 
                             "LS5 Validation", 
-                            "projects/ee-ross-superior/assets/train-test/validation_ls5_3class_v2024").start()
+                            "projects/ee-ross-superior/assets/train-test/validation_ls5_v2024").start()
 
 ee.batch.Export.table.toAsset(labels_ls7_validate, 
                             "LS7 Validation", 
-                            "projects/ee-ross-superior/assets/train-test/validation_ls7_3class_v2024").start()
+                            "projects/ee-ross-superior/assets/train-test/validation_ls7_v2024").start()
 
 ee.batch.Export.table.toAsset(labels_ls8_validate, 
                             "LS8 Validation", 
-                            "projects/ee-ross-superior/assets/train-test/validation_ls8_3class_v2024").start()
+                            "projects/ee-ross-superior/assets/train-test/validation_ls8_v2024").start()
 
 ee.batch.Export.table.toAsset(labels_ls9_validate, 
                             "LS9 Validation", 
-                            "projects/ee-ross-superior/assets/train-test/validation_ls9_3class_v2024").start()
+                            "projects/ee-ross-superior/assets/train-test/validation_ls9_v2024").start()
 
 ee.batch.Export.table.toAsset(labels_sen_validate, 
                             "Sen Validation", 
-                            "projects/ee-ross-superior/assets/train-test/validation_sen_3class_v2024").start()
+                            "projects/ee-ross-superior/assets/train-test/validation_sen_v2024").start()
+
 ```
 
 

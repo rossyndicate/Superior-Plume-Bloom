@@ -85,8 +85,8 @@ import gee_funx as gf
 These assets were created in the 03_Train_Test_Split.Rmd file
 
 ```{python}
-training_ls9 = ee.FeatureCollection("projects/ee-ross-superior/assets/train-test/training_ls9_3class_v2024")
-testing_ls9 = ee.FeatureCollection("projects/ee-ross-superior/assets/train-test/validation_ls9_3class_v2024")
+training_ls9 = ee.FeatureCollection("projects/ee-ross-superior/assets/train-test/training_ls9_v2024")
+testing_ls9 = ee.FeatureCollection("projects/ee-ross-superior/assets/train-test/validation_ls9_v2024")
 ```
 
 ## Train the GTB model
@@ -96,7 +96,9 @@ ls_input_feat = ["SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", "SR_B7"]
 output_label = "class"
 class_values = (['cloud',
   'openWater',
-  'sediment'])
+  'lightNearShoreSediment',
+  'offShoreSediment',
+  'darkNearShoreSediment'])
 ```
 
 ### Landsat 9
@@ -110,7 +112,6 @@ trainedGTB_ls9 = (ee.Classifier.smileGradientTreeBoost(numberOfTrees = 10, seed 
 
 print(trainedGTB_ls9.getInfo())
 ```
-
 
 Unfortunately, there is no current mechanism to save the GTB object as an asset, 
 so we are relying on setting the seed here to take care of reproducibility. Let's
@@ -139,7 +140,7 @@ plt.barh(keys, values, color='skyblue')
 # Adding titles and labels
 plt.xlabel('Feature Importance')
 plt.ylabel('Band')
-plt.title('Feature importance for 3-class GTB model for Landsat 9')
+plt.title('Feature importance for 5-class GTB model for Landsat 9')
 
 # Reverse the y-axis to show highest value at the top
 plt.gca().invert_yaxis()
@@ -152,9 +153,10 @@ plt.show()
 df = pd.DataFrame(list(sorted_importance.items()), columns=['Band', 'Feature_Importance'])
 
 # And save the variable importance for later use.
-df.to_csv('data/output/GTB_3class_LS9_variable_importance_'+v_date+'.csv', index = False)
+df.to_csv('data/output/GTB_LS9_variable_importance_'+v_date+'.csv', index = False)
 
 ```
+
 ## Evaluate the models
 
 ### Landsat 9
@@ -176,7 +178,7 @@ print(training_conf_l9)
 training_conf_l9['mission'] = 'Landsat 9'
 training_conf_l9.reset_index(inplace = True)
 training_conf_l9 = training_conf_l9.rename(columns = {'level_0': 'class'})  
-training_conf_l9.to_csv('data/output/GTB_3class_'+v_date+'_l9_training_confusion.csv', index = False)
+training_conf_l9.to_csv('data/output/GTB_'+v_date+'_l9_training_confusion.csv', index = False)
 
 confusionMatrixGTB_ls9 = (testing_ls9
   .classify(trainedGTB_ls9)
@@ -195,7 +197,7 @@ print(confusion_l9)
 confusion_l9['mission'] = 'Landsat 9'
 confusion_l9.reset_index(inplace = True)
 confusion_l9 = confusion_l9.rename(columns = {'level_0': 'class'})  
-confusion_l9.to_csv('data/output/GTB_3class_'+v_date+'_l9_confusion.csv', index = False)
+confusion_l9.to_csv('data/output/GTB_'+v_date+'_l9_confusion.csv', index = False)
 
 acc_values_GTB_ls9 = (confusionMatrixGTB_ls9.accuracy().getInfo())
 print("GTB Confusion Overall Accuracy for Landsat 9: ", acc_values_GTB_ls9)
@@ -205,8 +207,9 @@ fs_GTB_ls9 = (confusionMatrixGTB_ls9.fscore().getInfo())
 print('GTB fScore for each class: ', fs_GTB_ls9)
 ```
 
-Not good. Those 5 openWater classes were mis-classified as sediment. We're going 
-to skip applying the model to the LS9 stack at this time.
+Well, that's not great - all open water were misclassified as darkNearShoreSediment.
+Let's see if it's any better in the 3-class version. We'll exprot the performance
+stats anyway.
 
 ### Collate model stats, save to data folder
 
@@ -229,8 +232,9 @@ performance_collation = pd.DataFrame(
 
 # reset the index
 performance_collation.reset_index(inplace = True)
-performance_collation.rename(columns = {'index':'satellite'}).to_csv('data/output/GTB_3class_LS9_'+v_date+'_performance_stats.csv', index = False)
+performance_collation.rename(columns = {'index':'satellite'}).to_csv('data/output/GTB_LS9_'+v_date+'_performance_stats.csv', index = False)
 ```
+
 
 <!-- ## Apply model to image stack for Landsat -->
 
@@ -303,12 +307,12 @@ performance_collation.rename(columns = {'index':'satellite'}).to_csv('data/outpu
 <!-- def applyPerMissionDate_ls9(missDate): -->
 <!--   mission = ee.String(missDate).slice(0,9) -->
 <!--   date = ee.String(missDate).slice(10,20) -->
-<!--   short_stack = (l8 -->
+<!--   short_stack = (l9 -->
 <!--     .filter(ee.Filter.eq('SPACECRAFT_ID', mission)) -->
 <!--     .filter(ee.Filter.eq('DATE_ACQUIRED', date))) -->
 <!--   oneMissDate = short_stack.mean() -->
 <!--   ls_miss_date_GTB = applyGTB_ls9(oneMissDate) -->
-<!--   ls_GTB_class = extract_3classes(ls_miss_date_GTB) -->
+<!--   ls_GTB_class = gf.extract_classes(ls_miss_date_GTB) -->
 <!--   return (ls_GTB_class.set('missDate', missDate)) -->
 
 <!-- def mosaicStack_l9(missDate): -->
@@ -327,7 +331,9 @@ performance_collation.rename(columns = {'index':'satellite'}).to_csv('data/outpu
 <!--     'classified', -->
 <!--     'cloud', -->
 <!--     'openWater', -->
-<!--     'sediment' -->
+<!--     'lightNSSed', -->
+<!--     'OSSed', -->
+<!--     'dNSSed' -->
 <!--     ]) -->
 
 <!-- ``` -->
@@ -360,7 +366,7 @@ performance_collation.rename(columns = {'index':'satellite'}).to_csv('data/outpu
 <!--   export_image = ee.batch.Export.image.toDrive( -->
 <!--     image = image_new_class, -->
 <!--     region = aoi_ee.geometry(), -->
-<!--     description = 'GTB_3class_v' + v_date + '_' + str(md.getInfo()), -->
+<!--     description = 'GTB_v' + v_date + '_' + str(md.getInfo()), -->
 <!--     folder = 'GTB_LS9_v'+v_date, -->
 <!--     scale = 30, -->
 <!--     crs = img_crs, -->
@@ -386,8 +392,8 @@ performance_collation.rename(columns = {'index':'satellite'}).to_csv('data/outpu
 <!-- #   export_image = ee.batch.Export.image.toAsset( -->
 <!-- #     image = image_new_class, -->
 <!-- #     region = aoi_ee.geometry(), -->
-<!-- #     description = 'GTB_3class_v' + v_date + '_' + str(md.getInfo()), -->
-<!-- #     assetId = 'projects/ee-ross-superior/assets/LS9_3class/GTB_LS9_'+str(md.getInfo())+'_v'+v_date, -->
+<!-- #     description = 'GTB_v' + v_date + '_' + str(md.getInfo()), -->
+<!-- #     assetId = 'projects/ee-ross-superior/assets/LS9/GTB_LS9_'+str(md.getInfo())+'_v'+v_date, -->
 <!-- #     scale = 30, -->
 <!-- #     crs = img_crs, -->
 <!-- #     maxPixels = 1e13) -->

@@ -1,5 +1,5 @@
 ---
-title: "eePlumB Develop and Apply GTB for Landsat 9"
+title: "eePlumB Develop and Apply GTB for Landsat 5"
 author: "ROSSyndicate"
 date: "2024-04-26"
 output: html_document
@@ -25,7 +25,7 @@ lapply(libs, package_loader)
 
 # Purpose
 
-This script develops and applies Gradient Tree Boost Models to the Landsat 9 image
+This script develops and applies Gradient Tree Boost Models to the Landsat 5 image
 stack.
 
 ## Activate conda environment
@@ -85,30 +85,32 @@ import gee_funx as gf
 These assets were created in the 03_Train_Test_Split.Rmd file
 
 ```{python}
-training_ls9 = ee.FeatureCollection("projects/ee-ross-superior/assets/train-test/training_ls9_3class_v2024")
-testing_ls9 = ee.FeatureCollection("projects/ee-ross-superior/assets/train-test/validation_ls9_3class_v2024")
+training_ls5 = ee.FeatureCollection("projects/ee-ross-superior/assets/train-test/training_ls5_v2024")
+testing_ls5 = ee.FeatureCollection("projects/ee-ross-superior/assets/train-test/validation_ls5_v2024")
 ```
 
 ## Train the GTB model
 
 ```{python}
-ls_input_feat = ["SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", "SR_B7"]
+ls_input_feat = ["SR_B1", "SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B7"]
 output_label = "class"
 class_values = (['cloud',
   'openWater',
-  'sediment'])
+  'lightNearShoreSediment',
+  'offShoreSediment',
+  'darkNearShoreSediment'])
 ```
 
-### Landsat 9
+### Landsat 5
 
 ```{python}
-trainedGTB_ls9 = (ee.Classifier.smileGradientTreeBoost(numberOfTrees = 10, seed = 47).train(
-  features = training_ls9,
+trainedGTB_ls5 = (ee.Classifier.smileGradientTreeBoost(numberOfTrees = 10, seed = 47).train(
+  features = training_ls5,
   classProperty = 'byte_property',
   inputProperties = ls_input_feat
 ))
 
-print(trainedGTB_ls9.getInfo())
+print(trainedGTB_ls5.getInfo())
 ```
 
 
@@ -119,9 +121,9 @@ also take a look at the variable importance to make sure that this all makes sen
 
 ```{python}
 # Variable Importance - Graph  
-GTB_ls9_dict = trainedGTB_ls9.explain()
+GTB_ls5_dict = trainedGTB_ls5.explain()
 
-variable_importance = (ee.Dictionary(GTB_ls9_dict)
+variable_importance = (ee.Dictionary(GTB_ls5_dict)
   .get('importance')
   .getInfo())
 
@@ -139,7 +141,7 @@ plt.barh(keys, values, color='skyblue')
 # Adding titles and labels
 plt.xlabel('Feature Importance')
 plt.ylabel('Band')
-plt.title('Feature importance for 3-class GTB model for Landsat 9')
+plt.title('Feature importance for 5-class GTB model for Landsat 5')
 
 # Reverse the y-axis to show highest value at the top
 plt.gca().invert_yaxis()
@@ -152,61 +154,59 @@ plt.show()
 df = pd.DataFrame(list(sorted_importance.items()), columns=['Band', 'Feature_Importance'])
 
 # And save the variable importance for later use.
-df.to_csv('data/output/GTB_3class_LS9_variable_importance_'+v_date+'.csv', index = False)
-
+df.to_csv('data/output/GTB_LS5_variable_importance_'+v_date+'.csv', index = False)
 ```
+
 ## Evaluate the models
 
-### Landsat 9
+### Landsat 5
 
 ```{python}
-trainingMatrixGTB_ls9 = (trainedGTB_ls9
+trainingMatrixGTB_ls5 = (trainedGTB_ls5
   .confusionMatrix())
 
 #convert to pandas dataframe with class info
-training_conf_l9 = (pd.DataFrame(
-  trainingMatrixGTB_ls9.getInfo(),
+training_conf_l5 = (pd.DataFrame(
+  trainingMatrixGTB_ls5.getInfo(),
   index=[class_values],
   columns =[class_values]
   ))
-print('GTB Training Confusion Matrix for Landsat 9:')
-print(training_conf_l9)
+print('GTB Training Confusion Matrix for Landsat 5:')
+print(training_conf_l5)
 
 #reformat and save
-training_conf_l9['mission'] = 'Landsat 9'
-training_conf_l9.reset_index(inplace = True)
-training_conf_l9 = training_conf_l9.rename(columns = {'level_0': 'class'})  
-training_conf_l9.to_csv('data/output/GTB_3class_'+v_date+'_l9_training_confusion.csv', index = False)
+training_conf_l5['mission'] = 'Landsat 5'
+training_conf_l5.reset_index(inplace = True)
+training_conf_l5 = training_conf_l5.rename(columns = {'level_0': 'class'})  
+training_conf_l5.to_csv('data/output/GTB_'+v_date+'_l5_training_confusion.csv', index = False)
 
-confusionMatrixGTB_ls9 = (testing_ls9
-  .classify(trainedGTB_ls9)
+confusionMatrixGTB_ls5 = (testing_ls5
+  .classify(trainedGTB_ls5)
   .errorMatrix('byte_property', "classification"))
 
 #convert to pandas dataframe with class info
-confusion_l9 = (pd.DataFrame(
-  confusionMatrixGTB_ls9.getInfo(),
+confusion_l5 = (pd.DataFrame(
+  confusionMatrixGTB_ls5.getInfo(),
   index=[class_values],
   columns =[class_values]
   ))
-print('GTB Confusion Matrix for Landsat 9:')
-print(confusion_l9)
+print('GTB Confusion Matrix for Landsat 5:')
+print(confusion_l5)
 
 #reformat and save
-confusion_l9['mission'] = 'Landsat 9'
-confusion_l9.reset_index(inplace = True)
-confusion_l9 = confusion_l9.rename(columns = {'level_0': 'class'})  
-confusion_l9.to_csv('data/output/GTB_3class_'+v_date+'_l9_confusion.csv', index = False)
+confusion_l5['mission'] = 'Landsat 5'
+confusion_l5.reset_index(inplace = True)
+confusion_l5 = confusion_l5.rename(columns = {'level_0': 'class'})  
+confusion_l5.to_csv('data/output/GTB_'+v_date+'_l5_confusion.csv', index = False)
 
-acc_values_GTB_ls9 = (confusionMatrixGTB_ls9.accuracy().getInfo())
-print("GTB Confusion Overall Accuracy for Landsat 9: ", acc_values_GTB_ls9)
-k_GTB_ls9 = (confusionMatrixGTB_ls9.kappa().getInfo())
-print("GTB kappa for LS9: ", k_GTB_ls9)
-fs_GTB_ls9 = (confusionMatrixGTB_ls9.fscore().getInfo())
-print('GTB fScore for each class: ', fs_GTB_ls9)
+acc_values_GTB_ls5 = (confusionMatrixGTB_ls5.accuracy().getInfo())
+print("GTB Confusion Overall Accuracy for Landsat 5: ", acc_values_GTB_ls5)
+k_GTB_ls5 = (confusionMatrixGTB_ls5.kappa().getInfo())
+print("GTB kappa for LS5: ", k_GTB_ls5)
+fs_GTB_ls5 = (confusionMatrixGTB_ls5.fscore().getInfo())
+print('GTB fScore for each class: ', fs_GTB_ls5)
 ```
 
-Not good. Those 5 openWater classes were mis-classified as sediment. We're going 
-to skip applying the model to the LS9 stack at this time.
 
 ### Collate model stats, save to data folder
 
@@ -216,20 +216,20 @@ the df.copy() function unlinks the original list from the new one. Silly python.
 ```{python}
 accuracy_heads = class_values.copy()
 accuracy_heads.extend(['GTB_accuracy', 'GTB_kappa'])
-landsat9_perf = fs_GTB_ls9.copy()
-landsat9_perf.extend([acc_values_GTB_ls9, k_GTB_ls9])
+landsat5_perf = fs_GTB_ls5.copy()
+landsat5_perf.extend([acc_values_GTB_ls5, k_GTB_ls5])
 
 performance_collation = pd.DataFrame(
-  [landsat9_perf],
+  [landsat5_perf],
   index = [
-    'Landsat 9'
+    'Landsat 5'
     ],
   columns = [accuracy_heads]
   )
 
 # reset the index
 performance_collation.reset_index(inplace = True)
-performance_collation.rename(columns = {'index':'satellite'}).to_csv('data/output/GTB_3class_LS9_'+v_date+'_performance_stats.csv', index = False)
+performance_collation.rename(columns = {'index':'satellite'}).to_csv('data/output/GTB_LS5_'+v_date+'_performance_stats.csv', index = False)
 ```
 
 <!-- ## Apply model to image stack for Landsat -->
@@ -240,14 +240,14 @@ performance_collation.rename(columns = {'index':'satellite'}).to_csv('data/outpu
 <!-- # filter stack for desired PRs -->
 <!-- ROWS = ee.List([27, 28]) -->
 
-<!-- l9 = (ee.ImageCollection("LANDSAT/LC09/C02/T1_L2") -->
+<!-- l5 = (ee.ImageCollection('LANDSAT/LT05/C02/T1_L2') -->
 <!--   .filter(ee.Filter.lt('CLOUD_COVER', 80)) -->
 <!--   .filter(ee.Filter.eq('WRS_PATH', 26)) -->
 <!--   .filter(ee.Filter.inList('WRS_ROW', ROWS)) -->
-<!--   .filter(ee.Filter.gte('IMAGE_QUALITY_OLI', 7)) -->
+<!--   .filter(ee.Filter.gte('IMAGE_QUALITY', 7)) -->
 <!--   .filter(ee.Filter.calendarRange(4, 11, 'month')) -->
-<!--   # mask high aerosol -->
-<!--   .map(gf.mask_high_aerosol) -->
+<!--   # mask high atmospheric opacity (conservative decision) -->
+<!--   .map(gf.mask_high_atmos_opac) -->
 <!--   # mask pixels with any qa flags -->
 <!--   .map(gf.mask_qa_flags) -->
 <!--   # mask saturated pixels -->
@@ -262,27 +262,31 @@ performance_collation.rename(columns = {'index':'satellite'}).to_csv('data/outpu
 <!-- Collections. Given that, we have manually uploaded the shapefiles as an Earth -->
 <!-- Engine Feature Collection. -->
 
+<!-- ```{python} -->
+<!-- aoi_ee = ee.FeatureCollection('projects/ee-ross-superior/assets/aoi/Superior_AOI_modeling') -->
+<!-- ``` -->
+
 <!-- And then clip each image by that aoi -->
 
 <!-- ```{python} -->
-<!-- l9_aoi = l9.map(gf.clip) -->
+<!-- l5_aoi = l5.map(gf.clip) -->
 <!-- ``` -->
 
 <!-- #### Helper functions -->
 
 <!-- ```{python} -->
 <!-- # get CRS info -->
-<!-- img_crs = l9.first().projection() -->
+<!-- img_crs = l5.first().projection() -->
 <!-- img_crsTrans = img_crs.getInfo().get('transform') -->
 <!-- ``` -->
 
-<!-- ### Consolidate stack by image date -->
+<!-- ### consolidate stack by image date -->
 
 <!-- ```{python} -->
-<!-- l9_aoi = l9_aoi.map(gf.addImageDate) -->
+<!-- l5_aoi = l5_aoi.map(gf.addImageDate) -->
 
 <!-- # summarize by missionDate field -->
-<!-- uniqueMissDate_l9 = l9_aoi.aggregate_array('missDate').distinct() -->
+<!-- uniqueMissDate_l5 = l5_aoi.aggregate_array('missDate').distinct() -->
 
 <!-- ``` -->
 
@@ -290,68 +294,69 @@ performance_collation.rename(columns = {'index':'satellite'}).to_csv('data/outpu
 
 <!-- ```{python} -->
 <!-- # need a couple of functions that refer to objects in this script -->
-<!-- def applyGTB_ls9(image): -->
+<!-- def applyGTB_ls5(image): -->
 <!--   # Select the bands that correspond to the input features of the GTB model -->
 <!--   imageFeatures = image.select(ls_input_feat) -->
 <!--   missDate = image.get('missDate') -->
 <!--   # Classify the image using the trained GTB model -->
 <!--   classifiedImage = (imageFeatures -->
-<!--     .classify(trainedGTB_ls9) -->
+<!--     .classify(trainedGTB_ls5) -->
 <!--     .set('missDate', missDate)) -->
 <!--   return image.addBands(classifiedImage) -->
 
-<!-- def applyPerMissionDate_ls9(missDate): -->
+<!-- def applyPerMissionDate_ls5(missDate): -->
 <!--   mission = ee.String(missDate).slice(0,9) -->
 <!--   date = ee.String(missDate).slice(10,20) -->
-<!--   short_stack = (l8 -->
+<!--   short_stack = (l5_aoi -->
 <!--     .filter(ee.Filter.eq('SPACECRAFT_ID', mission)) -->
 <!--     .filter(ee.Filter.eq('DATE_ACQUIRED', date))) -->
 <!--   oneMissDate = short_stack.mean() -->
-<!--   ls_miss_date_GTB = applyGTB_ls9(oneMissDate) -->
-<!--   ls_GTB_class = extract_3classes(ls_miss_date_GTB) -->
+<!--   ls_miss_date_GTB = applyGTB_ls5(oneMissDate) -->
+<!--   ls_GTB_class = extract_classes(ls_miss_date_GTB) -->
 <!--   return (ls_GTB_class.set('missDate', missDate)) -->
 
-<!-- def mosaicStack_l9(missDate): -->
-<!--   md_GTB = applyPerMissionDate_ls9(missDate) -->
+<!-- def mosaicStack_l5(missDate): -->
+<!--   md_GTB = applyPerMissionDate_ls5(missDate) -->
 <!--   return md_GTB -->
 
-<!-- newStack_list_l9 = uniqueMissDate_l9.map(mosaicStack_l9) -->
-<!-- newStack_l9 = ee.ImageCollection(newStack_list_l9) -->
+
+<!-- newStack_list_l5 = uniqueMissDate_l5.map(mosaicStack_l5) -->
+<!-- newStack_l5 = ee.ImageCollection(newStack_list_l5) -->
 
 <!-- ``` -->
 
 <!-- ### Lighten up each of the stacks to only the bands we care about -->
 
 <!-- ```{python} -->
-<!-- lightStack_l9 = newStack_l9.select([ -->
+<!-- lightStack_l5 = newStack_l5.select([ -->
 <!--     'classified', -->
 <!--     'cloud', -->
 <!--     'openWater', -->
-<!--     'sediment' -->
+<!--     'lightNSSed', -->
+<!--     'OSSed', -->
+<!--     'dNSSed' -->
 <!--     ]) -->
 
 <!-- ``` -->
 
 <!-- ## Export GeoTiffs to drive -->
 
-<!-- ### Raster Export -->
-
-<!-- ### GTB images for Landsat 9 -->
+<!-- ### GTB images for Landsat 5 -->
 
 <!-- ```{python} -->
-<!-- date_length_9 = len(uniqueMissDate_l9.getInfo()) -->
+<!-- date_length_5 = len(uniqueMissDate_l5.getInfo()) -->
 
 <!-- aoi_ee = ee.FeatureCollection('projects/ee-ross-superior/assets/aoi/Superior_AOI_modeling') -->
 
 <!-- def clip(image): -->
 <!--   return image.clip(aoi_ee.geometry()) -->
 
-<!-- # export as tif to drive -->
-<!-- for d in range(date_length_9): -->
-<!--   md = uniqueMissDate_l9.get(d) -->
+<!-- # export tif -->
+<!-- for d in range(date_length_5): -->
+<!--   md = uniqueMissDate_l5.get(d) -->
 <!--   print(md.getInfo()) -->
-<!--   print(str(d+1) + ' of ' + str(date_length_9)) -->
-<!--   image = (newStack_l9 -->
+<!--   print(str(d+1) + ' of ' + str(date_length_5)) -->
+<!--   image = (newStack_l5 -->
 <!--     .filter(ee.Filter.eq('missDate', md)) -->
 <!--     .first() -->
 <!--     .clip(aoi_ee.geometry())) -->
@@ -360,8 +365,8 @@ performance_collation.rename(columns = {'index':'satellite'}).to_csv('data/outpu
 <!--   export_image = ee.batch.Export.image.toDrive( -->
 <!--     image = image_new_class, -->
 <!--     region = aoi_ee.geometry(), -->
-<!--     description = 'GTB_3class_v' + v_date + '_' + str(md.getInfo()), -->
-<!--     folder = 'GTB_LS9_v'+v_date, -->
+<!--     description = 'GTB_v' + v_date + '_' + str(md.getInfo()), -->
+<!--     folder = 'GTB_LS5_v'+ v_date, -->
 <!--     scale = 30, -->
 <!--     crs = img_crs, -->
 <!--     maxPixels = 1e13) -->
@@ -372,12 +377,12 @@ performance_collation.rename(columns = {'index':'satellite'}).to_csv('data/outpu
 <!--   export_image.start() -->
 
 
-<!-- # # export as GEE asset -->
-<!-- # for d in range(date_length_9): -->
-<!-- #   md = uniqueMissDate_l9.get(d) -->
+<!-- # # export as asset -->
+<!-- # for d in range(date_length_5): -->
+<!-- #   md = uniqueMissDate_l5.get(d) -->
 <!-- #   print(md.getInfo()) -->
-<!-- #   print(str(d+1) + ' of ' + str(date_length_9)) -->
-<!-- #   image = (newStack_l9 -->
+<!-- #   print(str(d+1) + ' of ' + str(date_length_5)) -->
+<!-- #   image = (newStack_l5 -->
 <!-- #     .filter(ee.Filter.eq('missDate', md)) -->
 <!-- #     .first() -->
 <!-- #     .clip(aoi_ee.geometry())) -->
@@ -386,8 +391,8 @@ performance_collation.rename(columns = {'index':'satellite'}).to_csv('data/outpu
 <!-- #   export_image = ee.batch.Export.image.toAsset( -->
 <!-- #     image = image_new_class, -->
 <!-- #     region = aoi_ee.geometry(), -->
-<!-- #     description = 'GTB_3class_v' + v_date + '_' + str(md.getInfo()), -->
-<!-- #     assetId = 'projects/ee-ross-superior/assets/LS9_3class/GTB_LS9_'+str(md.getInfo())+'_v'+v_date, -->
+<!-- #     description = 'GTB_v' + v_date + '_' + str(md.getInfo()), -->
+<!-- #     assetId = 'projects/ee-ross-superior/assets/LS5/GTB_LS5_'+str(md.getInfo())+'_v'+v_date, -->
 <!-- #     scale = 30, -->
 <!-- #     crs = img_crs, -->
 <!-- #     maxPixels = 1e13) -->
