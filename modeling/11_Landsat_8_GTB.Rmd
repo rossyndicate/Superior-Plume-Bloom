@@ -140,7 +140,7 @@ plt.barh(keys, values, color='skyblue')
 # Adding titles and labels
 plt.xlabel('Feature Importance')
 plt.ylabel('Band')
-plt.title('Feature importance for 3-class GTB model for Landsat 8')
+plt.title('Feature importance for 5-class GTB model for Landsat 8')
 
 # Reverse the y-axis to show highest value at the top
 plt.gca().invert_yaxis()
